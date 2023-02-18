@@ -1,0 +1,106 @@
+block main {
+  var depth = 40;
+
+  //(depth > 0) == (depth > 0);
+  //@unicode;
+  
+  @print_clock_seconds[clocks = @benchmark_bonk[depth = depth]];
+  //@print_clock_seconds[clocks = @benchmark_bonk[depth = depth]];
+  /*@print_clock_seconds[clocks = @benchmark_bonk[depth = depth]];
+  @print_clock_seconds[clocks = @benchmark_bonk[depth = depth]];
+  @print_clock_seconds[clocks = @benchmark_bonk[depth = depth]];
+  @print_clock_seconds[clocks = @benchmark_c   [depth = depth]];
+  @print_clock_seconds[clocks = @benchmark_c   [depth = depth]];
+  @print_clock_seconds[clocks = @benchmark_c   [depth = depth]];
+  @print_clock_seconds[clocks = @benchmark_c   [depth = depth]];
+  @print_clock_seconds[clocks = @benchmark_c   [depth = depth]];
+  */
+}
+
+block benchmark_c {
+  context var depth;
+  var start = @clock;
+  @c_fibonacci[n = depth];
+  var end = @clock;
+  bonk end - start;
+}
+
+block benchmark_bonk {
+  context var depth;
+  var start = @clock;
+  @bonk_fibonacci[n = depth];
+  var end = @clock;
+  bonk end - start;
+}
+
+block bonk_fibonacci {
+  context var n;
+  n > 1 or bonk 1;
+  bonk @bonk_fibonacci[n = n - 1] + @bonk_fibonacci[n = n - 2];
+}
+
+block unicode {
+  var i = 0;
+  cycle { (i = i + 1) < 60 or brek;
+
+    @put_char[char = 240];
+    @put_char[char = 159];
+    @put_char[char = 140];
+    @put_char[char = 127 + i];
+  }
+}
+
+/*
+var gvar_1;
+var gvar_2;
+
+block main {
+  // var a;
+  // var b;
+  // (a > 0) == (b > 0);
+
+  var n = 10;
+
+  cycle {
+    check n == 0 {
+      brek;
+    }
+
+    n = n - 1;
+  }
+
+  gvar_1 = 1;
+  gvar_2 = 2;
+  @clobber;
+  @print_globals;
+  @print_number[number = @fib[i = 30]];
+
+  bonk 0;
+}
+
+block clobber {
+  bonk 1 + (452 + (234523 + (2345234 + (53424 + (23453 + (-2345235 + (98763 + (3245 + (1 + (45654 + (234567 + (765432 + (1345678 + (98765 + (111 + (1333 + 1567))))))))))))))));
+}
+
+block fib {
+  context var i;
+
+  i < 2 and bonk 1;
+
+  bonk @fib[i = i - 1] + @fib[i = i - 2];
+}
+
+block print_globals {
+  @print_number[number = gvar_1];
+  @print_number[number = gvar_2];
+}
+
+*/
+
+// === promises ===
+
+promise block clock {}
+promise block print_clock_seconds { context var clocks; }
+promise block print_number { context var number; }
+promise block put_char     { context var char;   }
+promise block c_fibonacci  { context var n;      }
