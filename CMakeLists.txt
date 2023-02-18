@@ -6,3 +6,5 @@ set(CMAKE_CXX_STANDARD 17)
 
 file(GLOB_RECURSE SOURCES src/*.cpp src/*.hpp)
 add_executable(bonk ${SOURCES})
+
+add_subdirectory(test)

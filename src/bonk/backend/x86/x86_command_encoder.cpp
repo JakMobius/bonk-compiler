@@ -190,7 +190,7 @@ void command_encoder::get_sib_base_index(command_parameter reg_rm, char* index_p
                 }
             } else if (index == rsp && register_amount == 2) {
                 // Try to exchange base and index registers
-                // Making sure it's possible
+                // Make sure it's possible
                 assert(reg_rm.memory.reg_a_constant == 1 && base != index);
                 char temp = index;
                 index = base;
