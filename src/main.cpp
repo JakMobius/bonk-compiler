@@ -1,8 +1,7 @@
 #include "bonk/backend/ede/ede_backend.hpp"
-#include "bonk/backend/x86/test/encoding_tester.hpp"
 #include "bonk/backend/x86/x86_backend.hpp"
-#include "bonk/bonk_cli_arguments.hpp"
 #include "bonk/compiler.hpp"
+#include "argparse/argparse.hpp"
 
 void init_fatal_error(const char* format, ...) {
     va_list ap;
@@ -20,66 +19,75 @@ void warning(const char* reason) {
 
 int main(int argc, const char* argv[]) {
 
-    if (argc <= 1) {
-        args::ArgumentList::print_help(args::TYPES);
-        return 0;
+    argparse::ArgumentParser program("bonk");
+    program.add_argument("input")
+        .help("path to the input file");
+    program.add_argument("-h", "--help")
+        .default_value(false)
+        .implicit_value(true)
+        .help("show this help message and exit");
+    program.add_argument("--ast")
+        .default_value(false)
+        .implicit_value(true)
+        .help("output AST as JSON");
+    program.add_argument("-o", "--output-file")
+        .default_value("out")
+        .help("path to the output file");
+    program.add_argument("-t", "--target")
+        .default_value("ede")
+        .help("compile target (ede or x86)");
+    program.add_argument("-l", "--log-file")
+        .help("path to the log file");
+
+    try {
+        program.parse_args(argc, argv);
+    } catch (const std::runtime_error& err) {
+        std::cerr << err.what() << std::endl;
+        std::cerr << program;
+        return 1;
     }
 
-    const char* input = argv[1];
+    const auto input = program.get<std::string>("input");
+    const auto help_flag = program.get<bool>("--help");
+    const auto ast_flag = program.get<bool>("--ast");
+    const auto output_file_path = program.get<std::string>("--output-file");
+    const auto target_flag = program.get<std::string>("--target");
 
-    auto* arguments = new args::ArgumentList(argc, argv, args::TYPES);
-
-    args::Argument* help_flag = arguments->search(&args::TYPES[E_ARGV_NAME_HELP]);
-    args::Argument* ast_flag = arguments->search(&args::TYPES[E_ARGV_NAME_AST]);
-    args::Argument* output_file_flag = arguments->search(&args::TYPES[E_ARGV_NAME_OUTPUT_FILE]);
-    args::Argument* target_flag = arguments->search(&args::TYPES[E_ARGV_NAME_TARGET]);
-    args::Argument* log_file_flag = arguments->search(&args::TYPES[E_ARGV_NAME_LOG_FILE]);
-
-    if (help_flag != nullptr || input[0] == '-') {
-        args::ArgumentList::print_help(args::TYPES);
-        delete arguments;
+    if (help_flag || input.empty()) {
+        std::cout << program;
         return 0;
     }
-
-    const char* output_file_path = nullptr;
-
-    if (output_file_flag)
-        output_file_path = output_file_flag->value;
-    if (!output_file_path)
-        output_file_path = "out";
 
     bonk::compiler_config config = {};
     config.error_file = stderr;
 
-    if (!target_flag || strcmp(target_flag->value, "ede") == 0) {
-        config.compile_backend = new bonk::ede_backend::backend();
-    } else if (strcmp(target_flag->value, "x86") == 0) {
+    if(target_flag == "x86") {
         config.compile_backend = new bonk::x86_backend::backend();
+    } else if(target_flag == "ede") {
+        config.compile_backend = new bonk::ede_backend::backend();
     } else {
-        init_fatal_error("unknown compile target: %s", target_flag->value);
-        delete arguments;
+        init_fatal_error("unknown compile target: %s", target_flag.c_str());
         return 1;
     }
 
-    FILE* output_file = fopen(output_file_path, "wb");
+    FILE* output_file = fopen(output_file_path.c_str(), "wb");
     if (!output_file) {
         init_fatal_error("failed to open input file\n");
         delete config.compile_backend;
-        delete arguments;
         return 1;
     }
 
-    if (log_file_flag) {
-        config.listing_file = fopen(log_file_flag->value, "w");
+    if (auto log_file = program.present("--log-file")) {
+        config.listing_file = fopen(log_file->c_str(), "w");
         if (!config.listing_file) {
             warning("failed to open log file\n");
             config.listing_file = nullptr;
         }
     }
 
-    auto* compiler = new bonk::compiler(&config);
+    bonk::compiler compiler(&config);
 
-    bonk::tree_node_list<bonk::tree_node*>* ast = compiler->get_ast_of_file_at_path(input);
+    bonk::tree_node_list<bonk::tree_node*>* ast = compiler.get_ast_of_file_at_path(input.c_str());
 
     if (ast) {
         if (ast_flag) {
@@ -87,28 +95,23 @@ int main(int argc, const char* argv[]) {
             ast->serialize(serializer);
             delete serializer;
         } else {
-            compiler->compile_ast(ast, output_file);
+            compiler.compile_ast(ast, output_file);
         }
     }
-
-    //    bonk::x86_backend::test_encodings(output_file);
 
     fclose(output_file);
 
     if (!ast_flag) {
-        if (chmod(output_file_path, 511) < 0) {
+        if (chmod(output_file_path.c_str(), 511) < 0) {
             warning("failed to add execution permissions to file\n");
         }
     }
 
-    delete arguments;
     delete config.compile_backend;
 
-    if (compiler->state) {
-        delete compiler;
+    if (compiler.state) {
         return 1;
     }
 
-    delete compiler;
     return 0;
 }
