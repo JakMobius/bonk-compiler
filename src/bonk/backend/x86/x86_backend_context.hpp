@@ -48,23 +48,23 @@ extern const int SYSTEM_V_CALLER_PRESERVED_REGISTERS_COUNT;
 
 struct backend_context {
 
-    int procedure_parameters;
-    abstract_register procedure_return_register;
-    command_buffer* procedure_command_buffer;
-    std::vector<backend_context_state> state_stack;
-    register_descriptor_list* current_descriptors;
-    register_descriptor_list* global_descriptors;
-    scope_stack* scope_stack;
-    backend_context_state* state;
-    macho::macho_file* target;
+    int procedure_parameters = 0;
+    abstract_register procedure_return_register = 0;
+    command_buffer* procedure_command_buffer = nullptr;
+    std::vector<backend_context_state> state_stack = {};
+    register_descriptor_list* current_descriptors = nullptr;
+    register_descriptor_list* global_descriptors = nullptr;
+    scope_stack* scope_stack = nullptr;
+    backend_context_state* state = nullptr;
+    macho::macho_file* target = nullptr;
 
-    command_list* procedure_body_container;
-    command_list* cycle_container;
-    command_list* cycle_body;
-    jmp_label* cycle_head;
-    jmp_label* cycle_tail;
+    command_list* procedure_body_container = nullptr;
+    command_list* cycle_container = nullptr;
+    command_list* cycle_body = nullptr;
+    jmp_label* cycle_head = nullptr;
+    jmp_label* cycle_tail = nullptr;
 
-    compiler* linked_compiler;
+    compiler* linked_compiler = nullptr;
 
     backend_context(compiler* compiler, macho::macho_file* target);
 

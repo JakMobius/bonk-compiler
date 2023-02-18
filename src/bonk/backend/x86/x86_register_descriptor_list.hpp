@@ -6,9 +6,9 @@
 namespace bonk::x86_backend {
 
 struct register_descriptor_list {
-    std::vector<abstract_register_descriptor> array;
-    register_descriptor_list* parent_descriptor_list;
-    unsigned long offset;
+    std::vector<abstract_register_descriptor> array {};
+    register_descriptor_list* parent_descriptor_list = nullptr;
+    unsigned long offset = 0;
 
     register_descriptor_list(register_descriptor_list* other);
 

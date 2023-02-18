@@ -19,24 +19,24 @@ enum relocation_type { RELOCATION_TYPE_CALL, RELOCATION_TYPE_CONSTANT };
 enum symbol_section { SYMBOL_SECTION_TEXT, SYMBOL_SECTION_DATA };
 
 struct macho_file {
-    mach_header_64 header;
-    segment_command_64 segment;
-    section_64 section_data;
-    section_64 section_text;
-    symtab_command symtab;
-    dysymtab_command dysymtab;
+    mach_header_64 header {};
+    segment_command_64 segment {};
+    section_64 section_data {};
+    section_64 section_text {};
+    symtab_command symtab {};
+    dysymtab_command dysymtab {};
 
-    std::unordered_map<std::string, int> local_symbol_index_table;
-    std::unordered_map<std::string, int> external_symbol_index_table;
+    std::unordered_map<std::string, int> local_symbol_index_table {};
+    std::unordered_map<std::string, int> external_symbol_index_table {};
 
-    std::vector<relocation_info> relocations;
-    std::vector<uint32_t> local_symbol_string_indices;
-    std::vector<uint32_t> external_symbol_string_indices;
-    std::vector<nlist_64> local_symbols;
-    std::vector<nlist_64> external_symbols;
-    std::vector<std::string> string_table;
-    std::vector<std::string> text_fragments;
-    std::vector<std::string> data_fragments;
+    std::vector<relocation_info> relocations {};
+    std::vector<uint32_t> local_symbol_string_indices {};
+    std::vector<uint32_t> external_symbol_string_indices {};
+    std::vector<nlist_64> local_symbols {};
+    std::vector<nlist_64> external_symbols {};
+    std::vector<std::string> string_table {};
+    std::vector<std::string> text_fragments {};
+    std::vector<std::string> data_fragments {};
 
     macho_file();
 

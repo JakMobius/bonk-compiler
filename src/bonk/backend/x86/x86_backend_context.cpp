@@ -284,7 +284,7 @@ void backend_context::write_block_implementation(tree_node_block_definition* blo
     compile_block_definition(block);
     pop_initial_state();
 
-//    command_dumper().dump_list(procedure_command_buffer->root_list, stdout, 0);
+    command_dumper().dump_list(procedure_command_buffer->root_list, stdout, 0);
 
     auto colorized_buffer = register_colorizer::colorize(procedure_command_buffer);
 

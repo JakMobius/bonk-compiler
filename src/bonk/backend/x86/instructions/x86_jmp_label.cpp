@@ -8,7 +8,6 @@ jmp_label::jmp_label(long long label) {
 
     parameters.resize(1);
     parameters[0] = command_parameter::create_imm32(label);
-    jmps_targeting = 0;
 }
 
 unsigned long jmp_label::get_index() {

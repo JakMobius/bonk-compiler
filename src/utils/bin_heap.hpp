@@ -5,8 +5,8 @@
 #include <vector>
 
 template <typename T> struct bin_heap {
-    std::vector<T> buffer;
-    long long length;
+    std::vector<T> buffer {};
+    long long length = 0;
 
     bin_heap();
 

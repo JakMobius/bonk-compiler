@@ -27,13 +27,13 @@ struct command_list : mlist<asm_command*> {
 };
 
 struct command_buffer {
-    macho::macho_file* file;
-    command_list* root_list;
-    linear_allocator allocator;
-    register_descriptor_list descriptors;
-    std::vector<command_list*> lists;
-    std::vector<command_list*> list;
-    unsigned long labels;
+    macho::macho_file* file = nullptr;
+    command_list* root_list = nullptr;
+    linear_allocator allocator {};
+    register_descriptor_list descriptors {};
+    std::vector<command_list*> lists {};
+    std::vector<command_list*> list {};
+    unsigned long labels = 0;
 
     // Creates completely new independent command parent_buffer
 

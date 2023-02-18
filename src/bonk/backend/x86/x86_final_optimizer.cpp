@@ -49,8 +49,8 @@ void final_optimizer::apply_label_map() {
          i = buffer->root_list->end()) {
         asm_command* command = buffer->root_list->get(i);
 
-        for (int j = 0; j < command->parameters.size(); j++) {
-            auto param = command->parameters[j];
+        for (auto & parameter : command->parameters) {
+            auto param = parameter;
             if (param.type == PARAMETER_TYPE_LABEL) {
                 bool relocated = false;
 
@@ -62,14 +62,14 @@ void final_optimizer::apply_label_map() {
                     param.label = it->second;
                 }
                 if (relocated)
-                    command->parameters[j] = param;
+                    parameter = param;
             }
         }
     }
     label_map.clear();
 }
 
-void final_optimizer::remove_useless_movs() {
+void final_optimizer::remove_useless_movs() const {
     for (auto i = buffer->root_list->begin(); i != buffer->root_list->end();) {
         asm_command* command = buffer->root_list->get(i);
 
@@ -90,7 +90,7 @@ void final_optimizer::remove_useless_movs() {
     }
 }
 
-bool final_optimizer::remove_double_jmps() {
+bool final_optimizer::remove_double_jmps() const {
     bool result = false;
     for (auto i = buffer->root_list->begin(); i != buffer->root_list->end();) {
         asm_command* command = buffer->root_list->get(i);
@@ -126,14 +126,30 @@ bool final_optimizer::remove_double_jmps() {
     return result;
 }
 
-void final_optimizer::remove_useless_labels() {
+void final_optimizer::remove_useless_labels() const {
+
+    std::vector<bool> label_used;
+
     for (auto i = buffer->root_list->begin(); i != buffer->root_list->end();) {
         asm_command* command = buffer->root_list->get(i);
 
-        // Removing labels which are not used in any jumps
+        for (auto param : command->parameters) {
+            if (param.type == PARAMETER_TYPE_LABEL) {
+                if (label_used.size() <= param.label->get_index()) {
+                    label_used.resize(param.label->get_index() + 1);
+                }
+                label_used[param.label->get_index()] = true;
+            }
+        }
+        i = buffer->root_list->next_iterator(i);
+    }
+
+    for (auto i = buffer->root_list->begin(); i != buffer->root_list->end();) {
+        asm_command* command = buffer->root_list->get(i);
+
         if (command->type == COMMAND_JMP_LABEL) {
-            auto label = ((jmp_label*)command);
-            if (label->jmps_targeting == 0) {
+            auto* label = (jmp_label*)command;
+            if (!label_used[label->get_index()]) {
                 auto old = i;
                 i = buffer->root_list->next_iterator(i);
                 buffer->root_list->remove(old);
@@ -144,7 +160,7 @@ void final_optimizer::remove_useless_labels() {
     }
 }
 
-bool final_optimizer::remove_dead_ends() {
+bool final_optimizer::remove_dead_ends() const {
     bool result = false;
     for (auto i = buffer->root_list->begin(); i != buffer->root_list->end();) {
         asm_command* command = buffer->root_list->get(i);
@@ -165,7 +181,7 @@ bool final_optimizer::remove_dead_ends() {
     return result;
 }
 
-void final_optimizer::optimize_mov_zeroes() {
+void final_optimizer::optimize_mov_zeroes() const {
     for (auto i = buffer->root_list->begin(); i != buffer->root_list->end();
          buffer->root_list->next_iterator(&i)) {
         asm_command* command = buffer->root_list->get(i);

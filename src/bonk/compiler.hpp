@@ -29,12 +29,12 @@ struct compiler_config {
 };
 
 struct compiler {
-    compiler_config* config;
+    compiler_config* config = nullptr;
 
-    parser* parser;
-    lexical_analyzer* lexical_analyzer;
+    parser* parser = nullptr;
+    lexical_analyzer* lexical_analyzer = nullptr;
 
-    compiler_state state;
+    compiler_state state = BONK_COMPILER_OK;
 
     void out_of_memory();
 

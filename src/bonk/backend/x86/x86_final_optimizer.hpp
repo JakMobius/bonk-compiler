@@ -13,15 +13,15 @@ struct final_optimizer {
 
     final_optimizer(command_buffer* buffer);
 
-    void optimize_mov_zeroes();
+    void optimize_mov_zeroes() const;
 
-    void remove_useless_movs();
+    void remove_useless_movs() const;
 
-    void remove_useless_labels();
+    void remove_useless_labels() const;
 
-    bool remove_double_jmps();
+    bool remove_double_jmps() const;
 
-    bool remove_dead_ends();
+    bool remove_dead_ends() const;
 
     void apply_label_map();
 };

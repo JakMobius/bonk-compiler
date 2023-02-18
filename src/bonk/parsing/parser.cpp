@@ -5,14 +5,11 @@ namespace bonk {
 
 parser::parser(compiler* compiler) {
     linked_compiler = compiler;
-    input = nullptr;
 }
 
 tree_node_list<tree_node*>* parser::parse_file(std::vector<lexeme>* lexemes) {
     input = lexemes;
     auto* target = new tree_node_list<tree_node*>();
-    if (!target)
-        return nullptr;
 
     if (!parse_grammatic_global(this, target)) {
         delete target;

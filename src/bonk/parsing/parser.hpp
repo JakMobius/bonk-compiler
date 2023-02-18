@@ -20,9 +20,9 @@ struct parser;
 namespace bonk {
 
 struct parser {
-    unsigned long position;
-    std::vector<lexeme>* input;
-    compiler* linked_compiler;
+    unsigned long position = 0;
+    std::vector<lexeme>* input = nullptr;
+    compiler* linked_compiler = nullptr;
 
     void warning(const char* format, ...);
 

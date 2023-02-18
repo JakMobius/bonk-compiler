@@ -9,8 +9,6 @@ namespace bonk::x86_backend {
 
 struct jmp_label : asm_command {
 
-    unsigned long jmps_targeting;
-
     jmp_label(long long label);
 
     void to_bytes(command_encoder* buffer) override;

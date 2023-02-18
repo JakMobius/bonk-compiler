@@ -31,12 +31,15 @@ int main(int argc, const char* argv[]) {
         .implicit_value(true)
         .help("output AST as JSON");
     program.add_argument("-o", "--output-file")
-        .default_value("out")
+        .default_value(std::string("out"))
+        .nargs(1)
         .help("path to the output file");
     program.add_argument("-t", "--target")
-        .default_value("ede")
+        .default_value(std::string("ede"))
+        .nargs(1)
         .help("compile target (ede or x86)");
     program.add_argument("-l", "--log-file")
+        .nargs(1)
         .help("path to the log file");
 
     try {
