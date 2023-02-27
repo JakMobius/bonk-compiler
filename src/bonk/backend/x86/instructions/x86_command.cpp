@@ -101,11 +101,11 @@ CommandParameter CommandParameter::create_symbol(CommandParameterSymbol symbol) 
     return param;
 }
 
-uint8_t CommandParameterMemory::register_amount() {
+uint8_t CommandParameterMemory::register_amount() const {
     return (reg_a != AbstractRegister(-1)) + (reg_b != AbstractRegister(-1));
 }
 
-AbstractRegister CommandParameterMemory::get_register(uint8_t index) {
+AbstractRegister CommandParameterMemory::get_register(uint8_t index) const {
     if (reg_a == AbstractRegister(-1))
         return reg_b;
     if (index == 0)

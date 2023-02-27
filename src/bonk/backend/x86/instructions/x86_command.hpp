@@ -72,9 +72,9 @@ struct CommandParameterMemory {
     AbstractRegister reg_b;
     uint8_t reg_a_constant;
 
-    uint8_t register_amount();
+    uint8_t register_amount() const;
 
-    AbstractRegister get_register(uint8_t index);
+    AbstractRegister get_register(uint8_t index) const;
 
     void set_register(uint8_t index, AbstractRegister reg);
 

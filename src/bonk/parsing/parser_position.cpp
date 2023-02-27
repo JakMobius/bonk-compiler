@@ -15,7 +15,7 @@ ParserPosition* ParserPosition::clone() {
     return new_position;
 }
 
-const char* ParserPosition::to_string() {
+const char* ParserPosition::to_string() const {
     int length = snprintf(nullptr, 0, "%s:%lu:%lu", filename, line, ch);
 
     auto* buffer = (char*)calloc(length + 1, sizeof(char));

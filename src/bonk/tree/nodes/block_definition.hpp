@@ -18,11 +18,11 @@ struct TreeNodeBlockDefinition : TreeNode {
 
     TreeNodeIdentifier* block_name;
     TreeNodeList<TreeNode*>* body;
-    bool is_promise;
+    bool is_promise{};
 
     TreeNodeBlockDefinition();
 
-    ~TreeNodeBlockDefinition();
+    ~TreeNodeBlockDefinition() override;
 
     void serialize(JsonSerializer* file) override;
 };

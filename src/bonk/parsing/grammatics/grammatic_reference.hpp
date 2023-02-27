@@ -1,7 +1,7 @@
 
 #pragma once
 
-#include <ctype.h>
+#include <cctype>
 #include "../parser.hpp"
 #include "./grammatic_expression.hpp"
 

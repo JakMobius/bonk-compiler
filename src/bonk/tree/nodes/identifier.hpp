@@ -11,11 +11,11 @@ namespace bonk {
 struct TreeNodeIdentifier : TreeNode {
     std::string variable_name;
 
-    TreeNodeIdentifier(const std::string& name);
+    explicit TreeNodeIdentifier(const std::string& name);
 
     bool contents_equal(TreeNodeIdentifier* other);
 
-    void print(FILE* file);
+    void print(FILE* file) const;
 
     void serialize(JsonSerializer* file) override;
 };

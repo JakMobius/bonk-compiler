@@ -1,8 +1,8 @@
 #pragma once
 
-#include "stdio.h"
-#include "stdlib.h"
-#include "string.h"
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
 
 namespace bonk {
 
@@ -14,7 +14,7 @@ struct ParserPosition {
 
     ParserPosition* clone();
 
-    const char* to_string();
+    const char* to_string() const;
 };
 
 } // namespace bonk

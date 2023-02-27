@@ -8,7 +8,7 @@
 namespace bonk::x86_backend {
 
 struct RetCommand : AsmCommand {
-    RetCommand(AbstractRegister return_value_handle = -1);
+    explicit RetCommand(AbstractRegister return_value_handle = -1);
 
     void to_bytes(CommandEncoder* buffer) override;
 

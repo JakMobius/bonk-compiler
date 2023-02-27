@@ -12,7 +12,7 @@ struct LinearAllocator {
     std::vector<LinearAllocatorPage> pages;
     unsigned long long page_capacity;
 
-    LinearAllocator(unsigned long long page_capacity = 1024);
+    explicit LinearAllocator(unsigned long long page_capacity = 1024);
 
     void set_page_capacity(unsigned long long page_capacity);
 

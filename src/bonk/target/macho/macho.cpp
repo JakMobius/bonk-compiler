@@ -241,26 +241,22 @@ void MachoFile::flush(FILE* file) {
     fwrite(&dysymtab, 1, sizeof(dysymtab_command), file);
 
     // Write code
-    for (int i = 0; i < text_fragments.size(); i++) {
-        auto& fragment = text_fragments[i];
+    for (auto & fragment : text_fragments) {
         fwrite(fragment.data(), 1, fragment.size(), file);
     }
 
     // Write data
-    for (int i = 0; i < data_fragments.size(); i++) {
-        auto& fragment = data_fragments[i];
+    for (auto & fragment : data_fragments) {
         fwrite(fragment.data(), 1, fragment.size(), file);
     }
 
     // Write relocations
-    for (int i = 0; i < relocations.size(); i++) {
-        auto& relocation = relocations[i];
+    for (auto & relocation : relocations) {
         fwrite(&relocation, 1, sizeof(relocation), file);
     }
 
     // Write local symbol table
-    for (int i = 0; i < local_symbols.size(); i++) {
-        auto& symbol = local_symbols[i];
+    for (auto & symbol : local_symbols) {
         if (symbol.n_sect == 2)
             symbol.n_value += section_text.size;
         fwrite(&symbol, 1, sizeof(symbol), file);
@@ -269,8 +265,7 @@ void MachoFile::flush(FILE* file) {
     }
 
     // Write external symbol table
-    for (int i = 0; i < external_symbols.size(); i++) {
-        auto symbol = external_symbols[i];
+    for (auto symbol : external_symbols) {
         if (symbol.n_sect == 2)
             symbol.n_value += section_text.size;
         fwrite(&symbol, 1, sizeof(symbol), file);
@@ -279,8 +274,7 @@ void MachoFile::flush(FILE* file) {
     }
 
     // Write string table
-    for (int i = 0; i < string_table.size(); i++) {
-        auto str = string_table[i];
+    for (auto str : string_table) {
         fprintf(file, "%s", str.data());
         fputc(0, file);
     }

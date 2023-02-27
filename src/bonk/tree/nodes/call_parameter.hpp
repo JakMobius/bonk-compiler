@@ -19,9 +19,9 @@ struct TreeNodeCallParameter : TreeNode {
 
     TreeNodeCallParameter(TreeNodeIdentifier* name, TreeNode* value);
 
-    ~TreeNodeCallParameter();
+    ~TreeNodeCallParameter() override;
 
-    void serialize(JsonSerializer* serializer);
+    void serialize(JsonSerializer* serializer) override;
 };
 
 } // namespace bonk

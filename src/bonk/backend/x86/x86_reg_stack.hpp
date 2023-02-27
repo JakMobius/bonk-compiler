@@ -24,7 +24,7 @@ struct RegStackEntry {
 
 struct RegStack {
 
-    std::vector<RegStackEntry> stack;
+    std::vector<RegStackEntry> stack{};
 
     CommandList* list;
 

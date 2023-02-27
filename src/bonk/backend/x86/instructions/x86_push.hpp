@@ -7,7 +7,7 @@
 namespace bonk::x86_backend {
 
 struct PushCommand : AsmCommand {
-    PushCommand(AbstractRegister reg);
+    explicit PushCommand(AbstractRegister reg);
 
     void to_bytes(CommandEncoder* buffer) override;
 

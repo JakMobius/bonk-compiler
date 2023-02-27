@@ -1,8 +1,8 @@
 
 #pragma once
 
-#include <stdarg.h>
-#include <stdio.h>
+#include <cstdarg>
+#include <cstdio>
 #include "./parsing/parser.hpp"
 #include "compiler.hpp"
 

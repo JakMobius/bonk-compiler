@@ -909,7 +909,7 @@ void RegisterColorizer::flush_unused_registers() {
 }
 
 void RegisterColorizer::release_register_immediately(MachineRegister reg,
-                                                      bool released_by_command) {
+                                                      bool released_by_command) const {
     assert(reg != rinvalid);
     COLORIZER_DEBUG("; release immediately: %s\n", ASM_REGISTERS_64[reg]);
 
@@ -962,7 +962,7 @@ bool RegisterColorizer::is_unused_register(MachineRegister reg) {
     return false;
 }
 
-void RegisterColorizer::transform_labels() {
+void RegisterColorizer::transform_labels() const {
     auto list = output->root_list;
     for (auto i = list->commands.begin(); i != list->commands.end(); ++i) {
         auto command = *i;

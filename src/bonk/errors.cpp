@@ -5,7 +5,7 @@
 
 namespace bonk {
 
-void Compiler::warning_positioned(ParserPosition* pos, const char* format, ...) {
+void Compiler::warning_positioned(ParserPosition* pos, const char* format, ...) const {
     if (config->error_file == nullptr)
         return;
     va_list ap;
@@ -17,7 +17,7 @@ void Compiler::warning_positioned(ParserPosition* pos, const char* format, ...) 
     fputc('\n', config->error_file);
 }
 
-void Compiler::warning(const char* format, ...) {
+void Compiler::warning(const char* format, ...) const {
     if (config->error_file == nullptr)
         return;
     va_list ap;
@@ -29,7 +29,7 @@ void Compiler::warning(const char* format, ...) {
     fputc('\n', config->error_file);
 }
 
-void Parser::warning(const char* format, ...) {
+void Parser::warning(const char* format, ...) const {
     if (linked_compiler->config->error_file == nullptr)
         return;
     va_list ap;
@@ -73,7 +73,7 @@ void Compiler::error(const char* format, ...) {
     fputc('\n', config->error_file);
 }
 
-void Parser::error(const char* format, ...) {
+void Parser::error(const char* format, ...) const {
     linked_compiler->state = BONK_COMPILER_STATE_ERROR;
     if (linked_compiler->config->error_file == nullptr)
         return;
@@ -141,7 +141,7 @@ void Compiler::fatal_error(const char* format, ...) {
     fputc('\n', output);
 }
 
-void Parser::fatal_error(const char* format, ...) {
+void Parser::fatal_error(const char* format, ...) const {
     FILE* output = stderr;
     va_list ap;
     va_start(ap, format);

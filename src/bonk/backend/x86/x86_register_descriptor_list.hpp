@@ -10,7 +10,7 @@ struct RegisterDescriptorList {
     RegisterDescriptorList* parent_descriptor_list = nullptr;
     unsigned long offset = 0;
 
-    RegisterDescriptorList(RegisterDescriptorList* other);
+    explicit RegisterDescriptorList(RegisterDescriptorList* other);
 
     RegisterDescriptorList();
 

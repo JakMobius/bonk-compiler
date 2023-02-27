@@ -7,7 +7,7 @@ namespace bonk::x86_backend {
 bool Backend::compile_ast(Compiler* linked_compiler, TreeNodeList<bonk::TreeNode*>* ast,
                           FILE* target) {
 
-    macho::MachoFile* file = new macho::MachoFile();
+    auto* file = new macho::MachoFile();
     BackendContext context{linked_compiler, file};
 
     context.compile_program(ast);

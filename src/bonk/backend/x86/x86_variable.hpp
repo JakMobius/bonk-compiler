@@ -16,10 +16,10 @@ enum VariableType { VARIABLE_TYPE_NUMBER, VARIABLE_TYPE_FUNCTION };
 namespace bonk::x86_backend {
 
 struct Variable {
-    bool is_contextual;
+    bool is_contextual{};
     VariableType type;
     TreeNodeIdentifier* identifier;
-    AbstractRegister storage;
+    AbstractRegister storage{};
 
     Variable(TreeNodeIdentifier* identifier);
 };

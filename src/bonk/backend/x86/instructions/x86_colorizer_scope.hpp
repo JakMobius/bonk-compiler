@@ -8,7 +8,7 @@ struct ScopeCommand : AsmCommand {
 
     CommandList* commands;
 
-    ScopeCommand(CommandList* nested_list);
+    explicit ScopeCommand(CommandList* nested_list);
 
     AsmCommand* clone() override {
         return new ScopeCommand(commands);

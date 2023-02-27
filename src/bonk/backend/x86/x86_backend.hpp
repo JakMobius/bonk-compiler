@@ -14,9 +14,9 @@ namespace bonk::x86_backend {
 
 struct Backend : bonk::Backend {
 
-    Backend(){};
+    Backend()= default;;
 
-    virtual ~Backend(){};
+    ~Backend() override= default;;
 
     bool compile_ast(Compiler* linked_compiler, TreeNodeList<bonk::TreeNode*>* ast,
                      FILE* target) override;

@@ -15,10 +15,10 @@ namespace bonk::x86_backend {
 
 struct RegisterColorizeContextState {
 
-    std::unordered_map<AbstractRegister, bin_heap<AbstractRegisterUsage>*> usage_heap_array;
+    std::unordered_map<AbstractRegister, bin_heap<AbstractRegisterUsage>*> usage_heap_array{};
 
     // Relocation table
-    std::unordered_map<AbstractRegister, AbstractRegisterDescriptor> relocation_info;
+    std::unordered_map<AbstractRegister, AbstractRegisterDescriptor> relocation_info{};
     CommandList* source;
 
     RegisterColorizeContextState(CommandList* list, RegisterColorizeContextState* state);

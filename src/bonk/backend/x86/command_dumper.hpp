@@ -7,15 +7,13 @@
 
 namespace bonk::x86_backend {
 
-class command_dumper {
+class CommandDumper {
   public:
     CommandList* command_list = nullptr;
 
-    command_dumper() {
-    }
+    CommandDumper() = default;
 
-    virtual ~command_dumper() {
-    }
+    virtual ~CommandDumper() = default;
 
     void dump(AsmCommand* command, FILE* file, int depth);
 
@@ -26,9 +24,9 @@ class command_dumper {
 
     void depth_padding(FILE* file, int depth, bool is_label);
 
-    void dump_register(AsmCommand* command, FILE* file, AbstractRegister reg);
+    void dump_register(AsmCommand* command, FILE* file, AbstractRegister reg) const;
 
-    void dump_param_register(AsmCommand* command, FILE* file, CommandParameter param);
+    void dump_param_register(AsmCommand* command, FILE* file, CommandParameter param) const;
 };
 
 } // namespace bonk::x86_backend

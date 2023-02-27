@@ -33,9 +33,9 @@ struct RelocationRequest {
 };
 
 struct CommandEncoder {
-    std::vector<EmplaceRequest> emplace_requests;
-    std::vector<RelocationRequest> relocation_requests;
-    std::vector<char> buffer;
+    std::vector<EmplaceRequest> emplace_requests{};
+    std::vector<RelocationRequest> relocation_requests{};
+    std::vector<char> buffer{};
 
     CommandEncoder();
 

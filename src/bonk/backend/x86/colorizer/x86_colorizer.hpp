@@ -41,12 +41,12 @@ struct RegisterColorizer {
     // to unused_registers_stack to prevent same
     // instruction to use the register which is released
     // by itself
-    std::vector<MachineRegister> registers_to_release;
+    std::vector<MachineRegister> registers_to_release{};
 
-    std::vector<MachineRegister> registers_released_by_command;
+    std::vector<MachineRegister> registers_released_by_command{};
 
     // Stack of unused registers
-    std::vector<MachineRegister> unused_registers_stack;
+    std::vector<MachineRegister> unused_registers_stack{};
 
     // Array of abstract registers associated with corresponding each real machine register
     AbstractRegister* machine_register_map = nullptr;
@@ -54,8 +54,8 @@ struct RegisterColorizer {
     RegisterColorizeContextState* state = nullptr;
     CommandBuffer* source = nullptr;
 
-    std::vector<RegisterColorizeContextState> state_stack;
-    std::unordered_map<JmpLabel*, JmpLabel*> label_map;
+    std::vector<RegisterColorizeContextState> state_stack{};
+    std::unordered_map<JmpLabel*, JmpLabel*> label_map{};
 
     CommandBuffer* output = nullptr;
 
@@ -117,7 +117,7 @@ struct RegisterColorizer {
 
     void destroy_register_if_unused(AbstractRegister reg);
 
-    void release_register_immediately(MachineRegister reg, bool b);
+    void release_register_immediately(MachineRegister reg, bool b) const;
 
     void release_register_after_command(MachineRegister reg);
 
@@ -129,7 +129,7 @@ struct RegisterColorizer {
 
     MachineRegister effective_unused_register(AsmCommand* cmd, bool b);
 
-    void transform_labels();
+    void transform_labels() const;
 
     bool command_uses_register(AsmCommand* cmd, MachineRegister reg, bool ignore_used);
 

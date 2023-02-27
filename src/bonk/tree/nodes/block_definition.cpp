@@ -11,9 +11,9 @@ TreeNodeBlockDefinition::TreeNodeBlockDefinition() : TreeNode() {
 }
 
 TreeNodeBlockDefinition::~TreeNodeBlockDefinition() {
-    if (body)
+
         delete body;
-    if (block_name)
+
         delete block_name;
 
     body = nullptr;

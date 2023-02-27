@@ -69,7 +69,7 @@ struct BackendContext {
 
     ~BackendContext();
 
-    void push_state();
+    void push_state() const;
 
     void pop_state();
 
@@ -79,13 +79,13 @@ struct BackendContext {
 
     void error_already_defined(TreeNodeIdentifier* identifier);
 
-    void error_undefined_reference(TreeNodeIdentifier* node);
+    void error_undefined_reference(TreeNodeIdentifier* node) const;
 
     Variable* field_list_declare_variable(TreeNodeVariableDefinition* node);
 
     void field_list_declare_block(TreeNodeBlockDefinition* node);
 
-    FieldList* field_list_find_block_parameters(TreeNodeBlockDefinition* block);
+    FieldList* field_list_find_block_parameters(TreeNodeBlockDefinition* block) const;
 
     void write_block_promise(TreeNodeBlockDefinition* block);
 
@@ -117,7 +117,7 @@ struct BackendContext {
 
     void pop_initial_state();
 
-    void pop_to_scope(CommandList* scope);
+    void pop_to_scope(CommandList* scope) const;
 
     void compile_bonk_statement(TreeNodeOperator* pOperator);
 
@@ -151,9 +151,9 @@ struct BackendContext {
 
     JumpCommand* compile_boolean_jump(TreeNode* node, bool check_for);
 
-    JmpLabel* insert_label();
+    JmpLabel* insert_label() const;
 
-    JmpLabel* create_label();
+    JmpLabel* create_label() const;
 
     bool compile_logic_operand_recursive(TreeNode* node, JmpLabel* control_label,
                                          CommandList* control_label_list, OperatorType oper_type,
@@ -167,9 +167,9 @@ struct BackendContext {
 
     void compile_call(TreeNodeCall* call);
 
-    void preserve_callee_registers();
+    void preserve_callee_registers() const;
 
-    void write_block_definition(TreeNodeBlockDefinition* definition);
+    void write_block_definition(TreeNodeBlockDefinition* definition) const;
 
     TreeNode*
     call_argument_list_get_value(TreeNodeList<TreeNodeCallParameter*>* argument_list,
@@ -181,7 +181,7 @@ struct BackendContext {
                                    TreeNodeList<TreeNodeCallParameter*>* argument_list,
                                     int i);
 
-    void write_global_var_definition(TreeNodeVariableDefinition* definition);
+    void write_global_var_definition(TreeNodeVariableDefinition* definition) const;
 };
 
 } // namespace bonk::x86_backend

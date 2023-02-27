@@ -85,13 +85,13 @@ struct Lexeme {
 };
 
 struct LexicalAnalyzer {
-    const char* text;
-    ParserPosition position;
+    const char* text{};
+    ParserPosition position{};
     Compiler* linked_compiler;
-    std::vector<Lexeme> lexemes;
-    std::vector<std::string> compiled_files;
-    bool is_line_comment;
-    bool is_multiline_comment;
+    std::vector<Lexeme> lexemes{};
+    std::vector<std::string> compiled_files{};
+    bool is_line_comment{};
+    bool is_multiline_comment{};
 
     void error(const char* format, ...);
 
@@ -99,7 +99,7 @@ struct LexicalAnalyzer {
 
     std::vector<bonk::Lexeme> parse_file(const char* filename, const char* text);
 
-    char next_char();
+    char next_char() const;
 
     void eat_char();
 

@@ -3,7 +3,7 @@
 
 namespace bonk::x86_backend {
 
-CallCommand::CallCommand(CommandParameterSymbol symbol, AbstractRegister* call_arguments,
+CallCommand::CallCommand(CommandParameterSymbol symbol, const AbstractRegister* call_arguments,
                            int amount) {
     type = COMMAND_CALL;
     assert(symbol.ip_relative);

@@ -17,7 +17,7 @@ namespace bonk::ede_backend {
 struct Variable {
     VariableType type;
     TreeNodeIdentifier* identifier;
-    unsigned long byte_offset;
+    unsigned long byte_offset{};
 
     Variable(TreeNodeIdentifier* identifier);
 };

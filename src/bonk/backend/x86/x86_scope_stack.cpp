@@ -3,8 +3,7 @@
 
 namespace bonk::x86_backend {
 
-ScopeStack::ScopeStack() {
-}
+ScopeStack::ScopeStack() = default;
 
 void ScopeStack::push_scope(FieldList* scope) {
     scopes.push_back(scope);

@@ -11,10 +11,10 @@ struct JsonSerializerState {
 struct JsonSerializer {
     FILE* target;
     int depth;
-    JsonSerializerState state;
+    JsonSerializerState state{};
     std::vector<JsonSerializerState> states;
 
-    JsonSerializer(FILE* file);
+    explicit JsonSerializer(FILE* file);
 
     ~JsonSerializer();
 
@@ -38,9 +38,9 @@ struct JsonSerializer {
 
     void close_array();
 
-    void padding();
+    void padding() const;
 
-    void escape_string(const char* string);
+    void escape_string(const char* string) const;
 
     void prepare_next_field();
 };

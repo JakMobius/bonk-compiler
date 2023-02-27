@@ -7,11 +7,11 @@ namespace bonk::x86_backend {
 
 struct FinalOptimizer {
     CommandBuffer* buffer;
-    std::unordered_map<JmpLabel*, JmpLabel*> label_map;
+    std::unordered_map<JmpLabel*, JmpLabel*> label_map{};
 
     static void optimize(CommandBuffer* buffer);
 
-    FinalOptimizer(CommandBuffer* buffer);
+    explicit FinalOptimizer(CommandBuffer* buffer);
 
     void optimize_mov_zeroes() const;
 
@@ -23,7 +23,7 @@ struct FinalOptimizer {
 
     bool remove_dead_ends() const;
 
-    void apply_label_map();
+    void apply_label_map() const;
 };
 
 } // namespace bonk::x86_backend

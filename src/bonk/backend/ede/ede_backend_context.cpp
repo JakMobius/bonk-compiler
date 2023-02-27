@@ -14,7 +14,7 @@ BackendContext::BackendContext(Compiler* compiler, FILE* destination) {
     target = destination;
 }
 
-void BackendContext::error_undefined_reference(TreeNodeIdentifier* node) {
+void BackendContext::error_undefined_reference(TreeNodeIdentifier* node) const {
     ParserPosition* position = node->source_position;
     linked_compiler->error_positioned(position, "undefined reference: '%s'",
                                       node->variable_name.c_str());
@@ -69,7 +69,7 @@ void BackendContext::compile_factor(TreeNode* node) {
 
 void BackendContext::compile_term(TreeNode* node) {
     if (node->type == TREE_NODE_TYPE_OPERATOR) {
-        TreeNodeOperator* oper = (TreeNodeOperator*)node;
+        auto* oper = (TreeNodeOperator*)node;
         OperatorType operator_type = oper->oper_type;
 
         if (operator_type == BONK_OPERATOR_MULTIPLY || operator_type == BONK_OPERATOR_DIVIDE) {
@@ -158,7 +158,7 @@ const char* BackendContext::get_comparsion_instruction_negated(OperatorType oper
 
 void BackendContext::compile_math_comparsion(TreeNode* node) {
     if (node->type == TREE_NODE_TYPE_OPERATOR) {
-        TreeNodeOperator* oper = (TreeNodeOperator*)node;
+        auto* oper = (TreeNodeOperator*)node;
         OperatorType operator_type = oper->oper_type;
 
         const char* comparing_instruction = get_comparsion_instruction(operator_type);
@@ -292,7 +292,7 @@ void BackendContext::compile_call(TreeNodeCall* call) {
 void BackendContext::compile_inline_assembly(TreeNodeOperator* node) {
     fprintf(target, "; inline assembly at line %lu:\n", node->source_position->line);
 
-    TreeNodeIdentifier* inline_asm = (TreeNodeIdentifier*)node->left;
+    auto* inline_asm = (TreeNodeIdentifier*)node->left;
 
     TreeNodeIdentifier inline_variable{""};
     inline_variable.source_position = node->source_position;
@@ -372,7 +372,7 @@ void BackendContext::compile_bonk_statement(TreeNodeOperator* node,
 }
 
 void BackendContext::compile_brek_statement(TreeNodeOperator* node,
-                                             unsigned long stack_bytes_expected) {
+                                             unsigned long stack_bytes_expected) const {
     if (cycle_label_id == 0) {
         linked_compiler->error_positioned(node->source_position, "brek statement outside cycle");
     } else {
@@ -385,7 +385,7 @@ void BackendContext::compile_brek_statement(TreeNodeOperator* node,
 }
 
 void BackendContext::compile_rebonk_statement(TreeNodeOperator* node,
-                                               unsigned long stack_bytes_expected) {
+                                               unsigned long stack_bytes_expected) const {
     if (cycle_label_id == 0) {
         linked_compiler->error_positioned(node->source_position, "rebonk statement outside cycle");
     } else {
@@ -568,7 +568,7 @@ void BackendContext::compile_expression(TreeNode* node, unsigned long stack_byte
     }
 }
 
-void BackendContext::error_already_defined(TreeNodeIdentifier* identifier) {
+void BackendContext::error_already_defined(TreeNodeIdentifier* identifier) const {
     ParserPosition* position = identifier->source_position;
     linked_compiler->error_positioned(position, "variable '%s' is already defined",
                                       identifier->variable_name.c_str());
@@ -592,8 +592,8 @@ void BackendContext::field_list_declare_variable(TreeNodeVariableDefinition* nod
     }
 }
 
-FieldList* BackendContext::field_list_find_block_parameters(TreeNodeBlockDefinition* block) {
-    FieldList* argument_list = new FieldList();
+FieldList* BackendContext::field_list_find_block_parameters(TreeNodeBlockDefinition* block) const {
+    auto* argument_list = new FieldList();
     if (!argument_list)
         return nullptr;
 
@@ -647,7 +647,7 @@ void BackendContext::field_list_declare_block(TreeNodeBlockDefinition* node) {
 FieldList* BackendContext::read_scope_variables(TreeNodeList<TreeNode*>* node,
                                                   bool reset_frame_offset) {
 
-    FieldList* scope = new FieldList();
+    auto* scope = new FieldList();
     if (!scope || !scope_stack.push_scope(scope)) {
         linked_compiler->out_of_memory();
         return nullptr;

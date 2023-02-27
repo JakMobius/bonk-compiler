@@ -6,7 +6,7 @@ namespace bonk::x86_backend {
 
 struct ScopePopCommand : AsmCommand {
 
-    ScopePopCommand(int scopes_to_pop);
+    explicit ScopePopCommand(int scopes_to_pop);
 
     AsmCommand* clone() override {
         return new ScopePopCommand(parameters[0].imm);

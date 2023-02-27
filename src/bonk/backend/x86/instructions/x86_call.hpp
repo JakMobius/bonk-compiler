@@ -6,7 +6,7 @@
 namespace bonk::x86_backend {
 
 struct CallCommand : AsmCommand {
-    CallCommand(CommandParameterSymbol symbol, AbstractRegister* parameters, int amount);
+    CallCommand(CommandParameterSymbol symbol, const AbstractRegister* parameters, int amount);
 
     void to_bytes(CommandEncoder* buffer) override;
 

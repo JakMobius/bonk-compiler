@@ -4,8 +4,7 @@
 
 namespace bonk::x86_backend {
 
-CommandEncoder::CommandEncoder() {
-}
+CommandEncoder::CommandEncoder() = default;
 
 void CommandEncoder::request_emplace(EmplaceRequest request) {
     emplace_requests.push_back(request);

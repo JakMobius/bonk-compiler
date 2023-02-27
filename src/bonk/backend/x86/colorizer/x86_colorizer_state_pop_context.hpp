@@ -22,7 +22,7 @@ struct ColorizerStatePopContext {
     RegisterColorizer* colorizer;
     int states_to_pop;
 
-    std::unordered_map<AbstractRegister, AbstractRegisterDescriptor> target_transform;
+    std::unordered_map<AbstractRegister, AbstractRegisterDescriptor> target_transform{};
 
     ColorizerStatePopContext(RegisterColorizer* the_colorizer, int the_states_to_pop);
 
@@ -30,9 +30,9 @@ struct ColorizerStatePopContext {
 
     bool should_save_register_with_owner(CommandList* owner);
 
-    AbstractRegisterDescriptor get_current_descriptor(AbstractRegister reg);
+    AbstractRegisterDescriptor get_current_descriptor(AbstractRegister reg) const;
 
-    AbstractRegisterDescriptor get_target_descriptor(AbstractRegister reg);
+    AbstractRegisterDescriptor get_target_descriptor(AbstractRegister reg) const;
 
     void restore_registers();
 
@@ -43,9 +43,9 @@ struct ColorizerStatePopContext {
 
     void try_restore_unowned_register_position(AbstractRegister i);
 
-    void restore_register_from_memory(AbstractRegister reg, MachineRegister target);
+    void restore_register_from_memory(AbstractRegister reg, MachineRegister target) const;
 
-    void restore_register_from_symbol(AbstractRegister reg, MachineRegister aRegister);
+    void restore_register_from_symbol(AbstractRegister reg, MachineRegister aRegister) const;
 };
 
 } // namespace bonk::x86_backend

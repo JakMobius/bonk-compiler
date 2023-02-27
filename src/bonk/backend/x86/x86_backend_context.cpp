@@ -135,7 +135,7 @@ Variable* BackendContext::field_list_declare_variable(TreeNodeVariableDefinition
 }
 
 FieldList* BackendContext::read_scope_variables(TreeNodeList<TreeNode*>* node) {
-    FieldList* scope = new FieldList(current_descriptors, state);
+    auto* scope = new FieldList(current_descriptors, state);
     scope_stack->push_scope(scope);
 
     std::list<TreeNode*>* list = &node->list;
@@ -164,8 +164,8 @@ FieldList* BackendContext::read_scope_variables(TreeNodeList<TreeNode*>* node) {
     return scope;
 }
 
-FieldList* BackendContext::field_list_find_block_parameters(TreeNodeBlockDefinition* block) {
-    FieldList* argument_list = new FieldList(current_descriptors, state);
+FieldList* BackendContext::field_list_find_block_parameters(TreeNodeBlockDefinition* block) const {
+    auto* argument_list = new FieldList(current_descriptors, state);
     if (!argument_list)
         return nullptr;
 
@@ -233,11 +233,11 @@ void BackendContext::compile_block(TreeNodeList<TreeNode*>* block) {
     }
 }
 
-void BackendContext::preserve_callee_registers() {
+void BackendContext::preserve_callee_registers() const {
     std::vector<AbstractRegister> registers;
 
-    for (auto i = 0; i < SYSTEM_V_CALLEE_PRESERVED_REGISTERS_COUNT; i++) {
-        registers.push_back(SYSTEM_V_CALLEE_PRESERVED_REGISTERS[i]);
+    for (auto i : SYSTEM_V_CALLEE_PRESERVED_REGISTERS) {
+        registers.push_back(i);
     }
 
     state->current_command_list->commands.push_back(new RegPreserveCommand(registers));
@@ -284,7 +284,7 @@ void BackendContext::write_block_implementation(TreeNodeBlockDefinition* block) 
     compile_block_definition(block);
     pop_initial_state();
 
-    command_dumper().dump_list(procedure_command_buffer->root_list, stdout, 0);
+    CommandDumper().dump_list(procedure_command_buffer->root_list, stdout, 0);
 
     auto colorized_buffer = RegisterColorizer::colorize(procedure_command_buffer);
 
@@ -293,7 +293,7 @@ void BackendContext::write_block_implementation(TreeNodeBlockDefinition* block) 
         fprintf(linked_compiler->config->listing_file, "; == function ==\n%s:\n",
                 block->block_name->variable_name.c_str());
 
-        command_dumper dumper;
+        CommandDumper dumper;
         dumper.dump_list(colorized_buffer->root_list, linked_compiler->config->listing_file, 0);
     }
     colorized_buffer->write_block_to_object_file(block->block_name->variable_name, target);
@@ -449,7 +449,7 @@ AbstractRegister BackendContext::get_variable(TreeNodeIdentifier* identifier) {
     return variable->storage;
 }
 
-void BackendContext::push_state() {
+void BackendContext::push_state() const {
     auto new_command_list = procedure_command_buffer->next_command_list();
     state_stack.push_back({new_command_list});
     state = &state_stack[state_stack.size() - 1];
@@ -507,13 +507,13 @@ void BackendContext::error_already_defined(TreeNodeIdentifier* identifier) {
                                       identifier->variable_name.c_str());
 }
 
-void BackendContext::error_undefined_reference(TreeNodeIdentifier* node) {
+void BackendContext::error_undefined_reference(TreeNodeIdentifier* node) const {
     ParserPosition* position = node->source_position;
     linked_compiler->error_positioned(position, "undefined reference: '%s'",
                                       node->variable_name.c_str());
 }
 
-void BackendContext::pop_to_scope(CommandList* scope) {
+void BackendContext::pop_to_scope(CommandList* scope) const {
     for (int i = state_stack.size() - 1, pop = 0;; i--, pop++) {
         if (scope == state_stack[i].current_command_list) {
             state->current_command_list->commands.push_back(new ScopePopCommand(pop));
@@ -790,11 +790,11 @@ void BackendContext::compile_rebonk_statement(TreeNodeOperator* oper) {
     state->current_command_list->commands.push_back(new JumpCommand(cycle_head, COMMAND_JMP));
 }
 
-JmpLabel* BackendContext::create_label() {
+JmpLabel* BackendContext::create_label() const {
     return new JmpLabel(state->current_command_list->parent_buffer->labels++);
 }
 
-JmpLabel* BackendContext::insert_label() {
+JmpLabel* BackendContext::insert_label() const {
     auto nop = new JmpLabel(state->current_command_list->parent_buffer->labels++);
     state->current_command_list->commands.push_back(nop);
     return nop;
@@ -901,9 +901,9 @@ void BackendContext::compile_call(TreeNodeCall* call) {
 
     std::vector<AbstractRegister> caller_preserved_registers;
 
-    for (int i = 0; i < SYSTEM_V_CALLER_PRESERVED_REGISTERS_COUNT; i++) {
+    for (auto i : SYSTEM_V_CALLER_PRESERVED_REGISTERS) {
         auto reg = procedure_command_buffer->descriptors.next_constrained_register(
-            SYSTEM_V_CALLER_PRESERVED_REGISTERS[i], state->current_command_list);
+            i, state->current_command_list);
         caller_preserved_registers.push_back(reg);
     }
 
@@ -921,7 +921,7 @@ void BackendContext::compile_call(TreeNodeCall* call) {
             rax, state->current_command_list));
 }
 
-void BackendContext::write_block_definition(TreeNodeBlockDefinition* definition) {
+void BackendContext::write_block_definition(TreeNodeBlockDefinition* definition) const {
     if (definition->is_promise) {
         target->declare_external_symbol(definition->block_name->variable_name);
     } else {
@@ -929,7 +929,7 @@ void BackendContext::write_block_definition(TreeNodeBlockDefinition* definition)
     }
 }
 
-void BackendContext::write_global_var_definition(TreeNodeVariableDefinition* definition) {
+void BackendContext::write_global_var_definition(TreeNodeVariableDefinition* definition) const {
     target->declare_internal_symbol(definition->variable_name->variable_name);
 }
 

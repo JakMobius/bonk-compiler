@@ -44,7 +44,7 @@ FinalOptimizer::FinalOptimizer(CommandBuffer* the_buffer) {
     buffer = the_buffer;
 }
 
-void FinalOptimizer::apply_label_map() {
+void FinalOptimizer::apply_label_map() const {
     for (auto i = buffer->root_list->commands.begin(); i != buffer->root_list->commands.end();
          ++i) {
         AsmCommand* command = *i;

@@ -12,7 +12,7 @@ bool TreeNodeIdentifier::contents_equal(TreeNodeIdentifier* other) {
     return variable_name == other->variable_name;
 }
 
-void TreeNodeIdentifier::print(FILE* file) {
+void TreeNodeIdentifier::print(FILE* file) const {
     fprintf(file, "%s", variable_name.c_str());
 }
 

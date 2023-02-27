@@ -48,9 +48,9 @@ struct Compiler {
 
     void error(const char* format, ...);
 
-    void warning_positioned(ParserPosition* pos, const char* format, ...);
+    void warning_positioned(ParserPosition* pos, const char* format, ...) const;
 
-    void warning(const char* format, ...);
+    void warning(const char* format, ...) const;
 
     void fatal_error(const char* format, ...);
 

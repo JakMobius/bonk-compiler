@@ -5,7 +5,7 @@
 
 namespace bonk::x86_backend {
 
-void command_dumper::depth_padding(FILE* file, int depth, bool is_label) {
+void CommandDumper::depth_padding(FILE* file, int depth, bool is_label) {
     if (!is_label)
         fprintf(file, "   ");
     for (int i = 0; i < depth; i++) {
@@ -13,7 +13,7 @@ void command_dumper::depth_padding(FILE* file, int depth, bool is_label) {
     }
 }
 
-void command_dumper::dump_register(AsmCommand* command, FILE* file, AbstractRegister reg) {
+void CommandDumper::dump_register(AsmCommand* command, FILE* file, AbstractRegister reg) const {
 
     if (command_list) {
         AbstractRegisterDescriptor* descriptor =
@@ -27,7 +27,7 @@ void command_dumper::dump_register(AsmCommand* command, FILE* file, AbstractRegi
     fprintf(file, "_r%llu", reg);
 }
 
-void command_dumper::dump_param_register(AsmCommand* command, FILE* file, CommandParameter param) {
+void CommandDumper::dump_param_register(AsmCommand* command, FILE* file, CommandParameter param) const {
 
     if (command_list) {
         AbstractRegisterDescriptor* descriptor =
@@ -46,7 +46,7 @@ void command_dumper::dump_param_register(AsmCommand* command, FILE* file, Comman
     fprintf(file, "_r%llu", param.reg);
 }
 
-void command_dumper::dump_scope_command(AsmCommand* command, FILE* file, int depth) {
+void CommandDumper::dump_scope_command(AsmCommand* command, FILE* file, int depth) {
     depth_padding(file, depth, false);
     fprintf(file, "colorizer::scope {\n");
 
@@ -79,7 +79,7 @@ void command_dumper::dump_scope_command(AsmCommand* command, FILE* file, int dep
     printf("}");
 }
 
-void command_dumper::dump(AsmCommand* command, FILE* file, int depth) {
+void CommandDumper::dump(AsmCommand* command, FILE* file, int depth) {
     if (command->type == COMMAND_COLORIZER_SCOPE) {
         dump_scope_command(command, file, depth);
         return;
@@ -153,7 +153,7 @@ void command_dumper::dump(AsmCommand* command, FILE* file, int depth) {
     }
 }
 
-void command_dumper::dump_list(struct CommandList* list, FILE* file, int depth) {
+void CommandDumper::dump_list(struct CommandList* list, FILE* file, int depth) {
     auto old_list = command_list;
     command_list = list;
     for (auto i = list->commands.begin(); i != list->commands.end(); ++i) {

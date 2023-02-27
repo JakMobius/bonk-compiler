@@ -112,14 +112,14 @@ void JsonSerializer::prepare_next_field() {
     state.is_first = false;
 }
 
-void JsonSerializer::padding() {
+void JsonSerializer::padding() const {
     for (int i = 0; i < depth; i++) {
         fputc(' ', target);
         fputc(' ', target);
     }
 }
 
-void JsonSerializer::escape_string(const char* string) {
+void JsonSerializer::escape_string(const char* string) const {
     if (!string)
         fprintf(target, "null");
     else {

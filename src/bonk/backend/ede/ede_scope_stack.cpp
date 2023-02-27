@@ -3,8 +3,7 @@
 
 namespace bonk::ede_backend {
 
-ScopeStack::ScopeStack() {
-}
+ScopeStack::ScopeStack() = default;
 
 bool ScopeStack::push_scope(FieldList* scope) {
 

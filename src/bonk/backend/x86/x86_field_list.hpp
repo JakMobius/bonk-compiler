@@ -16,7 +16,7 @@ namespace bonk::x86_backend {
 
 struct FieldList {
     int arguments;
-    std::vector<Variable*> variables;
+    std::vector<Variable*> variables{};
     BackendContextState* context_state;
     RegisterDescriptorList* descriptors;
 
@@ -26,7 +26,7 @@ struct FieldList {
 
     Variable* get_variable(TreeNodeIdentifier* identifier);
 
-    bool add_variable(Variable* variable);
+    bool add_variable(Variable* variable) const;
 };
 
 } // namespace bonk::x86_backend

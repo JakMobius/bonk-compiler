@@ -20,9 +20,9 @@ struct BackendContext {
 
     void field_list_declare_block(TreeNodeBlockDefinition* node);
 
-    void error_already_defined(TreeNodeIdentifier* identifier);
+    void error_already_defined(TreeNodeIdentifier* identifier) const;
 
-    void error_undefined_reference(TreeNodeIdentifier* node);
+    void error_undefined_reference(TreeNodeIdentifier* node) const;
 
     const char* get_comparsion_instruction(OperatorType operator_type);
 
@@ -49,11 +49,11 @@ struct BackendContext {
     void compile_assignment(TreeNodeIdentifier* variable, TreeNode* value,
                             unsigned long stack_bytes_expected);
 
-    void compile_rebonk_statement(TreeNodeOperator* node, unsigned long stack_bytes_expected);
+    void compile_rebonk_statement(TreeNodeOperator* node, unsigned long stack_bytes_expected) const;
 
     void compile_bonk_statement(TreeNodeOperator* node, unsigned long stack_bytes_expected);
 
-    void compile_brek_statement(TreeNodeOperator* node, unsigned long stack_bytes_expected);
+    void compile_brek_statement(TreeNodeOperator* node, unsigned long stack_bytes_expected) const;
 
     void compile_inline_assembly(TreeNodeOperator* node);
 
@@ -65,7 +65,7 @@ struct BackendContext {
 
     FieldList* read_scope_variables(TreeNodeList<TreeNode*>*, bool reset_frame_offset);
 
-    FieldList* field_list_find_block_parameters(TreeNodeBlockDefinition* block);
+    FieldList* field_list_find_block_parameters(TreeNodeBlockDefinition* block) const;
 
     unsigned long next_label_id();
 

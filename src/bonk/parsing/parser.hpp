@@ -2,8 +2,8 @@
 
 #pragma once
 
-#include <stdbool.h>
-#include <stdlib.h>
+
+#include <cstdlib>
 #include <cassert>
 
 namespace bonk {
@@ -24,11 +24,11 @@ struct Parser {
     std::vector<Lexeme>* input = nullptr;
     Compiler* linked_compiler = nullptr;
 
-    void warning(const char* format, ...);
+    void warning(const char* format, ...) const;
 
-    void error(const char* format, ...);
+    void error(const char* format, ...) const;
 
-    void fatal_error(const char* format, ...);
+    void fatal_error(const char* format, ...) const;
 
     Lexeme* next_lexeme();
 

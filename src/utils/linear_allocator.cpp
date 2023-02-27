@@ -7,7 +7,7 @@ LinearAllocator::LinearAllocator(unsigned long long the_page_capacity) {
 }
 
 void* LinearAllocator::allocate(unsigned long long capacity) {
-    if (pages.size() > 0) {
+    if (!pages.empty()) {
         LinearAllocatorPage& page = pages[pages.size() - 1];
         if (page.capacity - page.usage >= capacity) {
             void* address = (char*)page.address + page.usage;
@@ -24,8 +24,8 @@ void* LinearAllocator::allocate(unsigned long long capacity) {
 }
 
 void LinearAllocator::clear() {
-    for (int i = 0; i < pages.size(); i++) {
-        free(pages[i].address);
+    for (auto & page : pages) {
+        free(page.address);
     }
     pages.clear();
 }

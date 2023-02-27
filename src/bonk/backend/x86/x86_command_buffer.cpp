@@ -41,7 +41,7 @@ CommandList* CommandBuffer::next_command_list() {
 }
 
 CommandEncoder* CommandBuffer::to_bytes() {
-    CommandEncoder* encoder = new CommandEncoder();
+    auto* encoder = new CommandEncoder();
 
     for (auto i = root_list->commands.begin(); i != root_list->commands.end(); ++i) {
         AsmCommand* command = *i;

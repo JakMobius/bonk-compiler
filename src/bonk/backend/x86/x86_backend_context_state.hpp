@@ -14,7 +14,7 @@ struct BackendContextState {
     RegStack register_stack;
     CommandList* current_command_list;
 
-    BackendContextState(CommandList* current_command_list);
+    explicit BackendContextState(CommandList* current_command_list);
 };
 
 } // namespace bonk::x86_backend

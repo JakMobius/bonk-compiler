@@ -5,7 +5,7 @@
 namespace bonk::x86_backend {
 
 struct RegPreserveCommand : AsmCommand {
-    RegPreserveCommand(const std::vector<AbstractRegister>& registers_to_preserve,
+    explicit RegPreserveCommand(const std::vector<AbstractRegister>& registers_to_preserve,
                          bool read = true, bool write = true);
 
     AsmCommand* clone() override {

@@ -20,7 +20,7 @@ Variable* FieldList::get_variable(TreeNodeIdentifier* identifier) {
     return nullptr;
 }
 
-bool FieldList::add_variable(Variable* variable) {
+bool FieldList::add_variable(Variable* variable) const {
     CommandList* list = nullptr;
     if (context_state)
         list = context_state->current_command_list;

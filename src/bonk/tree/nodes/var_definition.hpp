@@ -18,7 +18,7 @@ struct TreeNodeVariableDefinition : TreeNode {
 
     TreeNodeVariableDefinition(bool contextual, TreeNodeIdentifier* identifier);
 
-    ~TreeNodeVariableDefinition();
+    ~TreeNodeVariableDefinition() override;
 
     void serialize(JsonSerializer* file) override;
 };

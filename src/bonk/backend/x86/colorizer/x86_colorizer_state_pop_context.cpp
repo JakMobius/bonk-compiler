@@ -132,7 +132,7 @@ void ColorizerStatePopContext::try_restore_unowned_register_position(AbstractReg
 }
 
 void ColorizerStatePopContext::restore_register_from_symbol(AbstractRegister reg,
-                                                            MachineRegister target) {
+                                                            MachineRegister target) const {
     AbstractRegister used_register = colorizer->machine_register_map[target];
 
     if (used_register != -1) {
@@ -144,7 +144,7 @@ void ColorizerStatePopContext::restore_register_from_symbol(AbstractRegister reg
 }
 
 void ColorizerStatePopContext::restore_register_from_memory(AbstractRegister reg,
-                                                            MachineRegister target) {
+                                                            MachineRegister target) const {
     AbstractRegister used_register = colorizer->machine_register_map[target];
 
     if (used_register != -1) {
@@ -221,11 +221,11 @@ void ColorizerStatePopContext::restore_registers() {
     }
 }
 
-AbstractRegisterDescriptor ColorizerStatePopContext::get_current_descriptor(AbstractRegister reg) {
+AbstractRegisterDescriptor ColorizerStatePopContext::get_current_descriptor(AbstractRegister reg) const {
     return *colorizer->source->descriptors.get_descriptor(reg);
 }
 
-AbstractRegisterDescriptor ColorizerStatePopContext::get_target_descriptor(AbstractRegister reg) {
+AbstractRegisterDescriptor ColorizerStatePopContext::get_target_descriptor(AbstractRegister reg) const {
     auto it = target_transform.find(reg);
     if (it != target_transform.end())
         return it->second;

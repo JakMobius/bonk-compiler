@@ -41,7 +41,7 @@ struct TreeNodeOperator : TreeNode {
     TreeNode* left = nullptr;
     TreeNode* right = nullptr;
 
-    TreeNodeOperator(OperatorType oper);
+    explicit TreeNodeOperator(OperatorType oper);
 
     void serialize(JsonSerializer* file) override;
 };

@@ -14,7 +14,7 @@ struct ScopeStack;
 namespace bonk::x86_backend {
 
 struct ScopeStack {
-    std::vector<FieldList*> scopes;
+    std::vector<FieldList*> scopes{};
 
     ScopeStack();
 

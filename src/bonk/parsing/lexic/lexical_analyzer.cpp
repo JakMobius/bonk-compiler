@@ -225,7 +225,7 @@ std::vector<Lexeme> LexicalAnalyzer::parse_file(const char* filename, const char
     return result;
 }
 
-char LexicalAnalyzer::next_char() {
+char LexicalAnalyzer::next_char() const {
     return text[position.index];
 }
 

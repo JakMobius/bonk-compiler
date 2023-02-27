@@ -50,7 +50,7 @@ bool parse_grammatic_help(Parser* thou, TreeNodeList<TreeNode*>* target) {
                 thou->linked_compiler->lexical_analyzer->parse_file(full_path, source);
 
             if (!thou->linked_compiler->state) {
-                Parser* nested_parser = new Parser(thou->linked_compiler);
+                auto* nested_parser = new Parser(thou->linked_compiler);
 
                 if (!nested_parser) {
                     free(full_path);

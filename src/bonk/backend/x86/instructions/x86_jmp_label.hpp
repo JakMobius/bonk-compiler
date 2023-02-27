@@ -9,7 +9,7 @@ namespace bonk::x86_backend {
 
 struct JmpLabel : AsmCommand {
 
-    JmpLabel(long long label);
+    explicit JmpLabel(long long label);
 
     void to_bytes(CommandEncoder* buffer) override;
 
