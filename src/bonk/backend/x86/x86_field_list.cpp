@@ -3,13 +3,13 @@
 
 namespace bonk::x86_backend {
 
-field_list::field_list(register_descriptor_list* descriptor_list, backend_context_state* state) {
+FieldList::FieldList(RegisterDescriptorList* descriptor_list, BackendContextState* state) {
     descriptors = descriptor_list;
     context_state = state;
     arguments = 0;
 }
 
-variable* field_list::get_variable(tree_node_identifier* identifier) {
+Variable* FieldList::get_variable(TreeNodeIdentifier* identifier) {
 
     for (int i = 0; i < variables.size(); i++) {
         if (variables[i]->identifier->contents_equal(identifier)) {
@@ -20,8 +20,8 @@ variable* field_list::get_variable(tree_node_identifier* identifier) {
     return nullptr;
 }
 
-bool field_list::add_variable(variable* variable) {
-    command_list* list = nullptr;
+bool FieldList::add_variable(Variable* variable) {
+    CommandList* list = nullptr;
     if (context_state)
         list = context_state->current_command_list;
     //    if(variable->is_contextual) {
@@ -39,7 +39,7 @@ bool field_list::add_variable(variable* variable) {
     return true;
 }
 
-field_list::~field_list() {
+FieldList::~FieldList() {
     for (int i = 0; i < variables.size(); i++) {
         delete variables[i];
     }

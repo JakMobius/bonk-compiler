@@ -3,7 +3,7 @@
 
 namespace bonk::x86_backend {
 
-static bool is_conditional_jump(asm_command_type type) {
+static bool is_conditional_jump(AsmCommandType type) {
     switch (type) {
     case COMMAND_JE:
     case COMMAND_JNE:
@@ -17,8 +17,8 @@ static bool is_conditional_jump(asm_command_type type) {
     }
 }
 
-void final_optimizer::optimize(command_buffer* buffer) {
-    final_optimizer optimizer = {buffer};
+void FinalOptimizer::optimize(CommandBuffer* buffer) {
+    FinalOptimizer optimizer = {buffer};
     optimizer.remove_useless_movs();
     optimizer.apply_label_map();
     optimizer.remove_useless_labels();
@@ -40,14 +40,14 @@ void final_optimizer::optimize(command_buffer* buffer) {
     optimizer.optimize_mov_zeroes();
 }
 
-final_optimizer::final_optimizer(command_buffer* the_buffer) {
+FinalOptimizer::FinalOptimizer(CommandBuffer* the_buffer) {
     buffer = the_buffer;
 }
 
-void final_optimizer::apply_label_map() {
+void FinalOptimizer::apply_label_map() {
     for (auto i = buffer->root_list->begin(); i != buffer->root_list->end();
          i = buffer->root_list->end()) {
-        asm_command* command = buffer->root_list->get(i);
+        AsmCommand* command = buffer->root_list->get(i);
 
         for (auto & parameter : command->parameters) {
             auto param = parameter;
@@ -69,9 +69,9 @@ void final_optimizer::apply_label_map() {
     label_map.clear();
 }
 
-void final_optimizer::remove_useless_movs() const {
+void FinalOptimizer::remove_useless_movs() const {
     for (auto i = buffer->root_list->begin(); i != buffer->root_list->end();) {
-        asm_command* command = buffer->root_list->get(i);
+        AsmCommand* command = buffer->root_list->get(i);
 
         // Removing mov rax, rax commands
         if (command->type == COMMAND_MOV) {
@@ -90,29 +90,29 @@ void final_optimizer::remove_useless_movs() const {
     }
 }
 
-bool final_optimizer::remove_double_jmps() const {
+bool FinalOptimizer::remove_double_jmps() const {
     bool result = false;
     for (auto i = buffer->root_list->begin(); i != buffer->root_list->end();) {
-        asm_command* command = buffer->root_list->get(i);
+        AsmCommand* command = buffer->root_list->get(i);
 
         // Removing mov rax, rax commands
         if (is_conditional_jump(command->type)) {
-            auto* jmp = (jump_command*)command;
+            auto* jmp = (JumpCommand*)command;
             auto walker = i;
             buffer->root_list->next_iterator(&walker);
 
             if (walker == buffer->root_list->end())
                 break;
-            asm_command* first_next_command = buffer->root_list->get(walker);
+            AsmCommand* first_next_command = buffer->root_list->get(walker);
             buffer->root_list->next_iterator(&walker);
             if (walker == buffer->root_list->end())
                 break;
-            asm_command* second_next_command = buffer->root_list->get(walker);
+            AsmCommand* second_next_command = buffer->root_list->get(walker);
 
             if (jmp->get_label() == second_next_command &&
                 first_next_command->type == COMMAND_JMP) {
-                ((jump_command*)first_next_command)->type = jmp->type;
-                ((jump_command*)first_next_command)->invert_condition();
+                ((JumpCommand*)first_next_command)->type = jmp->type;
+                ((JumpCommand*)first_next_command)->invert_condition();
                 auto old = i;
                 jmp->set_label(nullptr);
                 i = buffer->root_list->next_iterator(i);
@@ -126,12 +126,12 @@ bool final_optimizer::remove_double_jmps() const {
     return result;
 }
 
-void final_optimizer::remove_useless_labels() const {
+void FinalOptimizer::remove_useless_labels() const {
 
     std::vector<bool> label_used;
 
     for (auto i = buffer->root_list->begin(); i != buffer->root_list->end();) {
-        asm_command* command = buffer->root_list->get(i);
+        AsmCommand* command = buffer->root_list->get(i);
 
         for (auto param : command->parameters) {
             if (param.type == PARAMETER_TYPE_LABEL) {
@@ -145,10 +145,10 @@ void final_optimizer::remove_useless_labels() const {
     }
 
     for (auto i = buffer->root_list->begin(); i != buffer->root_list->end();) {
-        asm_command* command = buffer->root_list->get(i);
+        AsmCommand* command = buffer->root_list->get(i);
 
         if (command->type == COMMAND_JMP_LABEL) {
-            auto* label = (jmp_label*)command;
+            auto* label = (JmpLabel*)command;
             if (!label_used[label->get_index()]) {
                 auto old = i;
                 i = buffer->root_list->next_iterator(i);
@@ -160,10 +160,10 @@ void final_optimizer::remove_useless_labels() const {
     }
 }
 
-bool final_optimizer::remove_dead_ends() const {
+bool FinalOptimizer::remove_dead_ends() const {
     bool result = false;
     for (auto i = buffer->root_list->begin(); i != buffer->root_list->end();) {
-        asm_command* command = buffer->root_list->get(i);
+        AsmCommand* command = buffer->root_list->get(i);
         i = buffer->root_list->next_iterator(i);
 
         if (command->type == COMMAND_RET || command->type == COMMAND_JMP) {
@@ -181,10 +181,10 @@ bool final_optimizer::remove_dead_ends() const {
     return result;
 }
 
-void final_optimizer::optimize_mov_zeroes() const {
+void FinalOptimizer::optimize_mov_zeroes() const {
     for (auto i = buffer->root_list->begin(); i != buffer->root_list->end();
          buffer->root_list->next_iterator(&i)) {
-        asm_command* command = buffer->root_list->get(i);
+        AsmCommand* command = buffer->root_list->get(i);
 
         if (command->type == COMMAND_MOV) {
             auto first_param = command->parameters[0];
@@ -192,8 +192,8 @@ void final_optimizer::optimize_mov_zeroes() const {
             if (first_param.type == PARAMETER_TYPE_REG_64 &&
                 second_param.type == PARAMETER_TYPE_IMM32 && second_param.imm == 0) {
                 buffer->root_list->set(
-                    i, new xor_command(command_parameter::create_register_64(first_param.reg),
-                                       command_parameter::create_register_64(first_param.reg)));
+                    i, new XorCommand(CommandParameter::create_register_64(first_param.reg),
+                                       CommandParameter::create_register_64(first_param.reg)));
             }
         }
     }

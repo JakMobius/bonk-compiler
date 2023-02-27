@@ -7,13 +7,13 @@
 
 namespace bonk::x86_backend {
 
-struct xor_command : asm_command {
-    xor_command(command_parameter target, command_parameter source);
+struct XorCommand : AsmCommand {
+    XorCommand(CommandParameter target, CommandParameter source);
 
-    void to_bytes(command_encoder* buffer) override;
+    void to_bytes(CommandEncoder* buffer) override;
 
-    asm_command* clone() override {
-        return new xor_command(parameters[0], parameters[1]);
+    AsmCommand* clone() override {
+        return new XorCommand(parameters[0], parameters[1]);
     }
 };
 

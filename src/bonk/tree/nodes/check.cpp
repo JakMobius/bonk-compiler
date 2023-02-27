@@ -3,7 +3,7 @@
 
 namespace bonk {
 
-tree_node_check::tree_node_check() : tree_node() {
+TreeNodeCheck::TreeNodeCheck() : TreeNode() {
     condition = nullptr;
     check_body = nullptr;
     or_body = nullptr;
@@ -11,7 +11,7 @@ tree_node_check::tree_node_check() : tree_node() {
     type = TREE_NODE_TYPE_CHECK;
 }
 
-tree_node_check::~tree_node_check() {
+TreeNodeCheck::~TreeNodeCheck() {
     delete condition;
     delete check_body;
     delete or_body;
@@ -21,8 +21,8 @@ tree_node_check::~tree_node_check() {
     or_body = nullptr;
 }
 
-void tree_node_check::serialize(json_serializer* serializer) {
-    tree_node::serialize(serializer);
+void TreeNodeCheck::serialize(JsonSerializer* serializer) {
+    TreeNode::serialize(serializer);
 
     serializer->block_string_field("type", "check");
 

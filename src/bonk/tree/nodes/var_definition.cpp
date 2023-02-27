@@ -3,16 +3,16 @@
 
 namespace bonk {
 
-tree_node_variable_definition::tree_node_variable_definition(bool contextual,
-                                                             tree_node_identifier* identifier) {
+TreeNodeVariableDefinition::TreeNodeVariableDefinition(bool contextual,
+                                                             TreeNodeIdentifier* identifier) {
     variable_name = identifier;
     is_contextual = contextual;
     variable_value = nullptr;
     type = TREE_NODE_TYPE_VAR_DEFINITION;
 }
 
-void tree_node_variable_definition::serialize(json_serializer* serializer) {
-    tree_node::serialize(serializer);
+void TreeNodeVariableDefinition::serialize(JsonSerializer* serializer) {
+    TreeNode::serialize(serializer);
 
     serializer->block_string_field("type", "var_definition");
     if (variable_name) {
@@ -32,7 +32,7 @@ void tree_node_variable_definition::serialize(json_serializer* serializer) {
     }
 }
 
-tree_node_variable_definition::~tree_node_variable_definition() {
+TreeNodeVariableDefinition::~TreeNodeVariableDefinition() {
     delete variable_name;
     delete variable_value;
 

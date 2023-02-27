@@ -3,11 +3,11 @@
 
 namespace bonk {
 
-struct lexeme;
-struct lexical_analyzer;
-struct parser_position;
+struct Lexeme;
+struct LexicalAnalyzer;
+struct ParserPosition;
 
-enum lexeme_type {
+enum LexemeType {
     BONK_LEXEME_NULL,
     BONK_LEXEME_KEYWORD,
     BONK_LEXEME_IDENTIFIER,
@@ -20,7 +20,7 @@ enum lexeme_type {
     BONK_LEXEME_INLINE_BAMS
 };
 
-enum keyword_type {
+enum KeywordType {
     BONK_KEYWORD_VAR,
     BONK_KEYWORD_BLOCK,
     BONK_KEYWORD_PRINT,
@@ -37,7 +37,7 @@ enum keyword_type {
     BONK_KEYWORD_PROMISE
 };
 
-enum brace_type {
+enum BraceType {
     BONK_BRACE_L_CB,
     BONK_BRACE_R_CB,
     BONK_BRACE_L_RB,
@@ -61,59 +61,59 @@ namespace bonk {
 extern const char* BONK_OPERATOR_NAMES[];
 extern const char* BONK_KEYWORD_NAMES[];
 
-struct lexeme {
-    parser_position* position;
-    lexeme_type type;
+struct Lexeme {
+    ParserPosition* position;
+    LexemeType type;
 
     union {
         struct {
-            keyword_type keyword_type;
+            KeywordType keyword_type;
         } keyword_data;
         struct {
-            brace_type brace_type;
+            BraceType brace_type;
         } brace_data;
         struct {
-            tree_node_number* number;
+            TreeNodeNumber* number;
         } number_data;
         struct {
-            tree_node_identifier* identifier;
+            TreeNodeIdentifier* identifier;
         } identifier_data;
         struct {
-            operator_type operator_type;
+            OperatorType operator_type;
         } operator_data;
     };
 };
 
-struct lexical_analyzer {
+struct LexicalAnalyzer {
     const char* text;
-    parser_position position;
-    compiler* linked_compiler;
-    std::vector<lexeme> lexemes;
+    ParserPosition position;
+    Compiler* linked_compiler;
+    std::vector<Lexeme> lexemes;
     std::vector<std::string> compiled_files;
     bool is_line_comment;
     bool is_multiline_comment;
 
     void error(const char* format, ...);
 
-    lexical_analyzer(compiler* compiler);
+    LexicalAnalyzer(Compiler* compiler);
 
-    std::vector<bonk::lexeme> parse_file(const char* filename, const char* text);
+    std::vector<bonk::Lexeme> parse_file(const char* filename, const char* text);
 
     char next_char();
 
     void eat_char();
 
-    bool parse_number_lexeme(lexeme* target);
+    bool parse_number_lexeme(Lexeme* target);
 
     int parse_digits_lexeme(int radix, long long int* integer_value, double* float_value);
 
-    bool parse_identifier_lexeme(lexeme* target);
+    bool parse_identifier_lexeme(Lexeme* target);
 
-    void make_operator_lexeme(lexeme* lexeme, operator_type type);
+    void make_operator_lexeme(Lexeme* lexeme, OperatorType type);
 
-    void make_brace_lexeme(lexeme* lexeme, brace_type type);
+    void make_brace_lexeme(Lexeme* lexeme, BraceType type);
 
-    keyword_type keyword_from_string(std::string_view string);
+    KeywordType keyword_from_string(std::string_view string);
 
     bool add_compiled_file(const std::string& file_path);
 

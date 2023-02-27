@@ -7,9 +7,9 @@
 
 namespace bonk {
 
-tree_node_variable_definition* parse_grammatic_var_definition(parser* parser) {
+TreeNodeVariableDefinition* parse_grammatic_var_definition(Parser* parser) {
 
-    lexeme* next = parser->next_lexeme();
+    Lexeme* next = parser->next_lexeme();
     bool is_contextual = false;
 
     if (next->type != BONK_LEXEME_KEYWORD)
@@ -37,8 +37,8 @@ tree_node_variable_definition* parse_grammatic_var_definition(parser* parser) {
 
     parser->eat_lexeme();
 
-    tree_node_variable_definition* definition =
-        new tree_node_variable_definition(is_contextual, next->identifier_data.identifier);
+    TreeNodeVariableDefinition* definition =
+        new TreeNodeVariableDefinition(is_contextual, next->identifier_data.identifier);
 
     definition->source_position = next->position->clone();
 

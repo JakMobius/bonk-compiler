@@ -7,14 +7,14 @@
 using namespace bonk::x86_backend;
 
 TEST(EncodingX86, MovCommandRegRegMem) {
-    auto* cbuffer = new command_buffer();
+    auto* cbuffer = new CommandBuffer();
 
     // mov reg, [reg]
     for (int i = 0; i < 16; i++) {
         for (int j = 0; j < 16; j++) {
-            cbuffer->root_list->insert_tail(new mov_command(
-                command_parameter::create_register_64(i),
-                command_parameter::create_memory(command_parameter_memory::create_reg(j))));
+            cbuffer->root_list->insert_tail(new MovCommand(
+                CommandParameter::create_register_64(i),
+                CommandParameter::create_memory(CommandParameterMemory::create_reg(j))));
         }
     }
 

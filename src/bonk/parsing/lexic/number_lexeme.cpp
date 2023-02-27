@@ -30,7 +30,7 @@ static unsigned char char_to_digit_radix(char c, int radix) {
     return -1;
 }
 
-bool lexical_analyzer::parse_number_lexeme(lexeme* target) {
+bool LexicalAnalyzer::parse_number_lexeme(Lexeme* target) {
     int fraction_digits = 0;
     long long integer_result = 0;
     double float_result = 0;
@@ -108,7 +108,7 @@ bool lexical_analyzer::parse_number_lexeme(lexeme* target) {
         }
     }
 
-    tree_node_number* result = new tree_node_number(float_result, integer_result);
+    TreeNodeNumber* result = new TreeNodeNumber(float_result, integer_result);
     result->source_position = target->position->clone();
 
     target->type = BONK_LEXEME_NUMBER;
@@ -117,7 +117,7 @@ bool lexical_analyzer::parse_number_lexeme(lexeme* target) {
     return true;
 }
 
-int lexical_analyzer::parse_digits_lexeme(int radix, long long* integer_value,
+int LexicalAnalyzer::parse_digits_lexeme(int radix, long long* integer_value,
                                           double* float_value) {
     long long integer_result = 0;
     double float_result = 0;

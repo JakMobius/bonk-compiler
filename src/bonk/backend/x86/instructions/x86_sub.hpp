@@ -7,13 +7,13 @@
 
 namespace bonk::x86_backend {
 
-struct sub_command : asm_command {
-    sub_command(command_parameter target, command_parameter source);
+struct SubCommand : AsmCommand {
+    SubCommand(CommandParameter target, CommandParameter source);
 
-    void to_bytes(command_encoder* buffer) override;
+    void to_bytes(CommandEncoder* buffer) override;
 
-    asm_command* clone() override {
-        return new sub_command(parameters[0], parameters[1]);
+    AsmCommand* clone() override {
+        return new SubCommand(parameters[0], parameters[1]);
     }
 };
 

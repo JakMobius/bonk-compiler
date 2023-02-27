@@ -2,17 +2,17 @@
 
 #include <vector>
 
-struct linear_allocator_page {
+struct LinearAllocatorPage {
     void* address;
     unsigned long long usage;
     unsigned long long capacity;
 };
 
-struct linear_allocator {
-    std::vector<linear_allocator_page> pages;
+struct LinearAllocator {
+    std::vector<LinearAllocatorPage> pages;
     unsigned long long page_capacity;
 
-    linear_allocator(unsigned long long page_capacity = 1024);
+    LinearAllocator(unsigned long long page_capacity = 1024);
 
     void set_page_capacity(unsigned long long page_capacity);
 

@@ -7,16 +7,16 @@
 
 namespace bonk::x86_backend {
 
-struct jmp_label : asm_command {
+struct JmpLabel : AsmCommand {
 
-    jmp_label(long long label);
+    JmpLabel(long long label);
 
-    void to_bytes(command_encoder* buffer) override;
+    void to_bytes(CommandEncoder* buffer) override;
 
     unsigned long get_index();
 
-    asm_command* clone() override {
-        return new jmp_label(parameters[0].imm);
+    AsmCommand* clone() override {
+        return new JmpLabel(parameters[0].imm);
     }
 };
 

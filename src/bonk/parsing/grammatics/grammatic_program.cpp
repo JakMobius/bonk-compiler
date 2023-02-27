@@ -7,21 +7,21 @@
 
 namespace bonk {
 
-tree_node* parse_grammatic_global_definition(parser* parser) {
-    tree_node* expression = parse_grammatic_block_definition(parser);
+TreeNode* parse_grammatic_global_definition(Parser* parser) {
+    TreeNode* expression = parse_grammatic_block_definition(parser);
     if (expression)
         return expression;
     if (parser->linked_compiler->state)
         return nullptr;
 
-    tree_node_variable_definition* variable_definition = parse_grammatic_var_definition(parser);
+    TreeNodeVariableDefinition* variable_definition = parse_grammatic_var_definition(parser);
     if (variable_definition) {
         if (variable_definition->is_contextual) {
             parser->error("global variables may not be contextual");
             delete variable_definition;
             return nullptr;
         }
-        lexeme* next = parser->next_lexeme();
+        Lexeme* next = parser->next_lexeme();
         if (next->type != BONK_LEXEME_SEMICOLON) {
             parser->error("expected semicolon");
             delete variable_definition;
@@ -34,9 +34,9 @@ tree_node* parse_grammatic_global_definition(parser* parser) {
     return nullptr;
 }
 
-bool parse_grammatic_program(parser* parser, tree_node_list<tree_node*>* target) {
+bool parse_grammatic_program(Parser* parser, TreeNodeList<TreeNode*>* target) {
 
-    tree_node* block = parse_grammatic_global_definition(parser);
+    TreeNode* block = parse_grammatic_global_definition(parser);
     if (!block) {
         return false;
     }

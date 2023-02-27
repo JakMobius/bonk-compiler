@@ -2,23 +2,23 @@
 
 namespace bonk::x86_backend {
 
-struct backend;
+struct Backend;
 
 }
 
 #include "../../compiler.hpp"
 #include "../../tree/nodes/nodes.hpp"
-#include "../backend.hpp"
+#include "bonk/backend/backend.hpp"
 
 namespace bonk::x86_backend {
 
-struct backend : bonk::backend {
+struct Backend : bonk::Backend {
 
-    backend(){};
+    Backend(){};
 
-    virtual ~backend(){};
+    virtual ~Backend(){};
 
-    bool compile_ast(compiler* linked_compiler, tree_node_list<bonk::tree_node*>* ast,
+    bool compile_ast(Compiler* linked_compiler, TreeNodeList<bonk::TreeNode*>* ast,
                      FILE* target) override;
 };
 

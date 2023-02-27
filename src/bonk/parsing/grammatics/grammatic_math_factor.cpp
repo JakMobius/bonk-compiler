@@ -7,15 +7,15 @@
 
 namespace bonk {
 
-tree_node* parse_grammatic_math_factor(parser* parser) {
-    tree_node* result = nullptr;
+TreeNode* parse_grammatic_math_factor(Parser* parser) {
+    TreeNode* result = nullptr;
 
     result = parse_grammatic_reference(parser);
     if (result)
         return result;
 
     if (parser->next_lexeme()->type == BONK_LEXEME_NUMBER) {
-        result = (tree_node*)parser->next_lexeme()->number_data.number;
+        result = (TreeNode*)parser->next_lexeme()->number_data.number;
         parser->eat_lexeme();
         return result;
     }

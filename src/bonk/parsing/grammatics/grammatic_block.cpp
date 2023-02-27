@@ -7,8 +7,8 @@
 
 namespace bonk {
 
-tree_node* parse_code_line(parser* parser) {
-    tree_node* expression = parse_grammatic_expression_leveled(parser, true);
+TreeNode* parse_code_line(Parser* parser) {
+    TreeNode* expression = parse_grammatic_expression_leveled(parser, true);
     if (expression)
         return expression;
     if (parser->linked_compiler->state)
@@ -17,9 +17,9 @@ tree_node* parse_code_line(parser* parser) {
     return nullptr;
 }
 
-tree_node_list<tree_node*>* parse_grammatic_block(parser* parser) {
+TreeNodeList<TreeNode*>* parse_grammatic_block(Parser* parser) {
 
-    auto* list = new tree_node_list<tree_node*>();
+    auto* list = new TreeNodeList<TreeNode*>();
 
     if (!list) {
         parser->linked_compiler->out_of_memory();
@@ -29,7 +29,7 @@ tree_node_list<tree_node*>* parse_grammatic_block(parser* parser) {
     auto* result = list;
 
     do {
-        tree_node* block = parse_code_line(parser);
+        TreeNode* block = parse_code_line(parser);
         if (parser->linked_compiler->state)
             return nullptr;
 

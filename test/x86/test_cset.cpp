@@ -8,14 +8,14 @@ using namespace bonk::x86_backend;
 
 TEST(EncodingX86, CSetCommand) {
 
-    auto* cbuffer = new command_buffer();
+    auto* cbuffer = new CommandBuffer();
 
-    cbuffer->root_list->insert_tail(new cset_command(rax, COMMAND_SETE));
-    cbuffer->root_list->insert_tail(new cset_command(rax, COMMAND_SETNE));
-    cbuffer->root_list->insert_tail(new cset_command(rax, COMMAND_SETG));
-    cbuffer->root_list->insert_tail(new cset_command(rax, COMMAND_SETNG));
-    cbuffer->root_list->insert_tail(new cset_command(rax, COMMAND_SETL));
-    cbuffer->root_list->insert_tail(new cset_command(rax, COMMAND_SETNL));
+    cbuffer->root_list->insert_tail(new CSetCommand(rax, COMMAND_SETE));
+    cbuffer->root_list->insert_tail(new CSetCommand(rax, COMMAND_SETNE));
+    cbuffer->root_list->insert_tail(new CSetCommand(rax, COMMAND_SETG));
+    cbuffer->root_list->insert_tail(new CSetCommand(rax, COMMAND_SETNG));
+    cbuffer->root_list->insert_tail(new CSetCommand(rax, COMMAND_SETL));
+    cbuffer->root_list->insert_tail(new CSetCommand(rax, COMMAND_SETNL));
 
     auto encoder = cbuffer->to_bytes();
     auto& buffer = encoder->buffer;

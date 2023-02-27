@@ -3,21 +3,21 @@
 #include <cstdio>
 #include <cstdlib>
 #include <string>
-#include "../../../utils/json_serializer.hpp"
+#include "../../../utils/JsonSerializer.hpp"
 #include "node.hpp"
 
 namespace bonk {
 
-struct tree_node_identifier : tree_node {
+struct TreeNodeIdentifier : TreeNode {
     std::string variable_name;
 
-    tree_node_identifier(const std::string& name);
+    TreeNodeIdentifier(const std::string& name);
 
-    bool contents_equal(tree_node_identifier* other);
+    bool contents_equal(TreeNodeIdentifier* other);
 
     void print(FILE* file);
 
-    void serialize(json_serializer* file) override;
+    void serialize(JsonSerializer* file) override;
 };
 
 } // namespace bonk

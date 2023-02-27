@@ -4,7 +4,7 @@
 #include <cstdlib>
 #include <cstring>
 
-enum mlist_op_result {
+enum MListOpResult {
     LIST_OP_OK,
     LIST_OP_NOMEM,
     LIST_OP_OVERFLOW,
@@ -13,15 +13,15 @@ enum mlist_op_result {
     LIST_OP_SEGFAULT
 };
 
-template <typename T> class mlist {
-    struct node {
+template <typename T> class MList {
+    struct Node {
         size_t next;
         size_t previous;
         T value;
         bool valid;
     };
 
-    node* storage;
+    Node* storage;
     bool optimized;
     constexpr static int INITIAL_INCREASE = 32;
 
@@ -32,20 +32,20 @@ template <typename T> class mlist {
     size_t freeSize;
 
   public:
-    mlist(size_t initial_size = 16) {
+    MList(size_t initial_size = 16) {
         optimized = true;
         capacity = initial_size;
         size = 0;
         freeSize = 0;
         freePtr = 0;
-        this->storage = (node*)calloc(initial_size + 1, sizeof(node));
+        this->storage = (Node*)calloc(initial_size + 1, sizeof(Node));
 
         storage[0].next = 0;
         storage[0].previous = 0;
         storage[0].valid = false;
     }
 
-    ~mlist() {
+    ~MList() {
         free(this->storage);
     }
 
@@ -73,7 +73,7 @@ template <typename T> class mlist {
      * Reallocates container so that it can hold one more value
      * Reallocation is not performed if some freeSize cells are available.
      */
-    mlist_op_result reallocate() {
+    MListOpResult reallocate() {
         if (this->freeSize != 0)
             return LIST_OP_OK;
         if (this->size < this->capacity)
@@ -85,7 +85,7 @@ template <typename T> class mlist {
         if (this->capacity == newCapacity + 2)
             return LIST_OP_OK;
 
-        auto* newStorage = (node*)realloc(this->storage, (newCapacity + 2) * sizeof(node));
+        auto* newStorage = (Node*)realloc(this->storage, (newCapacity + 2) * sizeof(Node));
 
         if (newStorage == NULL)
             return LIST_OP_NOMEM;
@@ -132,7 +132,7 @@ template <typename T> class mlist {
      * @param physPos - physical position of inserted element
      * @return operation result
      */
-    mlist_op_result insert_after(size_t pos, T value, size_t* physPos = nullptr) {
+    MListOpResult insert_after(size_t pos, T value, size_t* physPos = nullptr) {
         if (pos > this->sum_size()) {
             return LIST_OP_OVERFLOW;
         }
@@ -168,7 +168,7 @@ template <typename T> class mlist {
      * @param physPos - physical position of inserted element
      * @return operation result
      */
-    mlist_op_result insert_after_logic(size_t pos, T value, size_t* physPos = nullptr) {
+    MListOpResult insert_after_logic(size_t pos, T value, size_t* physPos = nullptr) {
         if (pos > this->size)
             return LIST_OP_OVERFLOW;
         return this->insert_after(this->logic_to_physic(pos), value, physPos);
@@ -181,7 +181,7 @@ template <typename T> class mlist {
      * @param physPos - physical position of inserted element
      * @return operation result
      */
-    mlist_op_result insert_before(size_t pos, T value, size_t* physPos = nullptr) {
+    MListOpResult insert_before(size_t pos, T value, size_t* physPos = nullptr) {
         if (pos > this->sum_size() || (!this->address_valid(pos) && pos != 0))
             return LIST_OP_SEGFAULT;
         pos = this->storage[pos].previous;
@@ -195,7 +195,7 @@ template <typename T> class mlist {
      * @param physPos - physical position of inserted element
      * @return operation result
      */
-    mlist_op_result insert_before_logic(size_t pos, T value, size_t* physPos = nullptr) {
+    MListOpResult insert_before_logic(size_t pos, T value, size_t* physPos = nullptr) {
         if (pos > this->size)
             return LIST_OP_OVERFLOW;
         return this->insert_before(this->logic_to_physic(pos), value, physPos);
@@ -207,7 +207,7 @@ template <typename T> class mlist {
      * @param physPos - physical position of inserted element
      * @return operation result
      */
-    mlist_op_result insert_head(const T& value, size_t* physPos = nullptr) {
+    MListOpResult insert_head(const T& value, size_t* physPos = nullptr) {
         return this->insert_after(0, value, physPos);
     }
 
@@ -217,7 +217,7 @@ template <typename T> class mlist {
      * @param physPos - physical position of inserted element
      * @return operation result
      */
-    mlist_op_result insert_tail(const T& value, size_t* physPos = nullptr) {
+    MListOpResult insert_tail(const T& value, size_t* physPos = nullptr) {
         return this->insert_after(this->storage[0].previous, value, physPos);
     }
 
@@ -227,7 +227,7 @@ template <typename T> class mlist {
      * @param value - new value
      * @return operation result
      */
-    mlist_op_result set(size_t pos, const T& value) {
+    MListOpResult set(size_t pos, const T& value) {
         if (!this->address_valid(pos))
             return LIST_OP_SEGFAULT;
         this->storage[pos].value = value;
@@ -240,7 +240,7 @@ template <typename T> class mlist {
      * @param value - new value
      * @return operation result
      */
-    mlist_op_result set_logic(size_t pos, const T& value) {
+    MListOpResult set_logic(size_t pos, const T& value) {
         if (pos > this->size)
             return LIST_OP_OVERFLOW;
         return this->set(this->logic_to_physic(pos), value);
@@ -257,7 +257,7 @@ template <typename T> class mlist {
      * @param value - retrieved value
      * @return operation result
      */
-    mlist_op_result get(size_t pos, T** value) {
+    MListOpResult get(size_t pos, T** value) {
         if (value == nullptr || !this->storage[pos].valid)
             return LIST_OP_SEGFAULT;
         *value = &(this->storage[pos].value);
@@ -270,14 +270,14 @@ template <typename T> class mlist {
      * @param value - retrieved value
      * @return operation result
      */
-    mlist_op_result get(size_t pos, T* value) {
+    MListOpResult get(size_t pos, T* value) {
         if (value == nullptr || !this->storage[pos].valid)
             return LIST_OP_SEGFAULT;
         *value = this->storage[pos].value;
         return LIST_OP_OK;
     }
 
-    const node* get_storage() const {
+    const Node* get_storage() const {
         return storage;
     }
 
@@ -287,7 +287,7 @@ template <typename T> class mlist {
      * @param value - retrieved value
      * @return operation result
      */
-    mlist_op_result get_logic(size_t pos, T** value = nullptr) {
+    MListOpResult get_logic(size_t pos, T** value = nullptr) {
         if (pos > this->size)
             return LIST_OP_OVERFLOW;
         return this->get(this->logic_to_physic(pos), value);
@@ -299,7 +299,7 @@ template <typename T> class mlist {
      * @param value - retrieved value
      * @return operation result
      */
-    mlist_op_result get_logic(size_t pos, T* value = nullptr) {
+    MListOpResult get_logic(size_t pos, T* value = nullptr) {
         if (pos > this->size)
             return LIST_OP_OVERFLOW;
         return this->get(this->logic_to_physic(pos), value);
@@ -311,7 +311,7 @@ template <typename T> class mlist {
      * @param value - retrieved value
      * @return operation result
      */
-    mlist_op_result pop(size_t pos, T* value = nullptr) {
+    MListOpResult pop(size_t pos, T* value = nullptr) {
         if (this->size == 0)
             return LIST_OP_UNDERFLOW;
         if (!this->address_valid(pos))
@@ -336,7 +336,7 @@ template <typename T> class mlist {
      * @param value - retrieved value
      * @return operation result
      */
-    mlist_op_result pop_front(T* value) {
+    MListOpResult pop_front(T* value) {
         return this->pop(this->storage[0].next, value);
     }
 
@@ -345,7 +345,7 @@ template <typename T> class mlist {
      * @param value - retrieved value
      * @return operation result
      */
-    mlist_op_result pop_back(T* value) {
+    MListOpResult pop_back(T* value) {
         return this->pop(this->storage[0].previous, value);
     }
 
@@ -355,7 +355,7 @@ template <typename T> class mlist {
      * @param value - retrieved value
      * @return operation result
      */
-    mlist_op_result pop_logic(size_t pos, T* value) {
+    MListOpResult pop_logic(size_t pos, T* value) {
         return this->pop(this->logic_to_physic(pos), value);
     }
 
@@ -364,7 +364,7 @@ template <typename T> class mlist {
      * @param pos - physical pos of considered element
      * @return operation result
      */
-    mlist_op_result remove(size_t pos) {
+    MListOpResult remove(size_t pos) {
         return this->pop(pos, nullptr);
     }
 
@@ -373,7 +373,7 @@ template <typename T> class mlist {
      * @param pos - logical pos of considered element
      * @return operation result
      */
-    mlist_op_result remove_logic(size_t pos) {
+    MListOpResult remove_logic(size_t pos) {
         if (pos > this->size)
             return LIST_OP_OVERFLOW;
         return this->pop(this->logic_to_physic(pos), nullptr);
@@ -383,7 +383,7 @@ template <typename T> class mlist {
      * Clears the list
      * @return operation result
      */
-    mlist_op_result clear() {
+    MListOpResult clear() {
         this->size = 0;
         this->storage[0].next = 0;
         this->storage[0].previous = 0;
@@ -398,8 +398,8 @@ template <typename T> class mlist {
      * physical positions are aligned in ascending order in the storage
      * @return operation result
      */
-    mlist_op_result optimize() {
-        auto* newStorage = (node*)(calloc(this->size + 2, sizeof(node)));
+    MListOpResult optimize() {
+        auto* newStorage = (Node*)(calloc(this->size + 2, sizeof(Node)));
         if (newStorage == nullptr)
             return LIST_OP_NOMEM;
         newStorage[0] = this->storage[0];
@@ -428,7 +428,7 @@ template <typename T> class mlist {
      * @param pos
      * @return
      */
-    mlist_op_result next_iterator(size_t* pos) {
+    MListOpResult next_iterator(size_t* pos) {
         if (!this->address_valid(*pos) && *pos != 0)
             return LIST_OP_SEGFAULT;
         *pos = this->storage[*pos].next;
@@ -462,7 +462,7 @@ template <typename T> class mlist {
      * @param pos
      * @return
      */
-    mlist_op_result prev_iterator(size_t* pos) {
+    MListOpResult prev_iterator(size_t* pos) {
         if (!this->address_valid(*pos) && *pos != 0)
             return LIST_OP_SEGFAULT;
         *pos = this->storage[*pos].previous;
@@ -475,7 +475,7 @@ template <typename T> class mlist {
      * @param value - searched value
      * @return operation result
      */
-    mlist_op_result search(size_t* pos, const T& value) const {
+    MListOpResult search(size_t* pos, const T& value) const {
         if (this->size == 0)
             return LIST_OP_NOTFOUND;
         *pos = this->storage[0].next;
@@ -494,11 +494,11 @@ template <typename T> class mlist {
      * shrinks to fit.
      * @return operation result
      */
-    mlist_op_result resize(size_t elemNumbers) {
+    MListOpResult resize(size_t elemNumbers) {
         if (elemNumbers < this->sum_size())
             elemNumbers = this->sum_size();
         elemNumbers++;
-        auto newStorage = (node*)realloc(storage, elemNumbers * sizeof(node));
+        auto newStorage = (Node*)realloc(storage, elemNumbers * sizeof(Node));
         if (newStorage == nullptr)
             return LIST_OP_NOMEM;
         this->storage = newStorage;
@@ -510,7 +510,7 @@ template <typename T> class mlist {
      * Resizes list to the minimum available space
      * @return operation result
      */
-    mlist_op_result shrinkToFit() {
+    MListOpResult shrinkToFit() {
         return this->resize(0);
     }
 

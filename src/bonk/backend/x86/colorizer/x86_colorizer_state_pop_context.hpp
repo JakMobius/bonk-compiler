@@ -5,10 +5,10 @@
 
 namespace bonk::x86_backend {
 
-struct colorizer_state_pop_context;
-struct register_colorizer;
+struct ColorizerStatePopContext;
+struct RegisterColorizer;
 
-enum state_register_restore_stage {
+enum StateRegisterRestoreStage {
     RESTORE_STAGE_MEM_REG,
     RESTORE_STAGE_REG_REG,
     RESTORE_STAGE_REG_MEM
@@ -18,34 +18,34 @@ enum state_register_restore_stage {
 
 namespace bonk::x86_backend {
 
-struct colorizer_state_pop_context {
-    register_colorizer* colorizer;
+struct ColorizerStatePopContext {
+    RegisterColorizer* colorizer;
     int states_to_pop;
 
-    std::unordered_map<abstract_register, abstract_register_descriptor> target_transform;
+    std::unordered_map<AbstractRegister, AbstractRegisterDescriptor> target_transform;
 
-    colorizer_state_pop_context(register_colorizer* the_colorizer, int the_states_to_pop);
+    ColorizerStatePopContext(RegisterColorizer* the_colorizer, int the_states_to_pop);
 
     bool count_transform();
 
-    bool should_save_register_with_owner(command_list* owner);
+    bool should_save_register_with_owner(CommandList* owner);
 
-    abstract_register_descriptor get_current_descriptor(abstract_register reg);
+    AbstractRegisterDescriptor get_current_descriptor(AbstractRegister reg);
 
-    abstract_register_descriptor get_target_descriptor(abstract_register reg);
+    AbstractRegisterDescriptor get_target_descriptor(AbstractRegister reg);
 
     void restore_registers();
 
-    void restore_register_state(abstract_register reg, abstract_register_descriptor old_state,
-                                state_register_restore_stage stage);
+    void restore_register_state(AbstractRegister reg, AbstractRegisterDescriptor old_state,
+                                StateRegisterRestoreStage stage);
 
-    void walk_register_location_graph(bool* is_walked, abstract_register i);
+    void walk_register_location_graph(bool* is_walked, AbstractRegister i);
 
-    void try_restore_unowned_register_position(abstract_register i);
+    void try_restore_unowned_register_position(AbstractRegister i);
 
-    void restore_register_from_memory(abstract_register reg, e_machine_register target);
+    void restore_register_from_memory(AbstractRegister reg, MachineRegister target);
 
-    void restore_register_from_symbol(abstract_register reg, e_machine_register aRegister);
+    void restore_register_from_symbol(AbstractRegister reg, MachineRegister aRegister);
 };
 
 } // namespace bonk::x86_backend

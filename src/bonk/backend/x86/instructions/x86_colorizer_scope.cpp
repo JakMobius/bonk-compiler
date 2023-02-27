@@ -3,10 +3,10 @@
 
 namespace bonk::x86_backend {
 
-scope_command::scope_command(command_list* nested_list) {
+ScopeCommand::ScopeCommand(CommandList* nested_list) {
 
-    std::set<abstract_register> read_registers_tree = {};
-    std::set<abstract_register> write_registers_tree = {};
+    std::set<AbstractRegister> read_registers_tree = {};
+    std::set<AbstractRegister> write_registers_tree = {};
 
     nested_list->append_read_register(&read_registers_tree);
     nested_list->append_write_register(&write_registers_tree);
@@ -16,7 +16,7 @@ scope_command::scope_command(command_list* nested_list) {
     commands = nested_list;
 
     for (auto i = commands->begin(); i != commands->end(); commands->next_iterator(&i)) {
-        asm_command* command = commands->get(i);
+        AsmCommand* command = commands->get(i);
         for (int j = 0; j < command->read_registers.size(); j++) {
             auto reg = command->read_registers[j];
             if (read_registers_tree.erase(reg)) {

@@ -3,20 +3,20 @@
 #include <cstdio>
 #include <vector>
 
-struct json_serializer_state {
+struct JsonSerializerState {
     bool is_array;
     bool is_first;
 };
 
-struct json_serializer {
+struct JsonSerializer {
     FILE* target;
     int depth;
-    json_serializer_state state;
-    std::vector<json_serializer_state> states;
+    JsonSerializerState state;
+    std::vector<JsonSerializerState> states;
 
-    json_serializer(FILE* file);
+    JsonSerializer(FILE* file);
 
-    ~json_serializer();
+    ~JsonSerializer();
 
     void block_string_field(const char* name, const char* value);
 

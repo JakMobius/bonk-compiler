@@ -4,19 +4,19 @@
 
 namespace bonk::x86_backend {
 
-struct frame_create_command : asm_command {
-    frame_create_command();
+struct FrameCreateCommand : AsmCommand {
+    FrameCreateCommand();
 
-    asm_command* clone() override {
-        return new frame_create_command();
+    AsmCommand* clone() override {
+        return new FrameCreateCommand();
     }
 };
 
-struct frame_destroy_command : asm_command {
-    frame_destroy_command();
+struct FrameDestroyCommand : AsmCommand {
+    FrameDestroyCommand();
 
-    asm_command* clone() override {
-        return new frame_destroy_command();
+    AsmCommand* clone() override {
+        return new FrameDestroyCommand();
     }
 };
 

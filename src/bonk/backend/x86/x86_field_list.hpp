@@ -3,7 +3,7 @@
 
 namespace bonk::x86_backend {
 
-struct field_list;
+struct FieldList;
 
 }
 
@@ -14,19 +14,19 @@ struct field_list;
 
 namespace bonk::x86_backend {
 
-struct field_list {
+struct FieldList {
     int arguments;
-    std::vector<variable*> variables;
-    backend_context_state* context_state;
-    register_descriptor_list* descriptors;
+    std::vector<Variable*> variables;
+    BackendContextState* context_state;
+    RegisterDescriptorList* descriptors;
 
-    field_list(register_descriptor_list* descriptor_list, backend_context_state* state);
+    FieldList(RegisterDescriptorList* descriptor_list, BackendContextState* state);
 
-    ~field_list();
+    ~FieldList();
 
-    variable* get_variable(tree_node_identifier* identifier);
+    Variable* get_variable(TreeNodeIdentifier* identifier);
 
-    bool add_variable(variable* variable);
+    bool add_variable(Variable* variable);
 };
 
 } // namespace bonk::x86_backend

@@ -6,6 +6,6 @@
 
 namespace bonk {
 
-bool parse_grammatic_global(parser* parser, tree_node_list<tree_node*>* target);
+bool parse_grammatic_global(Parser* parser, TreeNodeList<TreeNode*>* target);
 
 }

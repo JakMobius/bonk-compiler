@@ -3,7 +3,7 @@
 
 namespace bonk::x86_backend {
 
-void write_jump_placeholder(command_encoder* buffer, jmp_label* label) {
+void write_jump_placeholder(CommandEncoder* buffer, JmpLabel* label) {
     unsigned long offset_position = buffer->buffer.size();
     for (int i = 0; i < 4; i++)
         buffer->buffer.push_back(0x00);
@@ -15,27 +15,27 @@ void write_jump_placeholder(command_encoder* buffer, jmp_label* label) {
                              .command = label});
 }
 
-static void write_jump(command_encoder* buffer, char opcode, jmp_label* label) {
+static void write_jump(CommandEncoder* buffer, char opcode, JmpLabel* label) {
     buffer->buffer.push_back(opcode);
     write_jump_placeholder(buffer, label);
 }
 
-static void write_jump(command_encoder* buffer, char opcode_a, char opcode_b, jmp_label* label) {
+static void write_jump(CommandEncoder* buffer, char opcode_a, char opcode_b, JmpLabel* label) {
     buffer->buffer.push_back(opcode_a);
     buffer->buffer.push_back(opcode_b);
     write_jump_placeholder(buffer, label);
 }
 
-void jump_command::set_label(jmp_label* label) {
+void JumpCommand::set_label(JmpLabel* label) {
     parameters.resize(1);
-    parameters[0] = command_parameter::create_label(label);
+    parameters[0] = CommandParameter::create_label(label);
 }
 
-jmp_label* jump_command::get_label() {
+JmpLabel* JumpCommand::get_label() {
     return parameters[0].label;
 }
 
-void jump_command::invert_condition() {
+void JumpCommand::invert_condition() {
     switch (type) {
     case COMMAND_JE:
         type = COMMAND_JNE;
@@ -60,9 +60,9 @@ void jump_command::invert_condition() {
     }
 }
 
-void jump_command::to_bytes(command_encoder* buffer) {
+void JumpCommand::to_bytes(CommandEncoder* buffer) {
 
-    command_parameter target = parameters[0];
+    CommandParameter target = parameters[0];
 
     if (target.type == PARAMETER_TYPE_LABEL) {
         switch (type) {
@@ -96,22 +96,22 @@ void jump_command::to_bytes(command_encoder* buffer) {
     assert(!"Cannot encode command");
 }
 
-jump_command::jump_command(jmp_label* label, asm_command_type jump_type) {
+JumpCommand::JumpCommand(JmpLabel* label, AsmCommandType jump_type) {
     type = jump_type;
     set_label(label);
 }
 
-cset_command::cset_command(abstract_register reg, asm_command_type cset_type) {
+CSetCommand::CSetCommand(AbstractRegister reg, AsmCommandType cset_type) {
     type = cset_type;
     set_read_register(reg);
     set_write_register(reg);
 
     parameters.resize(1);
-    parameters[0] = command_parameter::create_register_8(reg);
+    parameters[0] = CommandParameter::create_register_8(reg);
 }
 
-void cset_command::to_bytes(command_encoder* buffer) {
-    command_parameter target = parameters[0];
+void CSetCommand::to_bytes(CommandEncoder* buffer) {
+    CommandParameter target = parameters[0];
 
     if (target.type == PARAMETER_TYPE_REG_8) {
         switch (type) {

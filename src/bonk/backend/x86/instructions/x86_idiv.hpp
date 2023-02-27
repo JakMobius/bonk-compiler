@@ -6,15 +6,14 @@
 
 namespace bonk::x86_backend {
 
-struct idiv_command : asm_command {
-    idiv_command(abstract_register divider, abstract_register rax_handle,
-                 abstract_register rdx_handle);
+struct IDivCommand : AsmCommand {
+    IDivCommand(AbstractRegister divider, AbstractRegister rax_handle, AbstractRegister rdx_handle);
 
-    void to_bytes(command_encoder* buffer) override;
+    void to_bytes(CommandEncoder* buffer) override;
 
-    asm_command* clone() override {
+    AsmCommand* clone() override {
         // TODO: this looks hacky
-        return new idiv_command(read_registers[0], read_registers[1], read_registers[2]);
+        return new IDivCommand(read_registers[0], read_registers[1], read_registers[2]);
     }
 };
 

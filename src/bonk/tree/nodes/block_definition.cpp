@@ -3,14 +3,14 @@
 
 namespace bonk {
 
-tree_node_block_definition::tree_node_block_definition() : tree_node() {
+TreeNodeBlockDefinition::TreeNodeBlockDefinition() : TreeNode() {
     body = nullptr;
     block_name = nullptr;
 
     type = TREE_NODE_TYPE_BLOCK_DEFINITION;
 }
 
-tree_node_block_definition::~tree_node_block_definition() {
+TreeNodeBlockDefinition::~TreeNodeBlockDefinition() {
     if (body)
         delete body;
     if (block_name)
@@ -20,8 +20,8 @@ tree_node_block_definition::~tree_node_block_definition() {
     block_name = nullptr;
 }
 
-void tree_node_block_definition::serialize(json_serializer* serializer) {
-    tree_node::serialize(serializer);
+void TreeNodeBlockDefinition::serialize(JsonSerializer* serializer) {
+    TreeNode::serialize(serializer);
 
     serializer->block_string_field("type", "block_definition");
     serializer->block_string_field("block_name",

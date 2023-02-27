@@ -7,8 +7,8 @@
 
 namespace bonk {
 
-tree_node* parse_grammatic_reference(parser* parser);
+TreeNode* parse_grammatic_reference(Parser* parser);
 
-tree_node_list<tree_node_call_parameter*>* parse_grammatic_arguments(parser* parser);
+TreeNodeList<TreeNodeCallParameter*>* parse_grammatic_arguments(Parser* parser);
 
 } // namespace bonk

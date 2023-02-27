@@ -10,7 +10,7 @@
 
 namespace bonk::x86_backend {
 
-struct abstract_register_usage;
+struct AbstractRegisterUsage;
 
 }
 
@@ -30,9 +30,9 @@ struct abstract_register_usage;
 
 namespace bonk::x86_backend {
 
-extern const e_machine_register SYSTEM_V_OPTIMAL_REGISTERS[];
+extern const MachineRegister SYSTEM_V_OPTIMAL_REGISTERS[];
 
-struct register_colorizer {
+struct RegisterColorizer {
 
     // When instruction releases some register, it
     // gets stored here instead of being pushed to
@@ -41,51 +41,51 @@ struct register_colorizer {
     // to unused_registers_stack to prevent same
     // instruction to use the register which is released
     // by itself
-    std::vector<e_machine_register> registers_to_release;
+    std::vector<MachineRegister> registers_to_release;
 
-    std::vector<e_machine_register> registers_released_by_command;
+    std::vector<MachineRegister> registers_released_by_command;
 
     // Stack of unused registers
-    std::vector<e_machine_register> unused_registers_stack;
+    std::vector<MachineRegister> unused_registers_stack;
 
     // Array of abstract registers associated with corresponding each real machine register
-    abstract_register* machine_register_map = nullptr;
+    AbstractRegister* machine_register_map = nullptr;
 
-    register_colorize_context_state* state = nullptr;
-    command_buffer* source = nullptr;
+    RegisterColorizeContextState* state = nullptr;
+    CommandBuffer* source = nullptr;
 
-    std::vector<register_colorize_context_state> state_stack;
-    std::unordered_map<jmp_label*, jmp_label*> label_map;
+    std::vector<RegisterColorizeContextState> state_stack;
+    std::unordered_map<JmpLabel*, JmpLabel*> label_map;
 
-    command_buffer* output = nullptr;
+    CommandBuffer* output = nullptr;
 
     int frame_size = 0;
     std::vector<int> released_frame_cells{};
 
-    register_colorizer(command_buffer* input);
+    RegisterColorizer(CommandBuffer* input);
 
-    ~register_colorizer();
+    ~RegisterColorizer();
 
-    static command_buffer* colorize(command_buffer* commands);
+    static CommandBuffer* colorize(CommandBuffer* commands);
 
-    void push_state(command_list* list);
+    void push_state(CommandList* list);
 
     void pop_state();
 
-    void colorize_command(asm_command* command, bool is_write);
+    void colorize_command(AsmCommand* command, bool is_write);
 
-    abstract_register get_colorized_register(asm_command* command, abstract_register reg,
+    AbstractRegister get_colorized_register(AsmCommand* command, AbstractRegister reg,
                                              bool is_write);
 
     // Colorizes specific register, moves another registers
-    void handle_register_use(asm_command* command, abstract_register reg, bool is_write);
+    void handle_register_use(AsmCommand* command, AbstractRegister reg, bool is_write);
 
     // Moves specified register to some another place (memory or register)
-    void move_register(abstract_register reg, asm_command* cmd);
+    void move_register(AbstractRegister reg, AsmCommand* cmd);
 
-    bin_heap<abstract_register_usage>* get_register_usage_heap(abstract_register reg);
+    bin_heap<AbstractRegisterUsage>* get_register_usage_heap(AbstractRegister reg);
 
-    void pop_nearest_register_usage(abstract_register reg, int max_scope = -1);
+    void pop_nearest_register_usage(AbstractRegister reg, int max_scope = -1);
 
     long long retain_frame_cell();
 
@@ -93,74 +93,74 @@ struct register_colorizer {
 
     void run_colorizer();
 
-    void save_register_location(abstract_register reg);
+    void save_register_location(AbstractRegister reg);
 
-    void move_register_to_symbol(abstract_register reg);
+    void move_register_to_symbol(AbstractRegister reg);
 
-    void move_register_to_stack(abstract_register reg, long long int frame_position);
+    void move_register_to_stack(AbstractRegister reg, long long int frame_position);
 
-    void move_register_to_register(abstract_register reg, e_machine_register target);
+    void move_register_to_register(AbstractRegister reg, MachineRegister target);
 
-    void restore_register_from_symbol(abstract_register reg, e_machine_register target);
+    void restore_register_from_symbol(AbstractRegister reg, MachineRegister target);
 
-    void restore_register_from_stack(abstract_register reg, e_machine_register target);
+    void restore_register_from_stack(AbstractRegister reg, MachineRegister target);
 
-    void restore_register(abstract_register reg, e_machine_register target);
+    void restore_register(AbstractRegister reg, MachineRegister target);
 
-    void exchange_registers(abstract_register reg_a, abstract_register reg_b);
+    void exchange_registers(AbstractRegister reg_a, AbstractRegister reg_b);
 
-    abstract_register least_used_register_for_command(asm_command* command, bool is_write);
+    AbstractRegister least_used_register_for_command(AsmCommand* command, bool is_write);
 
-    void give_location_for_register(abstract_register reg);
+    void give_location_for_register(AbstractRegister reg);
 
-    void release_register_location(abstract_register reg, bool immediately);
+    void release_register_location(AbstractRegister reg, bool immediately);
 
-    void destroy_register_if_unused(abstract_register reg);
+    void destroy_register_if_unused(AbstractRegister reg);
 
-    void release_register_immediately(e_machine_register reg, bool b);
+    void release_register_immediately(MachineRegister reg, bool b);
 
-    void release_register_after_command(e_machine_register reg);
+    void release_register_after_command(MachineRegister reg);
 
     void flush_unused_registers();
 
-    bool gather_unused_register(e_machine_register reg);
+    bool gather_unused_register(MachineRegister reg);
 
-    bool is_unused_register(e_machine_register reg);
+    bool is_unused_register(MachineRegister reg);
 
-    e_machine_register effective_unused_register(asm_command* cmd, bool b);
+    MachineRegister effective_unused_register(AsmCommand* cmd, bool b);
 
     void transform_labels();
 
-    bool command_uses_register(asm_command* cmd, e_machine_register reg, bool ignore_used);
+    bool command_uses_register(AsmCommand* cmd, MachineRegister reg, bool ignore_used);
 
     void replace_frame_commands();
 
-    void handle_reg_preserve_command(reg_preserve_command* command);
+    void handle_reg_preserve_command(RegPreserveCommand* command);
 
-    void handle_scope_pop_command(scope_pop_command* command);
+    void handle_scope_pop_command(ScopePopCommand* command);
 
-    void handle_scope_command(scope_command* command);
+    void handle_scope_command(ScopeCommand* command);
 
-    void handle_general_command(asm_command* command);
+    void handle_general_command(AsmCommand* command);
 
-    void handle_locate_reg_reg_command(locate_reg_command* command);
+    void handle_locate_reg_reg_command(LocateRegCommand* command);
 
-    void handle_locate_reg_stack_command(locate_reg_command* command);
+    void handle_locate_reg_stack_command(LocateRegCommand* command);
 
     void pop_scopes(int scopes);
 
-    void locate_register_at_machine_register(abstract_register reg, e_machine_register loc,
-                                             asm_command* command);
+    void locate_register_at_machine_register(AbstractRegister reg, MachineRegister loc,
+                                             AsmCommand* command);
 
-    void locate_register_at_stack(abstract_register reg, int frame_position);
+    void locate_register_at_stack(AbstractRegister reg, int frame_position);
 
-    void pop_command_register_usages(asm_command* command, int current_scope = -1);
+    void pop_command_register_usages(AsmCommand* command, int current_scope = -1);
 
-    void destroy_command_register_usages(asm_command* command);
+    void destroy_command_register_usages(AsmCommand* command);
 
-    int frame_cell_for_register(abstract_register reg);
+    int frame_cell_for_register(AbstractRegister reg);
 
-    void locate_register_at_symbol(abstract_register reg);
+    void locate_register_at_symbol(AbstractRegister reg);
 
     void upload_symbol_registers();
 };

@@ -3,11 +3,11 @@
 
 namespace bonk::x86_backend {
 
-nop_command::nop_command() {
+NopCommand::NopCommand() {
     type = COMMAND_NOP;
 }
 
-void nop_command::to_bytes(command_encoder* buffer) {
+void NopCommand::to_bytes(CommandEncoder* buffer) {
     buffer->buffer.push_back(0x90);
 }
 

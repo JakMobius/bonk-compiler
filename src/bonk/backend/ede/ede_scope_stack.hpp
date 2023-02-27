@@ -3,7 +3,7 @@
 
 namespace bonk::ede_backend {
 
-struct scope_stack;
+struct ScopeStack;
 
 }
 
@@ -13,20 +13,20 @@ struct scope_stack;
 
 namespace bonk::ede_backend {
 
-struct scope_stack {
-    std::vector<field_list*> scopes;
+struct ScopeStack {
+    std::vector<FieldList*> scopes;
 
-    scope_stack();
+    ScopeStack();
 
-    bool push_scope(field_list* scope);
+    bool push_scope(FieldList* scope);
 
     void pop_scope();
 
-    field_list* top();
+    FieldList* top();
 
     unsigned long frame_size();
 
-    variable* get_variable(tree_node_identifier* identifier, field_list** scope);
+    Variable* get_variable(TreeNodeIdentifier* identifier, FieldList** scope);
 };
 
 } // namespace bonk::ede_backend

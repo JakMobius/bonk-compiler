@@ -2,7 +2,7 @@
 
 namespace bonk::x86_backend {
 
-struct xchg_command;
+struct XchgCommand;
 
 }
 
@@ -14,13 +14,13 @@ struct xchg_command;
 
 namespace bonk::x86_backend {
 
-struct xchg_command : asm_command {
-    xchg_command(command_parameter target, command_parameter source);
+struct XchgCommand : AsmCommand {
+    XchgCommand(CommandParameter target, CommandParameter source);
 
-    void to_bytes(command_encoder* buffer) override;
+    void to_bytes(CommandEncoder* buffer) override;
 
-    asm_command* clone() override {
-        return new xchg_command(parameters[0], parameters[1]);
+    AsmCommand* clone() override {
+        return new XchgCommand(parameters[0], parameters[1]);
     }
 };
 

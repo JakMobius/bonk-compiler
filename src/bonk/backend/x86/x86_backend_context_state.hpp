@@ -4,17 +4,17 @@
 
 namespace bonk::x86_backend {
 
-struct backend_context_state;
+struct BackendContextState;
 
 }
 
 namespace bonk::x86_backend {
 
-struct backend_context_state {
-    reg_stack register_stack;
-    command_list* current_command_list;
+struct BackendContextState {
+    RegStack register_stack;
+    CommandList* current_command_list;
 
-    backend_context_state(command_list* current_command_list);
+    BackendContextState(CommandList* current_command_list);
 };
 
 } // namespace bonk::x86_backend

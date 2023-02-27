@@ -2,26 +2,26 @@
 
 namespace bonk {
 
-struct tree_node_call_parameter;
+struct TreeNodeCallParameter;
 
 }
 
-#include "../../../utils/json_serializer.hpp"
+#include "../../../utils/JsonSerializer.hpp"
 #include "identifier.hpp"
 #include "node.hpp"
 
 namespace bonk {
 
-struct tree_node_call_parameter : tree_node {
+struct TreeNodeCallParameter : TreeNode {
 
-    tree_node_identifier* parameter_name;
-    tree_node* parameter_value;
+    TreeNodeIdentifier* parameter_name;
+    TreeNode* parameter_value;
 
-    tree_node_call_parameter(tree_node_identifier* name, tree_node* value);
+    TreeNodeCallParameter(TreeNodeIdentifier* name, TreeNode* value);
 
-    ~tree_node_call_parameter();
+    ~TreeNodeCallParameter();
 
-    void serialize(json_serializer* serializer);
+    void serialize(JsonSerializer* serializer);
 };
 
 } // namespace bonk

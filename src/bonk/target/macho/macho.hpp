@@ -14,11 +14,11 @@
 
 namespace bonk::macho {
 
-enum relocation_type { RELOCATION_TYPE_CALL, RELOCATION_TYPE_CONSTANT };
+enum RelocationType { RELOCATION_TYPE_CALL, RELOCATION_TYPE_CONSTANT };
 
-enum symbol_section { SYMBOL_SECTION_TEXT, SYMBOL_SECTION_DATA };
+enum SymbolSection { SYMBOL_SECTION_TEXT, SYMBOL_SECTION_DATA };
 
-struct macho_file {
+struct MachoFile {
     mach_header_64 header {};
     segment_command_64 segment {};
     section_64 section_data {};
@@ -38,7 +38,7 @@ struct macho_file {
     std::vector<std::string> text_fragments {};
     std::vector<std::string> data_fragments {};
 
-    macho_file();
+    MachoFile();
 
     void flush(FILE* file);
 
@@ -66,7 +66,7 @@ struct macho_file {
 
     void add_external_symbol(const std::string& symbol);
 
-    void add_internal_symbol(const std::string& symbol, symbol_section section, uint32_t offset);
+    void add_internal_symbol(const std::string& symbol, SymbolSection section, uint32_t offset);
 
     std::string get_symbol_name(uint32_t symbol);
 

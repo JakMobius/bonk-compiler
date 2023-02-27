@@ -7,16 +7,16 @@
 
 namespace bonk::x86_backend {
 
-struct ret_command : asm_command {
-    ret_command(abstract_register return_value_handle = -1);
+struct RetCommand : AsmCommand {
+    RetCommand(AbstractRegister return_value_handle = -1);
 
-    void to_bytes(command_encoder* buffer) override;
+    void to_bytes(CommandEncoder* buffer) override;
 
-    asm_command* clone() override {
+    AsmCommand* clone() override {
         if (parameters.size()) {
-            return new ret_command(parameters[0].reg);
+            return new RetCommand(parameters[0].reg);
         } else {
-            return new ret_command(-1);
+            return new RetCommand(-1);
         };
     }
 };

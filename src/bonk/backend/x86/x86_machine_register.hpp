@@ -4,7 +4,7 @@
 
 namespace bonk::x86_backend {
 
-enum e_machine_register : unsigned char {
+enum MachineRegister : unsigned char {
     rax,
     rcx,
     rdx,

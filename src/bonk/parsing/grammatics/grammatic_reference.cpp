@@ -10,10 +10,10 @@
 
 namespace bonk {
 
-tree_node* parse_grammatic_reference(parser* parser) {
-    tree_node* variable = nullptr;
+TreeNode* parse_grammatic_reference(Parser* parser) {
+    TreeNode* variable = nullptr;
 
-    lexeme* next = parser->next_lexeme();
+    Lexeme* next = parser->next_lexeme();
 
     bool is_call = false;
 
@@ -48,7 +48,7 @@ tree_node* parse_grammatic_reference(parser* parser) {
         }
         parser->eat_lexeme();
     } else if (next->type == BONK_LEXEME_IDENTIFIER) {
-        variable = (tree_node*)next->identifier_data.identifier;
+        variable = (TreeNode*)next->identifier_data.identifier;
         parser->eat_lexeme();
     }
 
@@ -62,7 +62,7 @@ tree_node* parse_grammatic_reference(parser* parser) {
     if (is_call) {
         auto* arguments = parse_grammatic_arguments(parser);
 
-        auto* call = new tree_node_call((tree_node_identifier*)variable, arguments);
+        auto* call = new TreeNodeCall((TreeNodeIdentifier*)variable, arguments);
         if (!call) {
             parser->linked_compiler->out_of_memory();
             return nullptr;
@@ -73,16 +73,16 @@ tree_node* parse_grammatic_reference(parser* parser) {
     return variable;
 }
 
-tree_node_list<tree_node_call_parameter*>* parse_grammatic_arguments(parser* parser) {
+TreeNodeList<TreeNodeCallParameter*>* parse_grammatic_arguments(Parser* parser) {
 
-    lexeme* next = parser->next_lexeme();
+    Lexeme* next = parser->next_lexeme();
     if (next->type != BONK_LEXEME_BRACE || next->brace_data.brace_type != BONK_BRACE_L_SB) {
         return nullptr;
     }
 
     parser->eat_lexeme();
 
-    auto* argument_list = new tree_node_list<tree_node_call_parameter*>();
+    auto* argument_list = new TreeNodeList<TreeNodeCallParameter*>();
     if (!argument_list) {
         parser->linked_compiler->out_of_memory();
         return nullptr;
@@ -98,7 +98,7 @@ tree_node_list<tree_node_call_parameter*>* parse_grammatic_arguments(parser* par
             return nullptr;
         }
 
-        tree_node_identifier* parameter_name = next->identifier_data.identifier;
+        TreeNodeIdentifier* parameter_name = next->identifier_data.identifier;
 
         parser->eat_lexeme();
         next = parser->next_lexeme();
@@ -112,7 +112,7 @@ tree_node_list<tree_node_call_parameter*>* parse_grammatic_arguments(parser* par
 
         parser->eat_lexeme();
 
-        tree_node* parameter_value = parse_grammatic_expression(parser);
+        TreeNode* parameter_value = parse_grammatic_expression(parser);
         if (!parameter_value) {
             if (!parser->linked_compiler->state) {
                 parser->error("expected parameter value");
@@ -120,7 +120,7 @@ tree_node_list<tree_node_call_parameter*>* parse_grammatic_arguments(parser* par
             return nullptr;
         }
 
-        auto* argument = new tree_node_call_parameter(parameter_name, parameter_value);
+        auto* argument = new TreeNodeCallParameter(parameter_name, parameter_value);
 
         if (!argument || argument_list->list.insert_tail(argument)) {
             delete argument_list;

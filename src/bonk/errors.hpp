@@ -8,9 +8,9 @@
 
 namespace bonk {
 
-struct compiler;
-struct parser;
-struct parser_position;
-struct lexical_analyzer;
+struct Compiler;
+struct Parser;
+struct ParserPosition;
+struct LexicalAnalyzer;
 
 } // namespace bonk

@@ -1,27 +1,27 @@
 #pragma once
 namespace bonk {
 
-struct tree_node_check;
+struct TreeNodeCheck;
 
 }
 
-#include "../../../utils/json_serializer.hpp"
+#include "../../../utils/JsonSerializer.hpp"
 #include "list.hpp"
 #include "node.hpp"
 
 namespace bonk {
 
-struct tree_node_check : tree_node {
+struct TreeNodeCheck : TreeNode {
 
-    tree_node* condition;
-    tree_node_list<tree_node*>* check_body;
-    tree_node_list<tree_node*>* or_body;
+    TreeNode* condition;
+    TreeNodeList<TreeNode*>* check_body;
+    TreeNodeList<TreeNode*>* or_body;
 
-    tree_node_check();
+    TreeNodeCheck();
 
-    ~tree_node_check() override;
+    ~TreeNodeCheck() override;
 
-    void serialize(json_serializer* serializer) override;
+    void serialize(JsonSerializer* serializer) override;
 };
 
 } // namespace bonk

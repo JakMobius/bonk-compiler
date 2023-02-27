@@ -2,10 +2,10 @@
 
 namespace bonk {
 
-struct compiler;
-struct compiler_config;
+struct Compiler;
+struct CompilerConfig;
 
-enum compiler_state {
+enum CompilerState {
     BONK_COMPILER_OK,
     BONK_COMPILER_STATE_ERROR,
     BONK_COMPILER_STATE_FATAL_ERROR
@@ -14,7 +14,7 @@ enum compiler_state {
 } // namespace bonk
 
 #include <cstdio>
-#include "backend/backend.hpp"
+#include "bonk/backend/backend.hpp"
 #include "errors.hpp"
 #include "parsing/lexic/lexical_analyzer.hpp"
 #include "parsing/parser.hpp"
@@ -22,41 +22,41 @@ enum compiler_state {
 
 namespace bonk {
 
-struct compiler_config {
+struct CompilerConfig {
     FILE* error_file;
     FILE* listing_file;
-    backend* compile_backend;
+    Backend* compile_backend;
 };
 
-struct compiler {
-    compiler_config* config = nullptr;
+struct Compiler {
+    CompilerConfig* config = nullptr;
 
-    parser* parser = nullptr;
-    lexical_analyzer* lexical_analyzer = nullptr;
+    Parser* parser = nullptr;
+    LexicalAnalyzer* lexical_analyzer = nullptr;
 
-    compiler_state state = BONK_COMPILER_OK;
+    CompilerState state = BONK_COMPILER_OK;
 
     void out_of_memory();
 
-    compiler(compiler_config* config);
+    Compiler(CompilerConfig* config);
 
-    ~compiler();
+    ~Compiler();
 
-    void fatal_error_positioned(parser_position* pPosition, const char* string, ...);
+    void fatal_error_positioned(ParserPosition* pPosition, const char* string, ...);
 
-    void error_positioned(parser_position* pPosition, const char* string, ...);
+    void error_positioned(ParserPosition* pPosition, const char* string, ...);
 
     void error(const char* format, ...);
 
-    void warning_positioned(parser_position* pos, const char* format, ...);
+    void warning_positioned(ParserPosition* pos, const char* format, ...);
 
     void warning(const char* format, ...);
 
     void fatal_error(const char* format, ...);
 
-    tree_node_list<tree_node*>* get_ast_of_file_at_path(const char* file_path);
+    TreeNodeList<TreeNode*>* get_ast_of_file_at_path(const char* file_path);
 
-    bool compile_ast(tree_node_list<tree_node*>* ast, FILE* target);
+    bool compile_ast(TreeNodeList<TreeNode*>* ast, FILE* target);
 };
 
 } // namespace bonk

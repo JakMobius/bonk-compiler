@@ -6,6 +6,6 @@
 
 namespace bonk {
 
-tree_node_block_definition* parse_grammatic_block_definition(parser* parser);
+TreeNodeBlockDefinition* parse_grammatic_block_definition(Parser* parser);
 
 }

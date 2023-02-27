@@ -4,14 +4,14 @@
 
 namespace bonk::x86_backend {
 
-command_encoder::command_encoder() {
+CommandEncoder::CommandEncoder() {
 }
 
-void command_encoder::request_emplace(emplace_request request) {
+void CommandEncoder::request_emplace(EmplaceRequest request) {
     emplace_requests.push_back(request);
 }
 
-void command_encoder::do_emplacements() {
+void CommandEncoder::do_emplacements() {
     for (int i = 0; i < emplace_requests.size(); i++) {
         auto& request = emplace_requests[i];
         if (!request.command)
@@ -23,7 +23,7 @@ void command_encoder::do_emplacements() {
     }
 }
 
-void command_encoder::request_relocation(relocation_request request) {
+void CommandEncoder::request_relocation(RelocationRequest request) {
     relocation_requests.push_back(request);
 }
 
@@ -31,7 +31,7 @@ void command_encoder::request_relocation(relocation_request request) {
 // http://www.cs.loyola.edu/~binkley/371/Encoding_Real_x86_Instructions.html
 // Chapters 5-11
 
-bool command_encoder::is_sip(command_parameter reg_rm) {
+bool CommandEncoder::is_sip(CommandParameter reg_rm) {
     if (reg_rm.type == PARAMETER_TYPE_MEMORY) {
         int registers = reg_rm.memory.register_amount();
         if (registers > 1 || registers == 0)
@@ -46,8 +46,8 @@ bool command_encoder::is_sip(command_parameter reg_rm) {
     }
 }
 
-char command_encoder::get_displacement_bytes(command_parameter reg_rm,
-                                             register_extensions* extensions) {
+char CommandEncoder::get_displacement_bytes(CommandParameter reg_rm,
+                                            RegisterExtensions* extensions) {
     assert(reg_rm.type == PARAMETER_TYPE_REG_64 || reg_rm.type == PARAMETER_TYPE_REG_8 ||
            reg_rm.type == PARAMETER_TYPE_MEMORY || reg_rm.type == PARAMETER_TYPE_IMM32 ||
            reg_rm.type == PARAMETER_TYPE_SYMBOL);
@@ -89,8 +89,8 @@ char command_encoder::get_displacement_bytes(command_parameter reg_rm,
     return size;
 }
 
-char command_encoder::get_mod_reg_rm_byte(command_parameter reg, command_parameter reg_rm,
-                                          register_extensions* extensions) {
+char CommandEncoder::get_mod_reg_rm_byte(CommandParameter reg, CommandParameter reg_rm,
+                                         RegisterExtensions* extensions) {
 
     assert(reg.type == PARAMETER_TYPE_REG_64 || reg.type == PARAMETER_TYPE_REG_8);
     assert(reg_rm.type == PARAMETER_TYPE_REG_64 || reg_rm.type == PARAMETER_TYPE_REG_8 ||
@@ -150,7 +150,7 @@ char command_encoder::get_mod_reg_rm_byte(command_parameter reg, command_paramet
     return (mod_mask << 6) | (reg.reg << 3) | (rm_mask << 0);
 }
 
-void command_encoder::get_sib_base_index(command_parameter reg_rm, char* index_p, char* base_p,
+void CommandEncoder::get_sib_base_index(CommandParameter reg_rm, char* index_p, char* base_p,
                                          bool* requires_mask) {
     int register_amount = reg_rm.memory.register_amount();
 
@@ -210,7 +210,7 @@ void command_encoder::get_sib_base_index(command_parameter reg_rm, char* index_p
         *requires_mask = base_requires_mask;
 }
 
-char command_encoder::get_sib_byte(command_parameter reg_rm, register_extensions* extensions) {
+char CommandEncoder::get_sib_byte(CommandParameter reg_rm, RegisterExtensions* extensions) {
     assert(reg_rm.type == PARAMETER_TYPE_MEMORY);
 
     char scale = 0;
@@ -247,11 +247,11 @@ char command_encoder::get_sib_byte(command_parameter reg_rm, register_extensions
     return (scale << 6) | (index << 3) | (base << 0);
 }
 
-void command_encoder::write_prefix_opcode_modrm_sib(char opcode, command_parameter reg,
-                                                    command_parameter reg_rm) {
+void CommandEncoder::write_prefix_opcode_modrm_sib(char opcode, CommandParameter reg,
+                                                    CommandParameter reg_rm) {
     assert(reg.type == PARAMETER_TYPE_REG_64 || reg.type == PARAMETER_TYPE_REG_8);
 
-    register_extensions extensions = {.w = reg.type == PARAMETER_TYPE_REG_64};
+    RegisterExtensions extensions = {.w = reg.type == PARAMETER_TYPE_REG_64};
 
     bool sib = is_sip(reg_rm);
     char mod_reg_rm = get_mod_reg_rm_byte(reg, reg_rm, &extensions);
@@ -267,7 +267,7 @@ void command_encoder::write_prefix_opcode_modrm_sib(char opcode, command_paramet
         buffer.push_back(sib_byte);
 
     if (reg_rm.type == PARAMETER_TYPE_SYMBOL) {
-        request_relocation(relocation_request{
+        request_relocation(RelocationRequest{
             .relocation = reg_rm.symbol.symbol,
             .address = (int32_t)(buffer.size()),
             .type = macho::RELOCATION_TYPE_CONSTANT,
@@ -281,11 +281,11 @@ void command_encoder::write_prefix_opcode_modrm_sib(char opcode, command_paramet
     }
 }
 
-void command_encoder::write_prefix_longopcode_regrm_sib(char opcode_a, char opcode_b,
-                                                        command_parameter reg,
-                                                        command_parameter reg_rm) {
+void CommandEncoder::write_prefix_longopcode_regrm_sib(char opcode_a, char opcode_b,
+                                                        CommandParameter reg,
+                                                        CommandParameter reg_rm) {
     assert(reg.type == PARAMETER_TYPE_REG_64 || reg.type == PARAMETER_TYPE_REG_8);
-    register_extensions extensions = {.w = reg.type == PARAMETER_TYPE_REG_64};
+    RegisterExtensions extensions = {.w = reg.type == PARAMETER_TYPE_REG_64};
 
     bool sib = is_sip(reg_rm);
     char mod_reg_rm = get_mod_reg_rm_byte(reg, reg_rm, &extensions);
@@ -306,10 +306,10 @@ void command_encoder::write_prefix_longopcode_regrm_sib(char opcode_a, char opco
     }
 }
 
-void command_encoder::write_extended_opcode(char opcode, char extension, command_parameter reg) {
+void CommandEncoder::write_extended_opcode(char opcode, char extension, CommandParameter reg) {
     assert(reg.type == PARAMETER_TYPE_REG_64 || reg.type == PARAMETER_TYPE_REG_8);
 
-    register_extensions extensions = {.w = reg.type == PARAMETER_TYPE_REG_64};
+    RegisterExtensions extensions = {.w = reg.type == PARAMETER_TYPE_REG_64};
     if (reg.reg > 7)
         extensions.b = true;
 
@@ -323,11 +323,11 @@ void command_encoder::write_extended_opcode(char opcode, char extension, command
     buffer.push_back(opcode_extension);
 }
 
-void command_encoder::write_extended_longopcode(char opcode_a, char opcode_b, char extension,
-                                                command_parameter reg) {
+void CommandEncoder::write_extended_longopcode(char opcode_a, char opcode_b, char extension,
+                                                CommandParameter reg) {
     assert(reg.type == PARAMETER_TYPE_REG_64 || reg.type == PARAMETER_TYPE_REG_8);
 
-    register_extensions extensions = {.w = reg.type == PARAMETER_TYPE_REG_64};
+    RegisterExtensions extensions = {.w = reg.type == PARAMETER_TYPE_REG_64};
     if (reg.reg > 7)
         extensions.b = true;
 
@@ -342,7 +342,7 @@ void command_encoder::write_extended_longopcode(char opcode_a, char opcode_b, ch
     buffer.push_back(opcode_extension);
 }
 
-uint64_t command_encoder::get_displacement(command_parameter rm) {
+uint64_t CommandEncoder::get_displacement(CommandParameter rm) {
     assert(rm.type == PARAMETER_TYPE_REG_64 || rm.type == PARAMETER_TYPE_REG_8 ||
            rm.type == PARAMETER_TYPE_REG_8 || rm.type == PARAMETER_TYPE_MEMORY ||
            rm.type == PARAMETER_TYPE_IMM32 || rm.type == PARAMETER_TYPE_SYMBOL);
@@ -354,11 +354,11 @@ uint64_t command_encoder::get_displacement(command_parameter rm) {
     return rm.imm;
 }
 
-e_machine_register command_encoder::to_machine_register(abstract_register reg) {
+MachineRegister CommandEncoder::to_machine_register(AbstractRegister reg) {
     // Assuming that the colorizer has already done its job,
     // the register should be a machine register (lay in a range of 0-15
     // and match the machine register index that it's mapped to)
-    return (e_machine_register)reg;
+    return (MachineRegister)reg;
 }
 
 } // namespace bonk::x86_backend

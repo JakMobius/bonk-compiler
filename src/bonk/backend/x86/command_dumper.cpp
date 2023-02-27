@@ -13,10 +13,10 @@ void command_dumper::depth_padding(FILE* file, int depth, bool is_label) {
     }
 }
 
-void command_dumper::dump_register(asm_command* command, FILE* file, abstract_register reg) {
+void command_dumper::dump_register(AsmCommand* command, FILE* file, AbstractRegister reg) {
 
     if (command_list) {
-        abstract_register_descriptor* descriptor =
+        AbstractRegisterDescriptor* descriptor =
             command_list->parent_buffer->descriptors.get_descriptor(reg);
         if (descriptor->has_register_constraint) {
             fprintf(file, "%s", ASM_REGISTERS_64[descriptor->last_register_location]);
@@ -27,11 +27,10 @@ void command_dumper::dump_register(asm_command* command, FILE* file, abstract_re
     fprintf(file, "_r%llu", reg);
 }
 
-void command_dumper::dump_param_register(asm_command* command, FILE* file,
-                                         command_parameter param) {
+void command_dumper::dump_param_register(AsmCommand* command, FILE* file, CommandParameter param) {
 
     if (command_list) {
-        abstract_register_descriptor* descriptor =
+        AbstractRegisterDescriptor* descriptor =
             command_list->parent_buffer->descriptors.get_descriptor(param.reg);
         if (descriptor->has_register_constraint) {
             if (param.type == PARAMETER_TYPE_REG_64) {
@@ -47,7 +46,7 @@ void command_dumper::dump_param_register(asm_command* command, FILE* file,
     fprintf(file, "_r%llu", param.reg);
 }
 
-void command_dumper::dump_scope_command(asm_command* command, FILE* file, int depth) {
+void command_dumper::dump_scope_command(AsmCommand* command, FILE* file, int depth) {
     depth_padding(file, depth, false);
     fprintf(file, "colorizer::scope {\n");
 
@@ -75,19 +74,19 @@ void command_dumper::dump_scope_command(asm_command* command, FILE* file, int de
         fprintf(file, ")\n");
     }
 
-    dump_list(((scope_command*)command)->commands, file, depth + 1);
+    dump_list(((ScopeCommand*)command)->commands, file, depth + 1);
     depth_padding(file, depth, false);
     printf("}");
 }
 
-void command_dumper::dump(asm_command* command, FILE* file, int depth) {
+void command_dumper::dump(AsmCommand* command, FILE* file, int depth) {
     if (command->type == COMMAND_COLORIZER_SCOPE) {
         dump_scope_command(command, file, depth);
         return;
     }
     if (command->type == COMMAND_JMP_LABEL) {
         depth_padding(file, depth, true);
-        fprintf(file, "L%lu:", ((jmp_label*)command)->get_index());
+        fprintf(file, "L%lu:", ((JmpLabel*)command)->get_index());
         return;
     }
     depth_padding(file, depth, false);
@@ -95,7 +94,7 @@ void command_dumper::dump(asm_command* command, FILE* file, int depth) {
     for (int i = 0; i < command->parameters.size(); i++) {
         if (i != 0)
             fputc(',', file);
-        command_parameter parameter = command->parameters[i];
+        CommandParameter parameter = command->parameters[i];
         if (parameter.type == PARAMETER_TYPE_LABEL) {
             if (parameter.label) {
                 fprintf(file, " L%lu", parameter.label->get_index());
@@ -111,20 +110,20 @@ void command_dumper::dump(asm_command* command, FILE* file, int depth) {
             fputc(' ', file);
             dump_param_register(command, file, parameter);
         } else if (parameter.type == PARAMETER_TYPE_MEMORY) {
-            command_parameter_memory mem = parameter.memory;
+            CommandParameterMemory mem = parameter.memory;
 
             fprintf(file, " [");
 
             bool pad = false;
 
-            if (mem.reg_a != abstract_register(-1)) {
+            if (mem.reg_a != AbstractRegister(-1)) {
                 fprintf(file, "%s", ASM_REGISTERS_64[mem.reg_a]);
                 if (mem.reg_a_constant != 1)
                     fprintf(file, "*%d", mem.reg_a_constant);
                 pad = true;
             }
 
-            if (mem.reg_b != abstract_register(-1)) {
+            if (mem.reg_b != AbstractRegister(-1)) {
                 if (pad)
                     fputc(' ', file);
                 fprintf(file, "%s", ASM_REGISTERS_64[mem.reg_b]);
@@ -154,7 +153,7 @@ void command_dumper::dump(asm_command* command, FILE* file, int depth) {
     }
 }
 
-void command_dumper::dump_list(struct command_list* list, FILE* file, int depth) {
+void command_dumper::dump_list(struct CommandList* list, FILE* file, int depth) {
     auto old_list = command_list;
     command_list = list;
     for (auto i = list->begin(); i != list->end(); list->next_iterator(&i)) {

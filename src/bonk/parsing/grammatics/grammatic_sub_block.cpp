@@ -11,8 +11,8 @@
 
 namespace bonk {
 
-tree_node* parse_grammatic_sub_block(parser* parser) {
-    tree_node* expression = parse_grammatic_cycle(parser);
+TreeNode* parse_grammatic_sub_block(Parser* parser) {
+    TreeNode* expression = parse_grammatic_cycle(parser);
     if (expression)
         return expression;
     if (parser->linked_compiler->state)
@@ -27,19 +27,19 @@ tree_node* parse_grammatic_sub_block(parser* parser) {
     return nullptr;
 }
 
-tree_node_check* parse_grammatic_check(parser* parser) {
-    lexeme* next = parser->next_lexeme();
+TreeNodeCheck* parse_grammatic_check(Parser* parser) {
+    Lexeme* next = parser->next_lexeme();
 
     if (next->type != BONK_LEXEME_KEYWORD ||
         next->keyword_data.keyword_type != BONK_KEYWORD_CHECK) {
         return nullptr;
     }
 
-    parser_position* check_position = next->position;
+    ParserPosition* check_position = next->position;
     parser->eat_lexeme();
     next = parser->next_lexeme();
 
-    tree_node* condition = parse_grammatic_expression(parser);
+    TreeNode* condition = parse_grammatic_expression(parser);
     if (!condition) {
         if (!parser->linked_compiler->state) {
             parser->error("expected expression to check");
@@ -56,9 +56,9 @@ tree_node_check* parse_grammatic_check(parser* parser) {
         return nullptr;
     }
 
-    auto* check = new tree_node_check();
+    auto* check = new TreeNodeCheck();
 
-    tree_node_list<tree_node*>* else_block = nullptr;
+    TreeNodeList<TreeNode*>* else_block = nullptr;
 
     next = parser->next_lexeme();
 
@@ -84,15 +84,15 @@ tree_node_check* parse_grammatic_check(parser* parser) {
     return check;
 }
 
-tree_node_cycle* parse_grammatic_cycle(parser* parser) {
-    lexeme* next = parser->next_lexeme();
+TreeNodeCycle* parse_grammatic_cycle(Parser* parser) {
+    Lexeme* next = parser->next_lexeme();
 
     if (next->type != BONK_LEXEME_KEYWORD ||
         next->keyword_data.keyword_type != BONK_KEYWORD_CYCLE) {
         return nullptr;
     }
 
-    parser_position* cycle_position = next->position;
+    ParserPosition* cycle_position = next->position;
     parser->eat_lexeme();
 
     auto* block = parse_grammatic_nested_block(parser);
@@ -102,15 +102,15 @@ tree_node_cycle* parse_grammatic_cycle(parser* parser) {
         return nullptr;
     }
 
-    auto* cycle = new tree_node_cycle();
+    auto* cycle = new TreeNodeCycle();
 
     cycle->source_position = cycle_position->clone();
     cycle->body = block;
     return cycle;
 }
 
-tree_node_list<tree_node*>* parse_grammatic_nested_block(parser* parser) {
-    lexeme* next = parser->next_lexeme();
+TreeNodeList<TreeNode*>* parse_grammatic_nested_block(Parser* parser) {
+    Lexeme* next = parser->next_lexeme();
 
     if (next->type != BONK_LEXEME_BRACE || next->brace_data.brace_type != BONK_BRACE_L_CB) {
         parser->error("expected '{'");
@@ -119,7 +119,7 @@ tree_node_list<tree_node*>* parse_grammatic_nested_block(parser* parser) {
 
     parser->eat_lexeme();
 
-    tree_node_list<tree_node*>* block = parse_grammatic_block(parser);
+    TreeNodeList<TreeNode*>* block = parse_grammatic_block(parser);
     if (!block) {
         if (parser->linked_compiler->state)
             return nullptr;

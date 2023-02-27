@@ -4,7 +4,7 @@
 
 namespace bonk::x86_backend {
 
-colorizer_state_pop_context::colorizer_state_pop_context(register_colorizer* the_colorizer,
+ColorizerStatePopContext::ColorizerStatePopContext(RegisterColorizer* the_colorizer,
                                                          int the_states_to_pop) {
     colorizer = the_colorizer;
     states_to_pop = the_states_to_pop;
@@ -13,7 +13,7 @@ colorizer_state_pop_context::colorizer_state_pop_context(register_colorizer* the
     count_transform();
 }
 
-bool colorizer_state_pop_context::count_transform() {
+bool ColorizerStatePopContext::count_transform() {
     auto stack = &colorizer->state_stack;
     int pop = 0;
     for (long long i = stack->size() - 1; pop < states_to_pop; i--, pop++) {
@@ -56,8 +56,8 @@ bool colorizer_state_pop_context::count_transform() {
     return true;
 }
 
-void colorizer_state_pop_context::walk_register_location_graph(bool* is_walked,
-                                                               abstract_register i) {
+void ColorizerStatePopContext::walk_register_location_graph(bool* is_walked,
+                                                               AbstractRegister i) {
     auto descriptor = get_current_descriptor(i);
     if (!should_save_register_with_owner(descriptor.owner)) {
         colorizer->release_register_location(i, true);
@@ -71,8 +71,8 @@ void colorizer_state_pop_context::walk_register_location_graph(bool* is_walked,
         return;
     }
 
-    e_machine_register current_location = descriptor.last_register_location;
-    e_machine_register old_location = old_state.last_register_location;
+    MachineRegister current_location = descriptor.last_register_location;
+    MachineRegister old_location = old_state.last_register_location;
 
     if (current_location == old_location) {
         // Everything is already on place
@@ -97,7 +97,7 @@ void colorizer_state_pop_context::walk_register_location_graph(bool* is_walked,
 
     while (true) {
         // What is stored on old place? Can we just move our register to the old place?
-        abstract_register bothering_register = colorizer->machine_register_map[old_location];
+        AbstractRegister bothering_register = colorizer->machine_register_map[old_location];
         if (bothering_register != -1 && bothering_register != i) {
             // No, we can't. We should move bothering register out of our way.
             walk_register_location_graph(is_walked, bothering_register);
@@ -125,15 +125,15 @@ void colorizer_state_pop_context::walk_register_location_graph(bool* is_walked,
     }
 }
 
-void colorizer_state_pop_context::try_restore_unowned_register_position(abstract_register i) {
+void ColorizerStatePopContext::try_restore_unowned_register_position(AbstractRegister i) {
     bool is_walked[16] = {};
 
     walk_register_location_graph(is_walked, i);
 }
 
-void colorizer_state_pop_context::restore_register_from_symbol(abstract_register reg,
-                                                               e_machine_register target) {
-    abstract_register used_register = colorizer->machine_register_map[target];
+void ColorizerStatePopContext::restore_register_from_symbol(AbstractRegister reg,
+                                                            MachineRegister target) {
+    AbstractRegister used_register = colorizer->machine_register_map[target];
 
     if (used_register != -1) {
         colorizer->release_register_location(used_register, true);
@@ -143,9 +143,9 @@ void colorizer_state_pop_context::restore_register_from_symbol(abstract_register
     colorizer->restore_register_from_symbol(reg, target);
 }
 
-void colorizer_state_pop_context::restore_register_from_memory(abstract_register reg,
-                                                               e_machine_register target) {
-    abstract_register used_register = colorizer->machine_register_map[target];
+void ColorizerStatePopContext::restore_register_from_memory(AbstractRegister reg,
+                                                            MachineRegister target) {
+    AbstractRegister used_register = colorizer->machine_register_map[target];
 
     if (used_register != -1) {
         colorizer->release_register_location(used_register, true);
@@ -155,9 +155,9 @@ void colorizer_state_pop_context::restore_register_from_memory(abstract_register
     colorizer->restore_register_from_stack(reg, target);
 }
 
-void colorizer_state_pop_context::restore_register_state(abstract_register reg,
-                                                         abstract_register_descriptor old_state,
-                                                         state_register_restore_stage stage) {
+void ColorizerStatePopContext::restore_register_state(AbstractRegister reg,
+                                                         AbstractRegisterDescriptor old_state,
+                                                      StateRegisterRestoreStage stage) {
     auto current_state = get_current_descriptor(reg);
 
     if (old_state.located_in_memory) {
@@ -213,28 +213,26 @@ void colorizer_state_pop_context::restore_register_state(abstract_register reg,
     }
 }
 
-void colorizer_state_pop_context::restore_registers() {
+void ColorizerStatePopContext::restore_registers() {
     for (int stage = 0; stage < 3; stage++) {
         for (auto it = target_transform.begin(); it != target_transform.end(); ++it) {
-            restore_register_state(it->first, it->second, state_register_restore_stage(stage));
+            restore_register_state(it->first, it->second, StateRegisterRestoreStage(stage));
         }
     }
 }
 
-abstract_register_descriptor
-colorizer_state_pop_context::get_current_descriptor(abstract_register reg) {
+AbstractRegisterDescriptor ColorizerStatePopContext::get_current_descriptor(AbstractRegister reg) {
     return *colorizer->source->descriptors.get_descriptor(reg);
 }
 
-abstract_register_descriptor
-colorizer_state_pop_context::get_target_descriptor(abstract_register reg) {
+AbstractRegisterDescriptor ColorizerStatePopContext::get_target_descriptor(AbstractRegister reg) {
     auto it = target_transform.find(reg);
     if (it != target_transform.end())
         return it->second;
     return *colorizer->source->descriptors.get_descriptor(reg);
 }
 
-bool colorizer_state_pop_context::should_save_register_with_owner(command_list* owner) {
+bool ColorizerStatePopContext::should_save_register_with_owner(CommandList* owner) {
     auto& stack = colorizer->state_stack;
     int pop = 0;
     for (long long i = stack.size() - 1; pop < states_to_pop; i--, pop++) {

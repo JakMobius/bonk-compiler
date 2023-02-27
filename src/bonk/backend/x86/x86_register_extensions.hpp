@@ -3,7 +3,7 @@
 
 namespace bonk::x86_backend {
 
-struct register_extensions;
+struct RegisterExtensions;
 
 }
 
@@ -11,7 +11,7 @@ struct register_extensions;
 
 namespace bonk::x86_backend {
 
-struct register_extensions {
+struct RegisterExtensions {
     bool w;
     bool r;
     bool x;

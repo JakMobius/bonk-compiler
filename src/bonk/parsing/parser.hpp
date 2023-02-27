@@ -8,7 +8,7 @@
 
 namespace bonk {
 
-struct parser;
+struct Parser;
 
 }
 
@@ -19,10 +19,10 @@ struct parser;
 
 namespace bonk {
 
-struct parser {
+struct Parser {
     unsigned long position = 0;
-    std::vector<lexeme>* input = nullptr;
-    compiler* linked_compiler = nullptr;
+    std::vector<Lexeme>* input = nullptr;
+    Compiler* linked_compiler = nullptr;
 
     void warning(const char* format, ...);
 
@@ -30,17 +30,17 @@ struct parser {
 
     void fatal_error(const char* format, ...);
 
-    lexeme* next_lexeme();
+    Lexeme* next_lexeme();
 
     void eat_lexeme();
 
     void spit_lexeme();
 
-    parser(compiler* compiler);
+    Parser(Compiler* compiler);
 
-    tree_node_list<tree_node*>* parse_file(std::vector<lexeme>* lexemes);
+    TreeNodeList<TreeNode*>* parse_file(std::vector<Lexeme>* lexemes);
 
-    bool append_file(std::vector<lexeme>* lexemes, tree_node_list<tree_node*>* target);
+    bool append_file(std::vector<Lexeme>* lexemes, TreeNodeList<TreeNode*>* target);
 };
 
 } // namespace bonk

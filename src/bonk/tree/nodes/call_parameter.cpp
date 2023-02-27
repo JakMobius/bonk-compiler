@@ -3,22 +3,22 @@
 
 namespace bonk {
 
-tree_node_call_parameter::tree_node_call_parameter(tree_node_identifier* name, tree_node* value)
-    : tree_node() {
+TreeNodeCallParameter::TreeNodeCallParameter(TreeNodeIdentifier* name, TreeNode* value)
+    : TreeNode() {
     parameter_name = name;
     parameter_value = value;
     type = TREE_NODE_TYPE_CALL_PARAMETER;
 }
 
-tree_node_call_parameter::~tree_node_call_parameter() {
+TreeNodeCallParameter::~TreeNodeCallParameter() {
     delete parameter_name;
     delete parameter_value;
     parameter_name = nullptr;
     parameter_value = nullptr;
 }
 
-void tree_node_call_parameter::serialize(json_serializer* serializer) {
-    tree_node::serialize(serializer);
+void TreeNodeCallParameter::serialize(JsonSerializer* serializer) {
+    TreeNode::serialize(serializer);
 
     serializer->block_string_field("type", "call_parameter");
     if (parameter_name) {

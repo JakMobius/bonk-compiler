@@ -3,7 +3,7 @@
 
 namespace bonk::x86_backend {
 
-mov_command::mov_command(command_parameter parameter1, command_parameter parameter2) {
+MovCommand::MovCommand(CommandParameter parameter1, CommandParameter parameter2) {
     type = COMMAND_MOV;
 
     parameters.push_back(parameter1);
@@ -30,10 +30,10 @@ mov_command::mov_command(command_parameter parameter1, command_parameter paramet
     }
 }
 
-void mov_command::to_bytes(command_encoder* buffer) {
+void MovCommand::to_bytes(CommandEncoder* buffer) {
 
-    command_parameter target = parameters[0];
-    command_parameter source = parameters[1];
+    CommandParameter target = parameters[0];
+    CommandParameter source = parameters[1];
 
     if (target.type == PARAMETER_TYPE_REG_64 && source.type == PARAMETER_TYPE_REG_64) {
         buffer->write_prefix_opcode_modrm_sib(0x89, source, target);
@@ -42,7 +42,7 @@ void mov_command::to_bytes(command_encoder* buffer) {
     }
 
     if (target.type == PARAMETER_TYPE_REG_64 && source.type == PARAMETER_TYPE_IMM32) {
-        register_extensions rex = {.w = true, .b = target.reg > 7};
+        RegisterExtensions rex = {.w = true, .b = target.reg > 7};
 
         buffer->buffer.push_back(rex.get_byte());
         buffer->buffer.push_back(0xb8 + (target.reg & 0b111)); // movabs opcode
@@ -65,7 +65,7 @@ void mov_command::to_bytes(command_encoder* buffer) {
     }
 
     if (target.type == PARAMETER_TYPE_REG_8 && source.type == PARAMETER_TYPE_IMM32) {
-        register_extensions rex = {.b = target.reg > 7};
+        RegisterExtensions rex = {.b = target.reg > 7};
 
         buffer->buffer.push_back(rex.get_byte());
         buffer->buffer.push_back(0xb0 + (target.reg & 0b111)); // mov r8 imm8 opcode
@@ -90,11 +90,11 @@ void mov_command::to_bytes(command_encoder* buffer) {
     assert(!"Cannot encode command");
 }
 
-void movzx_command::to_bytes(command_encoder* buffer) {
+void MovZXCommand::to_bytes(CommandEncoder* buffer) {
 
     parameters.resize(2);
-    command_parameter target = parameters[0];
-    command_parameter source = parameters[1];
+    CommandParameter target = parameters[0];
+    CommandParameter source = parameters[1];
 
     if (target.type == PARAMETER_TYPE_REG_64 && source.type == PARAMETER_TYPE_REG_8) {
         buffer->write_prefix_longopcode_regrm_sib(0x0F, 0xB6, source, target);

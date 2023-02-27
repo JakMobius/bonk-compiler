@@ -3,13 +3,13 @@
 
 namespace bonk {
 
-parser::parser(compiler* compiler) {
+Parser::Parser(Compiler* compiler) {
     linked_compiler = compiler;
 }
 
-tree_node_list<tree_node*>* parser::parse_file(std::vector<lexeme>* lexemes) {
+TreeNodeList<TreeNode*>* Parser::parse_file(std::vector<Lexeme>* lexemes) {
     input = lexemes;
-    auto* target = new tree_node_list<tree_node*>();
+    auto* target = new TreeNodeList<TreeNode*>();
 
     if (!parse_grammatic_global(this, target)) {
         delete target;
@@ -19,22 +19,22 @@ tree_node_list<tree_node*>* parser::parse_file(std::vector<lexeme>* lexemes) {
     return target;
 }
 
-bool parser::append_file(std::vector<lexeme>* lexemes, tree_node_list<tree_node*>* target) {
+bool Parser::append_file(std::vector<Lexeme>* lexemes, TreeNodeList<TreeNode*>* target) {
     input = lexemes;
 
     return parse_grammatic_global(this, target);
 }
 
-void parser::spit_lexeme() {
+void Parser::spit_lexeme() {
     position--;
 }
 
-lexeme* parser::next_lexeme() {
+Lexeme* Parser::next_lexeme() {
     return &(*input)[(int)position];
 }
 
-void parser::eat_lexeme() {
-    lexeme* c = next_lexeme();
+void Parser::eat_lexeme() {
+    Lexeme* c = next_lexeme();
     assert(c->type);
     position++;
 }

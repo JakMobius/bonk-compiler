@@ -4,12 +4,12 @@
 
 namespace bonk::x86_backend {
 
-struct scope_pop_command : asm_command {
+struct ScopePopCommand : AsmCommand {
 
-    scope_pop_command(int scopes_to_pop);
+    ScopePopCommand(int scopes_to_pop);
 
-    asm_command* clone() override {
-        return new scope_pop_command(parameters[0].imm);
+    AsmCommand* clone() override {
+        return new ScopePopCommand(parameters[0].imm);
     }
 };
 

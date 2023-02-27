@@ -5,24 +5,24 @@
 
 namespace bonk::x86_backend {
 
-struct register_descriptor_list {
-    std::vector<abstract_register_descriptor> array {};
-    register_descriptor_list* parent_descriptor_list = nullptr;
+struct RegisterDescriptorList {
+    std::vector<AbstractRegisterDescriptor> array {};
+    RegisterDescriptorList* parent_descriptor_list = nullptr;
     unsigned long offset = 0;
 
-    register_descriptor_list(register_descriptor_list* other);
+    RegisterDescriptorList(RegisterDescriptorList* other);
 
-    register_descriptor_list();
+    RegisterDescriptorList();
 
     unsigned long size();
 
-    abstract_register next_constrained_register(e_machine_register reg, command_list* owner);
+    AbstractRegister next_constrained_register(MachineRegister reg, CommandList* owner);
 
-    abstract_register next_register(command_list* owner);
+    AbstractRegister next_register(CommandList* owner);
 
-    abstract_register machine_register(e_machine_register reg);
+    AbstractRegister machine_register(MachineRegister reg);
 
-    abstract_register_descriptor* get_descriptor(abstract_register i);
+    AbstractRegisterDescriptor* get_descriptor(AbstractRegister i);
 };
 
 } // namespace bonk::x86_backend

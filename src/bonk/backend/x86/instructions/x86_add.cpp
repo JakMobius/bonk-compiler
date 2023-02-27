@@ -3,7 +3,7 @@
 
 namespace bonk::x86_backend {
 
-add_command::add_command(command_parameter target, command_parameter source) {
+AddCommand::AddCommand(CommandParameter target, CommandParameter source) {
     type = COMMAND_ADD;
 
     assert(target.type == PARAMETER_TYPE_REG_64 || target.type == PARAMETER_TYPE_REG_8);
@@ -23,10 +23,10 @@ add_command::add_command(command_parameter target, command_parameter source) {
     set_write_register(target.reg);
 }
 
-void add_command::to_bytes(command_encoder* buffer) {
+void AddCommand::to_bytes(CommandEncoder* buffer) {
 
-    command_parameter target = parameters[0];
-    command_parameter source = parameters[1];
+    CommandParameter target = parameters[0];
+    CommandParameter source = parameters[1];
 
     if (target.type == PARAMETER_TYPE_REG_64 && source.type == PARAMETER_TYPE_REG_64) {
         // Turned out that these arguments must be passed in reverse order.

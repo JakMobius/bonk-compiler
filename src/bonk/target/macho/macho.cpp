@@ -3,7 +3,7 @@
 
 namespace bonk::macho {
 
-void macho_file::section_init_data() {
+void MachoFile::section_init_data() {
     strcpy(section_data.segname, SEG_DATA);   /* segname  <- __DATA */
     strcpy(section_data.sectname, SECT_DATA); /* sectname <- __data */
     section_data.addr = 0;                    /* = sectionText.size */
@@ -16,7 +16,7 @@ void macho_file::section_init_data() {
     section_data.flags = S_REGULAR;
 }
 
-void macho_file::section_init_text() {
+void MachoFile::section_init_text() {
     strcpy(section_text.segname, SEG_TEXT);   /* segname  <- __TEXT */
     strcpy(section_text.sectname, SECT_TEXT); /* sectname <- __text */
     section_text.addr = 0;
@@ -28,7 +28,7 @@ void macho_file::section_init_text() {
     section_text.flags = S_REGULAR | S_ATTR_PURE_INSTRUCTIONS | S_ATTR_SOME_INSTRUCTIONS;
 }
 
-void macho_file::header_init() {
+void MachoFile::header_init() {
     header.magic = MH_MAGIC_64;
     header.cputype = CPU_TYPE_X86_64;
     header.cpusubtype = CPU_SUBTYPE_X86_64_ALL;
@@ -39,7 +39,7 @@ void macho_file::header_init() {
     header.flags = MH_SUBSECTIONS_VIA_SYMBOLS;
 }
 
-void macho_file::symtab_init() {
+void MachoFile::symtab_init() {
     symtab.cmd = LC_SYMTAB;
     symtab.cmdsize = sizeof(symtab_command);
     symtab.symoff = 0;  /* to be modified */
@@ -48,7 +48,7 @@ void macho_file::symtab_init() {
     symtab.strsize = 0; /* to be modified */
 }
 
-void macho_file::dysymtab_init() {
+void MachoFile::dysymtab_init() {
     dysymtab.cmd = LC_DYSYMTAB;
     dysymtab.cmdsize = sizeof(dysymtab_command);
     dysymtab.ilocalsym = 0;  /* to be modified */
@@ -57,7 +57,7 @@ void macho_file::dysymtab_init() {
     dysymtab.nextdefsym = 0; /* to be modified */
 }
 
-void macho_file::segment_init() {
+void MachoFile::segment_init() {
     /*
      * Usually, as there is only one segment in the object file,
      * placing name is omitted.
@@ -75,7 +75,7 @@ void macho_file::segment_init() {
     segment.nsects = 2; /* code and data sections */
 }
 
-macho_file::macho_file() {
+MachoFile::MachoFile() {
     header_init();
     segment_init();
     symtab_init();
@@ -84,17 +84,17 @@ macho_file::macho_file() {
     section_init_data();
 }
 
-void macho_file::add_code(const std::string& code) {
+void MachoFile::add_code(const std::string& code) {
     text_fragments.push_back(code);
     section_text.size += code.size();
 }
 
-void macho_file::add_data(const std::string& data) {
+void MachoFile::add_data(const std::string& data) {
     data_fragments.push_back(data);
     section_data.size += data.size();
 }
 
-void macho_file::declare_external_symbol(const std::string& symbol) {
+void MachoFile::declare_external_symbol(const std::string& symbol) {
     std::string underscored_symbol = "_" + symbol;
     int underscored_symbol_length = underscored_symbol.size();
     string_table.push_back(std::move(underscored_symbol));
@@ -108,7 +108,7 @@ void macho_file::declare_external_symbol(const std::string& symbol) {
     dysymtab.nextdefsym++;
 }
 
-void macho_file::declare_internal_symbol(const std::string& symbol) {
+void MachoFile::declare_internal_symbol(const std::string& symbol) {
     std::string underscored_symbol = "_" + symbol;
     int underscored_symbol_length = underscored_symbol.size();
     string_table.push_back(std::move(underscored_symbol));
@@ -123,7 +123,7 @@ void macho_file::declare_internal_symbol(const std::string& symbol) {
     dysymtab.iextdefsym++;
 }
 
-void macho_file::add_external_symbol(const std::string& symbol) {
+void MachoFile::add_external_symbol(const std::string& symbol) {
 
     auto i = external_symbol_index_table.find(symbol);
 
@@ -131,7 +131,7 @@ void macho_file::add_external_symbol(const std::string& symbol) {
                                    REFERENCE_FLAG_UNDEFINED_NON_LAZY, 0};
 }
 
-void macho_file::add_internal_symbol(const std::string& symbol, symbol_section section,
+void MachoFile::add_internal_symbol(const std::string& symbol, SymbolSection section,
                                      uint32_t offset) {
     uint8_t section_index = 0;
 
@@ -150,7 +150,7 @@ void macho_file::add_internal_symbol(const std::string& symbol, symbol_section s
                                 REFERENCE_FLAG_DEFINED, offset};
 }
 
-uint32_t macho_file::get_symbol_from_name(const std::string& symbol) {
+uint32_t MachoFile::get_symbol_from_name(const std::string& symbol) {
     auto local_it = local_symbol_index_table.find(symbol);
 
     if (local_it != local_symbol_index_table.end()) {
@@ -166,7 +166,7 @@ uint32_t macho_file::get_symbol_from_name(const std::string& symbol) {
     }
 }
 
-std::string macho_file::get_symbol_name(uint32_t symbol) {
+std::string MachoFile::get_symbol_name(uint32_t symbol) {
     if (symbol >= dysymtab.ilocalsym && symbol < dysymtab.ilocalsym + dysymtab.nlocalsym) {
         return string_table[local_symbol_string_indices[symbol - dysymtab.ilocalsym]];
     } else if (symbol >= dysymtab.iextdefsym &&
@@ -177,7 +177,7 @@ std::string macho_file::get_symbol_name(uint32_t symbol) {
     }
 }
 
-bool macho_file::add_relocation(uint32_t symbol, int32_t address, bool pc_rel,
+bool MachoFile::add_relocation(uint32_t symbol, int32_t address, bool pc_rel,
                                 uint8_t data_length) {
 
     relocation_info relocation = {};
@@ -211,7 +211,7 @@ bool macho_file::add_relocation(uint32_t symbol, int32_t address, bool pc_rel,
     return true;
 }
 
-void macho_file::flush(FILE* file) {
+void MachoFile::flush(FILE* file) {
 
     segment.filesize = section_text.size + section_data.size;
     segment.vmsize = segment.filesize;

@@ -1,7 +1,7 @@
 
 #include "file_io.hpp"
 
-const char* read_file(const char* filepath, file_op_result* result, unsigned long* length) {
+const char* read_file(const char* filepath, FileOpResult* result, unsigned long* length) {
     struct stat filedata = {};
 
     if (filepath == nullptr) {

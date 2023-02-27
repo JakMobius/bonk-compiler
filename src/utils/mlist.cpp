@@ -1,7 +1,7 @@
 
 #include "mlist.hpp"
 
-template <typename T> struct mlist {
+template <typename T> struct MList {
     T* element_array;
     int* prev_indices;
     int* next_indices;
@@ -10,9 +10,9 @@ template <typename T> struct mlist {
     int capacity;
     int size;
 
-    mlist(int capacity);
+    MList(int capacity);
 
-    ~mlist();
+    ~MList();
 
     void insert(int index, T element);
 
@@ -37,7 +37,7 @@ template <typename T> struct mlist {
     void clear();
 };
 
-template <typename T> mlist<T>::mlist(int new_capacity) {
+template <typename T> MList<T>::MList(int new_capacity) {
     tail = 1;
     head = 1;
     size = 0;
@@ -55,7 +55,7 @@ template <typename T> mlist<T>::mlist(int new_capacity) {
     next_indices[new_capacity] = 0;
 }
 
-template <typename T> void mlist<T>::insert(int index, T element) {
+template <typename T> void MList<T>::insert(int index, T element) {
 
     // index = 0 is valid when root_list is full
     // and user wants to insert element to end
@@ -103,15 +103,15 @@ template <typename T> void mlist<T>::insert(int index, T element) {
     return;
 }
 
-template <typename T> void mlist<T>::insert_head(T element) {
+template <typename T> void MList<T>::insert_head(T element) {
     return insert(head, element);
 }
 
-template <typename T> void mlist<T>::insert_tail(T element) {
+template <typename T> void MList<T>::insert_tail(T element) {
     return insert(tail, element);
 }
 
-template <typename T> void mlist<T>::delete_index(int index, T* target) {
+template <typename T> void MList<T>::delete_index(int index, T* target) {
     if (index == 0)
         return;
     if (index > size)
@@ -154,15 +154,15 @@ template <typename T> void mlist<T>::delete_index(int index, T* target) {
     return;
 }
 
-template <typename T> void mlist<T>::delete_head(T* target) {
+template <typename T> void MList<T>::delete_head(T* target) {
     return delete_index(head, target);
 }
 
-template <typename T> void mlist<T>::delete_tail(T* target) {
+template <typename T> void MList<T>::delete_tail(T* target) {
     return delete_index(prev_indices[tail], target);
 }
 
-template <typename T> void mlist<T>::order_swap(int a, int b) {
+template <typename T> void MList<T>::order_swap(int a, int b) {
 
     if (head == a)
         head = b;
@@ -211,11 +211,11 @@ template <typename T> void mlist<T>::order_swap(int a, int b) {
     }
 }
 
-template <typename T> void mlist<T>::shrink_to_fit() {
+template <typename T> void MList<T>::shrink_to_fit() {
     return resize(size);
 }
 
-template <typename T> void mlist<T>::resize(int new_capacity) {
+template <typename T> void MList<T>::resize(int new_capacity) {
     new_capacity++;
 
     int* new_element_array = (T*)realloc(this->element_array, new_capacity * sizeof(T));
@@ -264,7 +264,7 @@ template <typename T> void mlist<T>::resize(int new_capacity) {
     capacity = new_capacity;
 }
 
-template <typename T> void mlist<T>::linear_address_search(int index, int* target) const {
+template <typename T> void MList<T>::linear_address_search(int index, int* target) const {
     if (index < 0 || index > size)
         return;
 
@@ -280,7 +280,7 @@ template <typename T> void mlist<T>::linear_address_search(int index, int* targe
     }
 }
 
-template <typename T> mlist<T>::~mlist() {
+template <typename T> MList<T>::~MList() {
     free(element_array);
     free(next_indices);
     free(prev_indices);
@@ -290,7 +290,7 @@ template <typename T> mlist<T>::~mlist() {
     prev_indices = nullptr;
 }
 
-template <typename T> void mlist<T>::clear() {
+template <typename T> void MList<T>::clear() {
     tail = 1;
     head = 1;
     size = 0;

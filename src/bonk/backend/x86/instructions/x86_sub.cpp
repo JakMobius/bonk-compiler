@@ -3,7 +3,7 @@
 
 namespace bonk::x86_backend {
 
-sub_command::sub_command(command_parameter target, command_parameter source) {
+SubCommand::SubCommand(CommandParameter target, CommandParameter source) {
     type = COMMAND_SUB;
 
     assert(target.type == PARAMETER_TYPE_REG_64);
@@ -23,10 +23,10 @@ sub_command::sub_command(command_parameter target, command_parameter source) {
     set_write_register(target.reg);
 }
 
-void sub_command::to_bytes(command_encoder* buffer) {
+void SubCommand::to_bytes(CommandEncoder* buffer) {
 
-    command_parameter target = parameters[0];
-    command_parameter source = parameters[1];
+    CommandParameter target = parameters[0];
+    CommandParameter source = parameters[1];
 
     if (target.type == PARAMETER_TYPE_REG_64 && source.type == PARAMETER_TYPE_REG_64) {
         buffer->write_prefix_opcode_modrm_sib(0x29, source, target);

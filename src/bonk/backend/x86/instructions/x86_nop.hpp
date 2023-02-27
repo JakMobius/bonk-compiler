@@ -7,14 +7,14 @@
 
 namespace bonk::x86_backend {
 
-struct nop_command : asm_command {
+struct NopCommand : AsmCommand {
 
-    nop_command();
+    NopCommand();
 
-    void to_bytes(command_encoder* buffer) override;
+    void to_bytes(CommandEncoder* buffer) override;
 
-    asm_command* clone() override {
-        return new nop_command();
+    AsmCommand* clone() override {
+        return new NopCommand();
     }
 };
 

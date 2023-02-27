@@ -2,8 +2,8 @@
 
 namespace bonk::x86_backend {
 
-struct linker_block;
-struct linker_constant;
+struct LinkerBlock;
+struct LinkerConstant;
 
 } // namespace bonk::x86_backend
 
@@ -11,14 +11,14 @@ struct linker_constant;
 
 namespace bonk::x86_backend {
 
-struct linker_block {
+struct LinkerBlock {
     unsigned long long offset;
 
-    std::vector<linker_block*> nested_blocks;
-    std::vector<linker_constant*> constants;
+    std::vector<LinkerBlock*> nested_blocks;
+    std::vector<LinkerConstant*> constants;
 };
 
-struct linker_constant {
+struct LinkerConstant {
     const char* constant_name;
     unsigned long long offset;
 };

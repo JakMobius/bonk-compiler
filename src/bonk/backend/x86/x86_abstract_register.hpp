@@ -2,9 +2,9 @@
 
 namespace bonk::x86_backend {
 
-typedef long long abstract_register;
-struct abstract_register_descriptor;
-struct command_list;
+typedef long long AbstractRegister;
+struct AbstractRegisterDescriptor;
+struct CommandList;
 
 } // namespace bonk::x86_backend
 
@@ -13,7 +13,7 @@ struct command_list;
 
 namespace bonk::x86_backend {
 
-struct abstract_register_descriptor {
+struct AbstractRegisterDescriptor {
 
     // As symbol-located register may not be stored in
     // stack frame, it becomes possible to unite these fields
@@ -26,7 +26,7 @@ struct abstract_register_descriptor {
     };
 
     /// Current or last machine register this register used to be stored in
-    e_machine_register last_register_location;
+    MachineRegister last_register_location;
 
     /// Indicates if this register should not be located
     /// in any register except one specified in last_register_location
@@ -50,7 +50,7 @@ struct abstract_register_descriptor {
     bool located_in_symbol;
 
     // Registers may only be relocated by their owners
-    command_list* owner;
+    CommandList* owner;
 };
 
 } // namespace bonk::x86_backend

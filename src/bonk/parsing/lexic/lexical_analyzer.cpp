@@ -10,21 +10,21 @@ const char* BONK_KEYWORD_NAMES[] = {"var",   "block",  "print", "context", "bonk
 const char* BONK_OPERATOR_NAMES[] = {"+", "-",  "*",  "/",  "=", "==",   "<",
                                      ">", "<=", ">=", "!=", "",  nullptr};
 
-lexical_analyzer::lexical_analyzer(compiler* compiler) {
+LexicalAnalyzer::LexicalAnalyzer(Compiler* compiler) {
     linked_compiler = compiler;
 }
 
-void lexical_analyzer::make_operator_lexeme(lexeme* lexeme, operator_type type) {
+void LexicalAnalyzer::make_operator_lexeme(Lexeme* lexeme, OperatorType type) {
     lexeme->type = BONK_LEXEME_OPERATOR;
     lexeme->operator_data.operator_type = type;
 }
 
-void lexical_analyzer::make_brace_lexeme(lexeme* lexeme, brace_type type) {
+void LexicalAnalyzer::make_brace_lexeme(Lexeme* lexeme, BraceType type) {
     lexeme->type = BONK_LEXEME_BRACE;
     lexeme->brace_data.brace_type = type;
 }
 
-bool lexical_analyzer::next() {
+bool LexicalAnalyzer::next() {
     char c = next_char();
 
     if (c == '\0') {
@@ -57,8 +57,8 @@ bool lexical_analyzer::next() {
         return true;
     }
 
-    parser_position saved_position = position;
-    lexeme next_lexeme = {};
+    ParserPosition saved_position = position;
+    Lexeme next_lexeme = {};
     next_lexeme.position = &saved_position;
 
     if (c == '@') {
@@ -132,7 +132,7 @@ bool lexical_analyzer::next() {
         if (lexemes.size() == 0) {
             make_brace_lexeme(&next_lexeme, BONK_BRACE_L_CB);
         } else {
-            lexeme last_lexeme = lexemes[lexemes.size() - 1];
+            Lexeme last_lexeme = lexemes[lexemes.size() - 1];
             if (last_lexeme.type != BONK_LEXEME_KEYWORD ||
                 last_lexeme.keyword_data.keyword_type != BONK_KEYWORD_BAMS) {
                 make_brace_lexeme(&next_lexeme, BONK_BRACE_L_CB);
@@ -155,7 +155,7 @@ bool lexical_analyzer::next() {
                 }
 
                 unsigned long length = position.index - begin_position - 1;
-                auto* inline_assembly = new tree_node_identifier({begin_pointer, length});
+                auto* inline_assembly = new TreeNodeIdentifier({begin_pointer, length});
 
                 next_lexeme.identifier_data.identifier = inline_assembly;
             }
@@ -200,7 +200,7 @@ bool lexical_analyzer::next() {
     return true;
 }
 
-std::vector<lexeme> lexical_analyzer::parse_file(const char* filename, const char* filetext) {
+std::vector<Lexeme> LexicalAnalyzer::parse_file(const char* filename, const char* filetext) {
 
     filename = strdup(filename);
 
@@ -219,17 +219,17 @@ std::vector<lexeme> lexical_analyzer::parse_file(const char* filename, const cha
 
     lexemes.push_back({});
 
-    std::vector<lexeme> result = std::move(lexemes);
+    std::vector<Lexeme> result = std::move(lexemes);
     lexemes = {};
 
     return result;
 }
 
-char lexical_analyzer::next_char() {
+char LexicalAnalyzer::next_char() {
     return text[position.index];
 }
 
-void lexical_analyzer::eat_char() {
+void LexicalAnalyzer::eat_char() {
     char c = next_char();
 
     assert(c != '\0');
@@ -242,12 +242,12 @@ void lexical_analyzer::eat_char() {
     }
 }
 
-bool lexical_analyzer::add_compiled_file(const std::string& file_path) {
+bool LexicalAnalyzer::add_compiled_file(const std::string& file_path) {
     compiled_files.push_back(file_path);
     return true;
 }
 
-bool lexical_analyzer::file_already_compiled(const std::string& file_path) {
+bool LexicalAnalyzer::file_already_compiled(const std::string& file_path) {
     for (int i = 0; i < compiled_files.size(); i++) {
         if (compiled_files[i] == file_path)
             return true;

@@ -6,16 +6,16 @@
 
 namespace bonk::x86_backend {
 
-struct locate_reg_command : asm_command {
+struct LocateRegCommand : AsmCommand {
 
-    locate_reg_command(abstract_register reg, command_parameter position);
+    LocateRegCommand(AbstractRegister reg, CommandParameter position);
 
-    abstract_register get_register_location();
+    AbstractRegister get_register_location();
 
     int get_stack_location();
 
-    asm_command* clone() override {
-        return new locate_reg_command(parameters[0].reg, parameters[1]);
+    AsmCommand* clone() override {
+        return new LocateRegCommand(parameters[0].reg, parameters[1]);
     }
 };
 

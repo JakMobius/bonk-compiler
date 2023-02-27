@@ -4,14 +4,14 @@
 
 namespace bonk::x86_backend {
 
-struct scope_command : asm_command {
+struct ScopeCommand : AsmCommand {
 
-    command_list* commands;
+    CommandList* commands;
 
-    scope_command(command_list* nested_list);
+    ScopeCommand(CommandList* nested_list);
 
-    asm_command* clone() override {
-        return new scope_command(commands);
+    AsmCommand* clone() override {
+        return new ScopeCommand(commands);
     }
 };
 

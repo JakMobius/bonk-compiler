@@ -4,12 +4,12 @@
 
 namespace bonk::x86_backend {
 
-struct scope_dead_end_command : asm_command {
+struct ScopeDeadEndCommand : AsmCommand {
 
-    scope_dead_end_command();
+    ScopeDeadEndCommand();
 
-    asm_command* clone() override {
-        return new scope_dead_end_command();
+    AsmCommand* clone() override {
+        return new ScopeDeadEndCommand();
     }
 };
 

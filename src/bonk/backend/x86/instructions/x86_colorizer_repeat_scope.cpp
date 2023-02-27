@@ -3,7 +3,7 @@
 
 namespace bonk::x86_backend {
 
-scope_repeat_command::scope_repeat_command() {
+ScopeRepeatCommand::ScopeRepeatCommand() {
     type = COMMAND_COLORIZER_REPEAT_SCOPE;
 }
 

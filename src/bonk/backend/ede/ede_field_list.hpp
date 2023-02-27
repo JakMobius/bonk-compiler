@@ -3,7 +3,7 @@
 
 namespace bonk::ede_backend {
 
-struct field_list;
+struct FieldList;
 
 }
 
@@ -12,18 +12,18 @@ struct field_list;
 
 namespace bonk::ede_backend {
 
-struct field_list {
-    std::vector<variable*> variables;
+struct FieldList {
+    std::vector<Variable*> variables;
     unsigned long byte_offset;
     unsigned long frame_size;
 
-    field_list();
+    FieldList();
 
-    ~field_list();
+    ~FieldList();
 
-    variable* get_variable(tree_node_identifier* identifier);
+    Variable* get_variable(TreeNodeIdentifier* identifier);
 
-    bool add_variable(variable* variable);
+    bool add_variable(Variable* variable);
 };
 
 } // namespace bonk::ede_backend

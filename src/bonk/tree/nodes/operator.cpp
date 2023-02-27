@@ -25,13 +25,13 @@ const char* OPERATOR_TYPE_NAMES[] = {"PLUS",
                                      "REBONK",
                                      "INVALID"};
 
-tree_node_operator::tree_node_operator(operator_type oper) {
+TreeNodeOperator::TreeNodeOperator(OperatorType oper) {
     oper_type = oper;
     type = TREE_NODE_TYPE_OPERATOR;
 }
 
-void tree_node_operator::serialize(json_serializer* serializer) {
-    tree_node::serialize(serializer);
+void TreeNodeOperator::serialize(JsonSerializer* serializer) {
+    TreeNode::serialize(serializer);
 
     serializer->block_string_field("type", "operator");
     serializer->block_string_field("operator_type", OPERATOR_TYPE_NAMES[oper_type]);

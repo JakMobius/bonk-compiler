@@ -3,12 +3,12 @@
 
 namespace bonk {
 
-tree_node* parse_grammatic_bams(parser* parser) {
-    lexeme* lexeme = parser->next_lexeme();
+TreeNode* parse_grammatic_bams(Parser* parser) {
+    Lexeme* lexeme = parser->next_lexeme();
     if (lexeme->type == BONK_LEXEME_INLINE_BAMS) {
         parser->eat_lexeme();
 
-        auto* node = new tree_node_operator(BONK_OPERATOR_BAMS);
+        auto* node = new TreeNodeOperator(BONK_OPERATOR_BAMS);
 
         node->source_position = lexeme->position->clone();
         node->left = lexeme->identifier_data.identifier;
@@ -20,8 +20,8 @@ tree_node* parse_grammatic_bams(parser* parser) {
     return nullptr;
 }
 
-tree_node* parse_grammatic_unary_operator(parser* parser) {
-    lexeme* lexeme = parser->next_lexeme();
+TreeNode* parse_grammatic_unary_operator(Parser* parser) {
+    Lexeme* lexeme = parser->next_lexeme();
 
     if (lexeme->type == BONK_LEXEME_KEYWORD) {
 
@@ -36,7 +36,7 @@ tree_node* parse_grammatic_unary_operator(parser* parser) {
         if (oper != BONK_OPERATOR_INVALID) {
             parser->eat_lexeme();
 
-            auto* statement = new tree_node_operator(BONK_OPERATOR_BREK);
+            auto* statement = new TreeNodeOperator(BONK_OPERATOR_BREK);
             if (!statement) {
                 parser->linked_compiler->out_of_memory();
                 return nullptr;
@@ -61,14 +61,14 @@ tree_node* parse_grammatic_unary_operator(parser* parser) {
 
         parser->eat_lexeme();
 
-        tree_node* expression = parse_grammatic_expression(parser);
+        TreeNode* expression = parse_grammatic_expression(parser);
         if (!expression) {
             if (parser->linked_compiler->state)
                 return nullptr;
             parser->error("missing operand");
         }
 
-        auto* print_call = new tree_node_operator(oper);
+        auto* print_call = new TreeNodeOperator(oper);
         if (!print_call) {
             parser->linked_compiler->out_of_memory();
             delete expression;

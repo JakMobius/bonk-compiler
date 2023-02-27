@@ -3,18 +3,18 @@
 
 namespace bonk::x86_backend {
 
-jmp_label::jmp_label(long long label) {
+JmpLabel::JmpLabel(long long label) {
     type = COMMAND_JMP_LABEL;
 
     parameters.resize(1);
-    parameters[0] = command_parameter::create_imm32(label);
+    parameters[0] = CommandParameter::create_imm32(label);
 }
 
-unsigned long jmp_label::get_index() {
+unsigned long JmpLabel::get_index() {
     return parameters[0].imm;
 }
 
-void jmp_label::to_bytes(command_encoder* buffer) {
+void JmpLabel::to_bytes(CommandEncoder* buffer) {
 }
 
 } // namespace bonk::x86_backend

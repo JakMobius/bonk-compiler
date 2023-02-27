@@ -6,6 +6,6 @@
 
 namespace bonk {
 
-bool parse_grammatic_program(parser* parser, tree_node_list<tree_node*>* target);
+bool parse_grammatic_program(Parser* parser, TreeNodeList<TreeNode*>* target);
 
 }

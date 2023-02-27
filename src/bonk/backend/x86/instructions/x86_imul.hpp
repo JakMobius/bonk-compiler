@@ -6,13 +6,13 @@
 
 namespace bonk::x86_backend {
 
-struct imul_command : asm_command {
-    imul_command(abstract_register target, abstract_register source);
+struct IMulCommand : AsmCommand {
+    IMulCommand(AbstractRegister target, AbstractRegister source);
 
-    void to_bytes(command_encoder* buffer) override;
+    void to_bytes(CommandEncoder* buffer) override;
 
-    asm_command* clone() override {
-        return new imul_command(parameters[0].reg, parameters[1].reg);
+    AsmCommand* clone() override {
+        return new IMulCommand(parameters[0].reg, parameters[1].reg);
     }
 };
 

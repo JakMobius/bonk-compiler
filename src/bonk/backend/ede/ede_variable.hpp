@@ -2,10 +2,10 @@
 
 namespace bonk::ede_backend {
 
-struct variable;
-struct variable_function;
+struct Variable;
+struct VariableFunction;
 
-enum variable_type { VARIABLE_TYPE_NUMBER, VARIABLE_TYPE_FUNCTION };
+enum VariableType { VARIABLE_TYPE_NUMBER, VARIABLE_TYPE_FUNCTION };
 
 } // namespace bonk::ede_backend
 
@@ -14,22 +14,22 @@ enum variable_type { VARIABLE_TYPE_NUMBER, VARIABLE_TYPE_FUNCTION };
 
 namespace bonk::ede_backend {
 
-struct variable {
-    variable_type type;
-    tree_node_identifier* identifier;
+struct Variable {
+    VariableType type;
+    TreeNodeIdentifier* identifier;
     unsigned long byte_offset;
 
-    variable(tree_node_identifier* identifier);
+    Variable(TreeNodeIdentifier* identifier);
 };
 
-struct variable_number : variable {
-    variable_number(tree_node_identifier* identifier);
+struct VariableNumber : Variable {
+    VariableNumber(TreeNodeIdentifier* identifier);
 };
 
-struct variable_function : variable {
-    field_list* argument_list;
+struct VariableFunction : Variable {
+    FieldList* argument_list;
 
-    variable_function(tree_node_identifier* identifier, field_list* the_argument_list);
+    VariableFunction(TreeNodeIdentifier* identifier, FieldList* the_argument_list);
 };
 
 } // namespace bonk::ede_backend

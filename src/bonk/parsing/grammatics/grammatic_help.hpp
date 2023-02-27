@@ -7,6 +7,6 @@
 
 namespace bonk {
 
-bool parse_grammatic_help(parser* thou, tree_node_list<tree_node*>* target);
+bool parse_grammatic_help(Parser* thou, TreeNodeList<TreeNode*>* target);
 
 }

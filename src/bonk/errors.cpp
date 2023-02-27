@@ -5,7 +5,7 @@
 
 namespace bonk {
 
-void compiler::warning_positioned(parser_position* pos, const char* format, ...) {
+void Compiler::warning_positioned(ParserPosition* pos, const char* format, ...) {
     if (config->error_file == nullptr)
         return;
     va_list ap;
@@ -17,7 +17,7 @@ void compiler::warning_positioned(parser_position* pos, const char* format, ...)
     fputc('\n', config->error_file);
 }
 
-void compiler::warning(const char* format, ...) {
+void Compiler::warning(const char* format, ...) {
     if (config->error_file == nullptr)
         return;
     va_list ap;
@@ -29,13 +29,13 @@ void compiler::warning(const char* format, ...) {
     fputc('\n', config->error_file);
 }
 
-void parser::warning(const char* format, ...) {
+void Parser::warning(const char* format, ...) {
     if (linked_compiler->config->error_file == nullptr)
         return;
     va_list ap;
 
     va_start(ap, format);
-    parser_position* pos = (*input)[(int)position].position;
+    ParserPosition* pos = (*input)[(int)position].position;
     fprintf(linked_compiler->config->error_file, "%s:%lu:%lu: warning: ", pos->filename, pos->line,
             pos->ch);
     vfprintf(linked_compiler->config->error_file, format, ap);
@@ -43,7 +43,7 @@ void parser::warning(const char* format, ...) {
     fputc('\n', linked_compiler->config->error_file);
 }
 
-void compiler::error_positioned(parser_position* pos, const char* format, ...) {
+void Compiler::error_positioned(ParserPosition* pos, const char* format, ...) {
     state = BONK_COMPILER_STATE_ERROR;
     if (config->error_file == nullptr)
         return;
@@ -60,7 +60,7 @@ void compiler::error_positioned(parser_position* pos, const char* format, ...) {
     fputc('\n', config->error_file);
 }
 
-void compiler::error(const char* format, ...) {
+void Compiler::error(const char* format, ...) {
     state = BONK_COMPILER_STATE_ERROR;
     if (config->error_file == nullptr)
         return;
@@ -73,14 +73,14 @@ void compiler::error(const char* format, ...) {
     fputc('\n', config->error_file);
 }
 
-void parser::error(const char* format, ...) {
+void Parser::error(const char* format, ...) {
     linked_compiler->state = BONK_COMPILER_STATE_ERROR;
     if (linked_compiler->config->error_file == nullptr)
         return;
     va_list ap;
 
     va_start(ap, format);
-    parser_position* pos = (*input)[(int)position].position;
+    ParserPosition* pos = (*input)[(int)position].position;
     if (pos) {
         fprintf(linked_compiler->config->error_file, "%s:%lu:%lu: error: ", pos->filename,
                 pos->line, pos->ch);
@@ -92,14 +92,14 @@ void parser::error(const char* format, ...) {
     fputc('\n', linked_compiler->config->error_file);
 }
 
-void lexical_analyzer::error(const char* format, ...) {
+void LexicalAnalyzer::error(const char* format, ...) {
     linked_compiler->state = BONK_COMPILER_STATE_ERROR;
     if (linked_compiler->config->error_file == nullptr)
         return;
     va_list ap;
 
     va_start(ap, format);
-    parser_position* pos = &position;
+    ParserPosition* pos = &position;
     if (pos) {
         fprintf(linked_compiler->config->error_file, "%s:%lu:%lu: error: ", pos->filename,
                 pos->line, pos->ch);
@@ -111,7 +111,7 @@ void lexical_analyzer::error(const char* format, ...) {
     fputc('\n', linked_compiler->config->error_file);
 }
 
-void compiler::fatal_error_positioned(parser_position* pos, const char* format, ...) {
+void Compiler::fatal_error_positioned(ParserPosition* pos, const char* format, ...) {
     state = BONK_COMPILER_STATE_FATAL_ERROR;
     if (config->error_file == nullptr)
         return;
@@ -124,7 +124,7 @@ void compiler::fatal_error_positioned(parser_position* pos, const char* format, 
     fputc('\n', config->error_file);
 }
 
-void compiler::fatal_error(const char* format, ...) {
+void Compiler::fatal_error(const char* format, ...) {
     FILE* output = stderr;
 
     state = BONK_COMPILER_STATE_FATAL_ERROR;
@@ -141,7 +141,7 @@ void compiler::fatal_error(const char* format, ...) {
     fputc('\n', output);
 }
 
-void parser::fatal_error(const char* format, ...) {
+void Parser::fatal_error(const char* format, ...) {
     FILE* output = stderr;
     va_list ap;
     va_start(ap, format);
@@ -150,7 +150,7 @@ void parser::fatal_error(const char* format, ...) {
     if (linked_compiler->config->error_file == nullptr)
         return;
     output = linked_compiler->config->error_file;
-    parser_position* pos = (*input)[(int)position].position;
+    ParserPosition* pos = (*input)[(int)position].position;
 
     fprintf(output, "%s:%lu:%lu: fatal error: ", pos->filename, pos->line, pos->ch);
     vfprintf(output, format, ap);

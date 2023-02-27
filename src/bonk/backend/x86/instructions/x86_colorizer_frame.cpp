@@ -3,11 +3,11 @@
 
 namespace bonk::x86_backend {
 
-frame_create_command::frame_create_command() {
+FrameCreateCommand::FrameCreateCommand() {
     type = COMMAND_COLORIZER_FRAME_CREATE;
 }
 
-frame_destroy_command::frame_destroy_command() {
+FrameDestroyCommand::FrameDestroyCommand() {
     type = COMMAND_COLORIZER_FRAME_DESTROY;
 }
 

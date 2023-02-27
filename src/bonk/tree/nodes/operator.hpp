@@ -1,9 +1,9 @@
 #pragma once
 namespace bonk {
 
-struct tree_node_operator;
+struct TreeNodeOperator;
 
-enum operator_type {
+enum OperatorType {
     BONK_OPERATOR_PLUS,
     BONK_OPERATOR_MINUS,
     BONK_OPERATOR_MULTIPLY,
@@ -31,19 +31,19 @@ extern const char* OPERATOR_TYPE_NAMES[];
 
 } // namespace bonk
 
-#include "../../../utils/json_serializer.hpp"
+#include "../../../utils/JsonSerializer.hpp"
 #include "node.hpp"
 
 namespace bonk {
 
-struct tree_node_operator : tree_node {
-    operator_type oper_type = BONK_OPERATOR_INVALID;
-    tree_node* left = nullptr;
-    tree_node* right = nullptr;
+struct TreeNodeOperator : TreeNode {
+    OperatorType oper_type = BONK_OPERATOR_INVALID;
+    TreeNode* left = nullptr;
+    TreeNode* right = nullptr;
 
-    tree_node_operator(operator_type oper);
+    TreeNodeOperator(OperatorType oper);
 
-    void serialize(json_serializer* file) override;
+    void serialize(JsonSerializer* file) override;
 };
 
 } // namespace bonk

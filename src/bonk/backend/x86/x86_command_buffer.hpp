@@ -2,8 +2,8 @@
 
 namespace bonk::x86_backend {
 
-struct command_buffer;
-struct command_list;
+struct CommandBuffer;
+struct CommandList;
 
 } // namespace bonk::x86_backend
 
@@ -16,41 +16,41 @@ struct command_list;
 
 namespace bonk::x86_backend {
 
-struct command_list : mlist<asm_command*> {
-    command_buffer* parent_buffer;
+struct CommandList : MList<AsmCommand*> {
+    CommandBuffer* parent_buffer;
 
-    command_list(command_buffer* parent_buffer);
+    CommandList(CommandBuffer* parent_buffer);
 
-    void append_read_register(std::set<abstract_register>* tree);
+    void append_read_register(std::set<AbstractRegister>* tree);
 
-    void append_write_register(std::set<abstract_register>* tree);
+    void append_write_register(std::set<AbstractRegister>* tree);
 };
 
-struct command_buffer {
-    macho::macho_file* file = nullptr;
-    command_list* root_list = nullptr;
-    linear_allocator allocator {};
-    register_descriptor_list descriptors {};
-    std::vector<command_list*> lists {};
-    std::vector<command_list*> list {};
+struct CommandBuffer {
+    macho::MachoFile* file = nullptr;
+    CommandList* root_list = nullptr;
+    LinearAllocator allocator {};
+    RegisterDescriptorList descriptors {};
+    std::vector<CommandList*> lists {};
+    std::vector<CommandList*> list {};
     unsigned long labels = 0;
 
     // Creates completely new independent command parent_buffer
 
-    command_buffer(macho::macho_file* file = nullptr);
+    CommandBuffer(macho::MachoFile* file = nullptr);
 
     // Creates command buffer which will use the same register namespace as
     // another command buffer
 
-    command_buffer(register_descriptor_list* descriptor_list, macho::macho_file* file = nullptr);
+    CommandBuffer(RegisterDescriptorList* descriptor_list, macho::MachoFile* file = nullptr);
 
-    ~command_buffer();
+    ~CommandBuffer();
 
-    command_list* next_command_list();
+    CommandList* next_command_list();
 
-    void write_block_to_object_file(const std::string& block_name, macho::macho_file* target);
+    void write_block_to_object_file(const std::string& block_name, macho::MachoFile* target);
 
-    command_encoder* to_bytes();
+    CommandEncoder* to_bytes();
 };
 
 } // namespace bonk::x86_backend

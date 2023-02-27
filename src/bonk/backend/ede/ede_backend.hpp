@@ -2,20 +2,20 @@
 
 #include "../../compiler.hpp"
 #include "../../tree/nodes/nodes.hpp"
-#include "../backend.hpp"
+#include "bonk/backend/backend.hpp"
 #include "ede_backend_context.hpp"
 #include "ede_field_list.hpp"
 #include "ede_scope_stack.hpp"
 
 namespace bonk::ede_backend {
 
-struct backend : bonk::backend {
-    backend(){};
+struct Backend : bonk::Backend {
+    Backend(){};
 
-    virtual ~backend() {
+    virtual ~Backend() {
     }
 
-    bool compile_ast(compiler* linked_compiler, tree_node_list<bonk::tree_node*>* ast,
+    bool compile_ast(Compiler* linked_compiler, TreeNodeList<bonk::TreeNode*>* ast,
                      FILE* target) override;
 };
 

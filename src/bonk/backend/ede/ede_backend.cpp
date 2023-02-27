@@ -3,10 +3,10 @@
 
 namespace bonk::ede_backend {
 
-bool backend::compile_ast(compiler* linked_compiler, tree_node_list<bonk::tree_node*>* ast,
+bool Backend::compile_ast(Compiler* linked_compiler, TreeNodeList<bonk::TreeNode*>* ast,
                           FILE* target) {
 
-    backend_context context(linked_compiler, target);
+    BackendContext context(linked_compiler, target);
     context.compile_program(ast);
 
     if (linked_compiler->state) {

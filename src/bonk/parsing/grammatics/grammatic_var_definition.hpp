@@ -5,6 +5,6 @@
 
 namespace bonk {
 
-tree_node_variable_definition* parse_grammatic_var_definition(parser* parser);
+TreeNodeVariableDefinition* parse_grammatic_var_definition(Parser* parser);
 
 }

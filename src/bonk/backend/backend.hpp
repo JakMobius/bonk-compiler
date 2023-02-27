@@ -2,7 +2,7 @@
 
 namespace bonk {
 
-struct backend;
+struct Backend;
 
 }
 
@@ -11,12 +11,12 @@ struct backend;
 
 namespace bonk {
 
-struct backend {
-    backend() = default;
+struct Backend {
+    Backend() = default;
 
-    virtual ~backend() = default;
+    virtual ~Backend() = default;
 
-    virtual bool compile_ast(compiler* linked_compiler, tree_node_list<tree_node*>* ast,
+    virtual bool compile_ast(Compiler* linked_compiler, TreeNodeList<TreeNode*>* ast,
                              FILE* target);
 };
 

@@ -7,25 +7,25 @@
 
 namespace bonk::x86_backend {
 
-struct register_colorize_context_state;
+struct RegisterColorizeContextState;
 
 }
 
 namespace bonk::x86_backend {
 
-struct register_colorize_context_state {
+struct RegisterColorizeContextState {
 
-    std::unordered_map<abstract_register, bin_heap<abstract_register_usage>*> usage_heap_array;
+    std::unordered_map<AbstractRegister, bin_heap<AbstractRegisterUsage>*> usage_heap_array;
 
     // Relocation table
-    std::unordered_map<abstract_register, abstract_register_descriptor> relocation_info;
-    command_list* source;
+    std::unordered_map<AbstractRegister, AbstractRegisterDescriptor> relocation_info;
+    CommandList* source;
 
-    register_colorize_context_state(command_list* list, register_colorize_context_state* state);
+    RegisterColorizeContextState(CommandList* list, RegisterColorizeContextState* state);
 
     bool create_usage_heap_array();
 
-    void add_register_usage(abstract_register, abstract_register_usage usage);
+    void add_register_usage(AbstractRegister, AbstractRegisterUsage usage);
 
     void duplicate_usages();
 };

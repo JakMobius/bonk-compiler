@@ -2,9 +2,9 @@
 
 namespace bonk::x86_backend {
 
-struct reg_stack;
-struct command_list;
-struct reg_stack_entry;
+struct RegStack;
+struct CommandList;
+struct RegStackEntry;
 
 } // namespace bonk::x86_backend
 
@@ -17,24 +17,24 @@ struct reg_stack_entry;
 
 namespace bonk::x86_backend {
 
-struct reg_stack_entry {
-    abstract_register reg;
+struct RegStackEntry {
+    AbstractRegister reg;
     bool is_logical;
 };
 
-struct reg_stack {
+struct RegStack {
 
-    std::vector<reg_stack_entry> stack;
+    std::vector<RegStackEntry> stack;
 
-    command_list* list;
+    CommandList* list;
 
-    reg_stack(command_list* list);
+    RegStack(CommandList* list);
 
     void push_imm64(uint64_t value);
 
-    void push_reg64(abstract_register reg);
+    void push_reg64(AbstractRegister reg);
 
-    void pop(abstract_register reg);
+    void pop(AbstractRegister reg);
 
     void add();
 
@@ -44,11 +44,11 @@ struct reg_stack {
 
     void div();
 
-    reg_stack_entry get_head_register();
+    RegStackEntry get_head_register();
 
-    abstract_register get_head_register_number();
+    AbstractRegister get_head_register_number();
 
-    abstract_register get_head_register_logical();
+    AbstractRegister get_head_register_logical();
 
     bool push_next_register(bool is_logical);
 
@@ -72,19 +72,19 @@ struct reg_stack {
 
     void not_equal();
 
-    void convert_logical_to_number(abstract_register reg);
+    void convert_logical_to_number(AbstractRegister reg);
 
-    void convert_number_to_logical(abstract_register reg);
+    void convert_number_to_logical(AbstractRegister reg);
 
     void compare();
 
     void test();
 
-    abstract_register push_placeholder(bool is_logical);
+    AbstractRegister push_placeholder(bool is_logical);
 
-    void pop_logical(abstract_register reg);
+    void pop_logical(AbstractRegister reg);
 
-    void write_head(abstract_register reg);
+    void write_head(AbstractRegister reg);
 };
 
 } // namespace bonk::x86_backend

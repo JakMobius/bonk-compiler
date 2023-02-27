@@ -3,7 +3,7 @@
 
 namespace bonk::x86_backend {
 
-scope_dead_end_command::scope_dead_end_command() {
+ScopeDeadEndCommand::ScopeDeadEndCommand() {
     type = COMMAND_COLORIZER_SCOPE_DEAD_END;
 }
 

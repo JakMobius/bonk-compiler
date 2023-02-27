@@ -6,13 +6,13 @@
 
 namespace bonk::x86_backend {
 
-struct pop_command : asm_command {
-    pop_command(abstract_register reg);
+struct PopCommand : AsmCommand {
+    PopCommand(AbstractRegister reg);
 
-    void to_bytes(command_encoder* buffer) override;
+    void to_bytes(CommandEncoder* buffer) override;
 
-    asm_command* clone() override {
-        return new pop_command(parameters[0].reg);
+    AsmCommand* clone() override {
+        return new PopCommand(parameters[0].reg);
     }
 };
 

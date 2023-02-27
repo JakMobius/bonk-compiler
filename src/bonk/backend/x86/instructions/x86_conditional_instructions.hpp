@@ -7,29 +7,29 @@
 
 namespace bonk::x86_backend {
 
-struct jump_command : asm_command {
-    void set_label(jmp_label* label);
+struct JumpCommand : AsmCommand {
+    void set_label(JmpLabel* label);
 
-    jmp_label* get_label();
+    JmpLabel* get_label();
 
     void invert_condition();
 
-    jump_command(jmp_label* label, asm_command_type jump_type);
+    JumpCommand(JmpLabel* label, AsmCommandType jump_type);
 
-    void to_bytes(command_encoder* buffer) override;
+    void to_bytes(CommandEncoder* buffer) override;
 
-    asm_command* clone() override {
-        return new jump_command(get_label(), type);
+    AsmCommand* clone() override {
+        return new JumpCommand(get_label(), type);
     }
 };
 
-struct cset_command : asm_command {
-    cset_command(abstract_register reg, asm_command_type cset_type);
+struct CSetCommand : AsmCommand {
+    CSetCommand(AbstractRegister reg, AsmCommandType cset_type);
 
-    void to_bytes(command_encoder* buffer) override;
+    void to_bytes(CommandEncoder* buffer) override;
 
-    asm_command* clone() override {
-        return new cset_command(parameters[0].reg, type);
+    AsmCommand* clone() override {
+        return new CSetCommand(parameters[0].reg, type);
     }
 };
 

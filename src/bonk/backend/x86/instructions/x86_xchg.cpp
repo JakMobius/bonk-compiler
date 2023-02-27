@@ -4,7 +4,7 @@
 
 namespace bonk::x86_backend {
 
-xchg_command::xchg_command(command_parameter target, command_parameter source) {
+XchgCommand::XchgCommand(CommandParameter target, CommandParameter source) {
     type = COMMAND_XCHG;
 
     parameters.resize(2);
@@ -28,10 +28,10 @@ xchg_command::xchg_command(command_parameter target, command_parameter source) {
     }
 }
 
-void xchg_command::to_bytes(command_encoder* buffer) {
+void XchgCommand::to_bytes(CommandEncoder* buffer) {
 
-    command_parameter target = parameters[0];
-    command_parameter source = parameters[1];
+    CommandParameter target = parameters[0];
+    CommandParameter source = parameters[1];
 
     if (target.type == PARAMETER_TYPE_REG_64 && source.type == PARAMETER_TYPE_REG_64) {
         buffer->write_prefix_opcode_modrm_sib(0x87, target, source);

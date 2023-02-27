@@ -1,7 +1,7 @@
 
-#include "json_serializer.hpp"
+#include "JsonSerializer.hpp"
 
-json_serializer::json_serializer(FILE* file) {
+JsonSerializer::JsonSerializer(FILE* file) {
     target = file;
     state.is_first = true;
     state.is_array = false;
@@ -9,20 +9,20 @@ json_serializer::json_serializer(FILE* file) {
     depth = 1;
 }
 
-void json_serializer::block_string_field(const char* name, const char* value) {
+void JsonSerializer::block_string_field(const char* name, const char* value) {
     prepare_next_field();
     escape_string(name);
     fprintf(target, ": ");
     escape_string(value);
 }
 
-void json_serializer::block_number_field(const char* name, long double value) {
+void JsonSerializer::block_number_field(const char* name, long double value) {
     prepare_next_field();
     escape_string(name);
     fprintf(target, ": %.17Lg", value);
 }
 
-void json_serializer::block_start_block(const char* name) {
+void JsonSerializer::block_start_block(const char* name) {
     prepare_next_field();
     escape_string(name);
     fprintf(target, ": {");
@@ -33,7 +33,7 @@ void json_serializer::block_start_block(const char* name) {
     depth++;
 }
 
-void json_serializer::close_block() {
+void JsonSerializer::close_block() {
     depth--;
 
     if (!state.is_first) {
@@ -47,7 +47,7 @@ void json_serializer::close_block() {
     fputc('}', target);
 }
 
-void json_serializer::block_start_array(const char* name) {
+void JsonSerializer::block_start_array(const char* name) {
     prepare_next_field();
     escape_string(name);
     fprintf(target, ": [");
@@ -58,19 +58,19 @@ void json_serializer::block_start_array(const char* name) {
     depth++;
 }
 
-void json_serializer::array_add_string(const char* name) {
+void JsonSerializer::array_add_string(const char* name) {
     prepare_next_field();
     padding();
     escape_string(name);
 }
 
-void json_serializer::array_add_number(long double value) {
+void JsonSerializer::array_add_number(long double value) {
     prepare_next_field();
     padding();
     fprintf(target, "%.17Lg", value);
 }
 
-void json_serializer::array_add_block() {
+void JsonSerializer::array_add_block() {
     prepare_next_field();
     fprintf(target, "{");
 
@@ -80,7 +80,7 @@ void json_serializer::array_add_block() {
     depth++;
 }
 
-void json_serializer::array_add_array() {
+void JsonSerializer::array_add_array() {
     prepare_next_field();
     fprintf(target, "[");
 
@@ -90,7 +90,7 @@ void json_serializer::array_add_array() {
     depth++;
 }
 
-void json_serializer::close_array() {
+void JsonSerializer::close_array() {
     depth--;
 
     if (!state.is_first) {
@@ -104,7 +104,7 @@ void json_serializer::close_array() {
     fputc(']', target);
 }
 
-void json_serializer::prepare_next_field() {
+void JsonSerializer::prepare_next_field() {
     if (!state.is_first)
         fputc(',', target);
     fputc('\n', target);
@@ -112,14 +112,14 @@ void json_serializer::prepare_next_field() {
     state.is_first = false;
 }
 
-void json_serializer::padding() {
+void JsonSerializer::padding() {
     for (int i = 0; i < depth; i++) {
         fputc(' ', target);
         fputc(' ', target);
     }
 }
 
-void json_serializer::escape_string(const char* string) {
+void JsonSerializer::escape_string(const char* string) {
     if (!string)
         fprintf(target, "null");
     else {
@@ -137,7 +137,7 @@ void json_serializer::escape_string(const char* string) {
     }
 }
 
-json_serializer::~json_serializer() {
+JsonSerializer::~JsonSerializer() {
     fprintf(target, "}");
     target = nullptr;
 }

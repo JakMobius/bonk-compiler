@@ -5,12 +5,12 @@
 
 namespace bonk {
 
-tree_node* parse_grammatic_sub_block(parser* parser);
+TreeNode* parse_grammatic_sub_block(Parser* parser);
 
-tree_node_list<tree_node*>* parse_grammatic_nested_block(parser* parser);
+TreeNodeList<TreeNode*>* parse_grammatic_nested_block(Parser* parser);
 
-tree_node_cycle* parse_grammatic_cycle(parser* parser);
+TreeNodeCycle* parse_grammatic_cycle(Parser* parser);
 
-tree_node_check* parse_grammatic_check(parser* parser);
+TreeNodeCheck* parse_grammatic_check(Parser* parser);
 
 } // namespace bonk

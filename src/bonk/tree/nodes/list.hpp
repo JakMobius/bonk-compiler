@@ -1,36 +1,36 @@
 #pragma once
 
-#include "../../../utils/json_serializer.hpp"
+#include "../../../utils/JsonSerializer.hpp"
 #include "../../../utils/list.hpp"
 #include "node.hpp"
 
 namespace bonk {
 
-template <typename T> struct tree_node_list : tree_node {
+template <typename T> struct TreeNodeList : TreeNode {
 
-    mlist<T> list;
+    MList<T> list;
 
-    tree_node_list();
+    TreeNodeList();
 
-    ~tree_node_list() override;
+    ~TreeNodeList() override;
 
     /* Override virtual methods */
 
-    void serialize(json_serializer* serializer) override;
+    void serialize(JsonSerializer* serializer) override;
 };
 
-template <typename T> tree_node_list<T>::tree_node_list() {
+template <typename T> TreeNodeList<T>::TreeNodeList() {
     type = TREE_NODE_TYPE_LIST;
 }
 
-template <typename T> tree_node_list<T>::~tree_node_list() {
+template <typename T> TreeNodeList<T>::~TreeNodeList() {
     for (auto i = list.begin(); i != list.end(); list.next_iterator(&i)) {
         delete list.get(i);
     }
 }
 
-template <typename T> void tree_node_list<T>::serialize(json_serializer* serializer) {
-    tree_node::serialize(serializer);
+template <typename T> void TreeNodeList<T>::serialize(JsonSerializer* serializer) {
+    TreeNode::serialize(serializer);
 
     serializer->block_string_field("type", "list");
     serializer->block_start_array("contents");

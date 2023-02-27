@@ -3,8 +3,8 @@
 
 namespace bonk {
 
-parser_position* parser_position::clone() {
-    auto* new_position = (parser_position*)calloc(1, sizeof(*this));
+ParserPosition* ParserPosition::clone() {
+    auto* new_position = (ParserPosition*)calloc(1, sizeof(*this));
 
     new_position->index = index;
     new_position->line = line;
@@ -15,7 +15,7 @@ parser_position* parser_position::clone() {
     return new_position;
 }
 
-const char* parser_position::to_string() {
+const char* ParserPosition::to_string() {
     int length = snprintf(nullptr, 0, "%s:%lu:%lu", filename, line, ch);
 
     auto* buffer = (char*)calloc(length + 1, sizeof(char));

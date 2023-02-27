@@ -2,10 +2,10 @@
 
 namespace bonk::x86_backend {
 
-struct variable;
-struct variable_function;
+struct Variable;
+struct VariableFunction;
 
-enum variable_type { VARIABLE_TYPE_NUMBER, VARIABLE_TYPE_FUNCTION };
+enum VariableType { VARIABLE_TYPE_NUMBER, VARIABLE_TYPE_FUNCTION };
 
 } // namespace bonk::x86_backend
 
@@ -15,23 +15,23 @@ enum variable_type { VARIABLE_TYPE_NUMBER, VARIABLE_TYPE_FUNCTION };
 
 namespace bonk::x86_backend {
 
-struct variable {
+struct Variable {
     bool is_contextual;
-    variable_type type;
-    tree_node_identifier* identifier;
-    abstract_register storage;
+    VariableType type;
+    TreeNodeIdentifier* identifier;
+    AbstractRegister storage;
 
-    variable(tree_node_identifier* identifier);
+    Variable(TreeNodeIdentifier* identifier);
 };
 
-struct variable_number : variable {
-    variable_number(tree_node_variable_definition* definition);
+struct VariableNumber : Variable {
+    VariableNumber(TreeNodeVariableDefinition* definition);
 };
 
-struct variable_function : variable {
-    field_list* argument_list;
+struct VariableFunction : Variable {
+    FieldList* argument_list;
 
-    variable_function(tree_node_identifier* the_identifier, field_list* the_argument_list);
+    VariableFunction(TreeNodeIdentifier* the_identifier, FieldList* the_argument_list);
 };
 
 } // namespace bonk::x86_backend

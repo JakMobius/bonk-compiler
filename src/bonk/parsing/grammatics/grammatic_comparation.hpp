@@ -6,8 +6,8 @@
 
 namespace bonk {
 
-bool is_comparation_operator(operator_type oper);
+bool is_comparation_operator(OperatorType oper);
 
-tree_node* parse_grammatic_comparation(parser* parser);
+TreeNode* parse_grammatic_comparation(Parser* parser);
 
 } // namespace bonk

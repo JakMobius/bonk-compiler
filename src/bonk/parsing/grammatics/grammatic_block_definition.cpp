@@ -7,10 +7,10 @@
 
 namespace bonk {
 
-tree_node_block_definition* parse_grammatic_block_definition(parser* parser) {
+TreeNodeBlockDefinition* parse_grammatic_block_definition(Parser* parser) {
 
     auto old_position = parser->position;
-    lexeme* next = parser->next_lexeme();
+    Lexeme* next = parser->next_lexeme();
     bool is_promised = false;
 
     if (next->type != BONK_LEXEME_KEYWORD)
@@ -38,7 +38,7 @@ tree_node_block_definition* parse_grammatic_block_definition(parser* parser) {
         return nullptr;
     }
 
-    tree_node_identifier* block_identifier = next->identifier_data.identifier;
+    TreeNodeIdentifier* block_identifier = next->identifier_data.identifier;
 
     parser->eat_lexeme();
     next = parser->next_lexeme();
@@ -71,7 +71,7 @@ tree_node_block_definition* parse_grammatic_block_definition(parser* parser) {
 
     parser->eat_lexeme();
 
-    auto* block_definition = new tree_node_block_definition();
+    auto* block_definition = new TreeNodeBlockDefinition();
 
     block_definition->body = block;
     block_definition->block_name = block_identifier;

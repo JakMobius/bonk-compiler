@@ -10,8 +10,8 @@
 
 namespace bonk {
 
-tree_node* parse_grammatic_expression(parser* parser);
+TreeNode* parse_grammatic_expression(Parser* parser);
 
-tree_node* parse_grammatic_expression_leveled(parser* parser, bool top_level);
+TreeNode* parse_grammatic_expression_leveled(Parser* parser, bool top_level);
 
 } // namespace bonk

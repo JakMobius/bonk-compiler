@@ -4,8 +4,8 @@
 
 namespace bonk {
 
-bool parse_grammatic_help(parser* thou, tree_node_list<tree_node*>* target) {
-    lexeme* next = thou->next_lexeme();
+bool parse_grammatic_help(Parser* thou, TreeNodeList<TreeNode*>* target) {
+    Lexeme* next = thou->next_lexeme();
     if (next->type == BONK_LEXEME_KEYWORD && next->keyword_data.keyword_type == BONK_KEYWORD_HELP) {
         thou->eat_lexeme();
 
@@ -28,7 +28,7 @@ bool parse_grammatic_help(parser* thou, tree_node_list<tree_node*>* target) {
 
         full_path[length] = '\0';
 
-        file_op_result read_result = FILE_OP_OK;
+        FileOpResult read_result = FILE_OP_OK;
         const char* source = read_file(full_path, &read_result, nullptr);
 
         if (read_result == FILE_OP_NOT_ENOUGH_MEMORY) {
@@ -46,11 +46,11 @@ bool parse_grammatic_help(parser* thou, tree_node_list<tree_node*>* target) {
         free((void*)library_name);
 
         if (!thou->linked_compiler->lexical_analyzer->file_already_compiled(full_path)) {
-            std::vector<lexeme> lexemes =
+            std::vector<Lexeme> lexemes =
                 thou->linked_compiler->lexical_analyzer->parse_file(full_path, source);
 
             if (!thou->linked_compiler->state) {
-                parser* nested_parser = new parser(thou->linked_compiler);
+                Parser* nested_parser = new Parser(thou->linked_compiler);
 
                 if (!nested_parser) {
                     free(full_path);

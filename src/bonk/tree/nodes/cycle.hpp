@@ -1,22 +1,22 @@
 #pragma once
 namespace bonk {
 
-struct tree_node_cycle;
+struct TreeNodeCycle;
 
 }
 
-#include "../../../utils/json_serializer.hpp"
+#include "../../../utils/JsonSerializer.hpp"
 #include "list.hpp"
 #include "node.hpp"
 
 namespace bonk {
 
-struct tree_node_cycle : tree_node {
-    tree_node_list<tree_node*>* body = nullptr;
+struct TreeNodeCycle : TreeNode {
+    TreeNodeList<TreeNode*>* body = nullptr;
 
-    tree_node_cycle();
+    TreeNodeCycle();
 
-    void serialize(json_serializer* serializer) override;
+    void serialize(JsonSerializer* serializer) override;
 };
 
 } // namespace bonk

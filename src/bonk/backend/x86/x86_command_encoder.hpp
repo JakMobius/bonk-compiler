@@ -2,11 +2,11 @@
 
 namespace bonk::x86_backend {
 
-struct emplace_request;
-struct command_buffer;
-struct jmp_label;
-struct asm_command;
-struct command_parameter;
+struct EmplaceRequest;
+struct CommandBuffer;
+struct JmpLabel;
+struct AsmCommand;
+struct CommandParameter;
 } // namespace bonk::x86_backend
 
 #include <vector>
@@ -17,60 +17,59 @@ struct command_parameter;
 
 namespace bonk::x86_backend {
 
-struct emplace_request {
+struct EmplaceRequest {
     unsigned long offset;
     unsigned long relation;
     char bytes;
-    jmp_label* command;
+    JmpLabel* command;
 };
 
-struct relocation_request {
+struct RelocationRequest {
     uint32_t relocation;
     int32_t address;
-    macho::relocation_type type;
+    macho::RelocationType type;
     uint8_t data_length;
     bool pc_rel;
 };
 
-struct command_encoder {
-    std::vector<emplace_request> emplace_requests;
-    std::vector<relocation_request> relocation_requests;
+struct CommandEncoder {
+    std::vector<EmplaceRequest> emplace_requests;
+    std::vector<RelocationRequest> relocation_requests;
     std::vector<char> buffer;
 
-    command_encoder();
+    CommandEncoder();
 
-    void request_emplace(emplace_request request);
+    void request_emplace(EmplaceRequest request);
 
     void do_emplacements();
 
-    void request_relocation(relocation_request request);
+    void request_relocation(RelocationRequest request);
 
-    bool is_sip(command_parameter reg_rm);
+    bool is_sip(CommandParameter reg_rm);
 
-    char get_displacement_bytes(command_parameter reg_rm, register_extensions* extensions);
+    char get_displacement_bytes(CommandParameter reg_rm, RegisterExtensions* extensions);
 
-    char get_mod_reg_rm_byte(command_parameter reg, command_parameter reg_rm,
-                             register_extensions* extensions);
+    char get_mod_reg_rm_byte(CommandParameter reg, CommandParameter reg_rm,
+                             RegisterExtensions* extensions);
 
-    char get_sib_byte(command_parameter reg_rm, register_extensions* extensions);
+    char get_sib_byte(CommandParameter reg_rm, RegisterExtensions* extensions);
 
-    uint64_t get_displacement(command_parameter rm);
+    uint64_t get_displacement(CommandParameter rm);
 
-    void get_sib_base_index(command_parameter reg_rm, char* index_p, char* base_p,
+    void get_sib_base_index(CommandParameter reg_rm, char* index_p, char* base_p,
                             bool* requires_mask);
 
-    void write_prefix_opcode_modrm_sib(char opcode, command_parameter reg,
-                                       command_parameter reg_rm);
+    void write_prefix_opcode_modrm_sib(char opcode, CommandParameter reg, CommandParameter reg_rm);
 
-    void write_prefix_longopcode_regrm_sib(char opcode_a, char opcode_b, command_parameter reg,
-                                           command_parameter reg_rm);
+    void write_prefix_longopcode_regrm_sib(char opcode_a, char opcode_b, CommandParameter reg,
+                                           CommandParameter reg_rm);
 
-    void write_extended_opcode(char opcode, char extension, command_parameter reg);
+    void write_extended_opcode(char opcode, char extension, CommandParameter reg);
 
     void write_extended_longopcode(char opcode_a, char opcode_b, char extension,
-                                   command_parameter reg);
+                                   CommandParameter reg);
 
-    e_machine_register to_machine_register(abstract_register reg);
+    MachineRegister to_machine_register(AbstractRegister reg);
 };
 
 } // namespace bonk::x86_backend

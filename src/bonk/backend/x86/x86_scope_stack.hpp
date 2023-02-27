@@ -3,7 +3,7 @@
 
 namespace bonk::x86_backend {
 
-struct scope_stack;
+struct ScopeStack;
 
 }
 
@@ -13,18 +13,18 @@ struct scope_stack;
 
 namespace bonk::x86_backend {
 
-struct scope_stack {
-    std::vector<field_list*> scopes;
+struct ScopeStack {
+    std::vector<FieldList*> scopes;
 
-    scope_stack();
+    ScopeStack();
 
-    void push_scope(field_list* scope);
+    void push_scope(FieldList* scope);
 
     void pop_scope();
 
-    field_list* top();
+    FieldList* top();
 
-    variable* get_variable(tree_node_identifier* identifier, field_list** scope);
+    Variable* get_variable(TreeNodeIdentifier* identifier, FieldList** scope);
 };
 
 } // namespace bonk::x86_backend

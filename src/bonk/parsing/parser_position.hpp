@@ -6,13 +6,13 @@
 
 namespace bonk {
 
-struct parser_position {
+struct ParserPosition {
     const char* filename;
     unsigned long line;
     unsigned long ch;
     unsigned long index;
 
-    parser_position* clone();
+    ParserPosition* clone();
 
     const char* to_string();
 };

@@ -3,19 +3,19 @@
 
 namespace bonk {
 
-void compiler::out_of_memory() {
+void Compiler::out_of_memory() {
     fatal_error("Compiler ran out of memory");
 }
 
-compiler::compiler(compiler_config* the_config) {
+Compiler::Compiler(CompilerConfig* the_config) {
     config = the_config;
 
     // TODO: better naming
-    lexical_analyzer = new struct lexical_analyzer(this);
-    parser = new struct parser(this);
+    lexical_analyzer = new LexicalAnalyzer(this);
+    parser = new Parser(this);
 }
 
-compiler::~compiler() {
+Compiler::~Compiler() {
     delete parser;
     delete lexical_analyzer;
 
@@ -24,8 +24,8 @@ compiler::~compiler() {
     parser = nullptr;
 }
 
-tree_node_list<tree_node*>* compiler::get_ast_of_file_at_path(const char* file_path) {
-    file_op_result file_read_result = FILE_OP_READ_ERROR;
+TreeNodeList<TreeNode*>* Compiler::get_ast_of_file_at_path(const char* file_path) {
+    FileOpResult file_read_result = FILE_OP_READ_ERROR;
     unsigned long file_length = 0;
     const char* real_path = realpath(file_path, nullptr);
     const char* file = read_file(real_path, &file_read_result, &file_length);
@@ -45,7 +45,7 @@ tree_node_list<tree_node*>* compiler::get_ast_of_file_at_path(const char* file_p
     return parser->parse_file(&lexemes);
 }
 
-bool compiler::compile_ast(tree_node_list<tree_node*>* ast, FILE* target) {
+bool Compiler::compile_ast(TreeNodeList<TreeNode*>* ast, FILE* target) {
     if (!config->compile_backend) {
         fatal_error("backend has not been specified");
         return false;

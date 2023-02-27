@@ -5,13 +5,13 @@
 
 namespace bonk::x86_backend {
 
-struct final_optimizer {
-    command_buffer* buffer;
-    std::unordered_map<jmp_label*, jmp_label*> label_map;
+struct FinalOptimizer {
+    CommandBuffer* buffer;
+    std::unordered_map<JmpLabel*, JmpLabel*> label_map;
 
-    static void optimize(command_buffer* buffer);
+    static void optimize(CommandBuffer* buffer);
 
-    final_optimizer(command_buffer* buffer);
+    FinalOptimizer(CommandBuffer* buffer);
 
     void optimize_mov_zeroes() const;
 

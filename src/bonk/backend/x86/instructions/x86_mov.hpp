@@ -2,7 +2,7 @@
 
 namespace bonk::x86_backend {
 
-struct mov_command;
+struct MovCommand;
 
 }
 
@@ -13,26 +13,26 @@ struct mov_command;
 
 namespace bonk::x86_backend {
 
-struct mov_command : asm_command {
-    mov_command(command_parameter target, command_parameter source);
+struct MovCommand : AsmCommand {
+    MovCommand(CommandParameter target, CommandParameter source);
 
-    void to_bytes(command_encoder* buffer) override;
+    void to_bytes(CommandEncoder* buffer) override;
 
-    asm_command* clone() override {
-        return new mov_command(parameters[0], parameters[1]);
+    AsmCommand* clone() override {
+        return new MovCommand(parameters[0], parameters[1]);
     }
 };
 
-struct movzx_command : mov_command {
-    movzx_command(command_parameter target, command_parameter source)
-        : mov_command(target, source) {
+struct MovZXCommand : MovCommand {
+    MovZXCommand(CommandParameter target, CommandParameter source)
+        : MovCommand(target, source) {
         type = COMMAND_MOVZX;
     }
 
-    void to_bytes(command_encoder* buffer) override;
+    void to_bytes(CommandEncoder* buffer) override;
 
-    asm_command* clone() override {
-        return new movzx_command(parameters[0], parameters[1]);
+    AsmCommand* clone() override {
+        return new MovZXCommand(parameters[0], parameters[1]);
     }
 };
 

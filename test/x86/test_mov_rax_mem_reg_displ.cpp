@@ -7,13 +7,13 @@
 using namespace bonk::x86_backend;
 
 TEST(EncodingX86, MovCommandRaxMemRegPlusDispl) {
-    auto* cbuffer = new command_buffer();
+    auto* cbuffer = new CommandBuffer();
 
     // mov rax, [reg + disp32]
     for (int i = 0; i < 16; i++) {
-        cbuffer->root_list->insert_tail(new mov_command(
-            command_parameter::create_register_64(rax),
-            command_parameter::create_memory(command_parameter_memory::create_reg_displ(i, -512))));
+        cbuffer->root_list->insert_tail(new MovCommand(
+            CommandParameter::create_register_64(rax),
+            CommandParameter::create_memory(CommandParameterMemory::create_reg_displ(i, -512))));
     }
 
     auto encoder = cbuffer->to_bytes();

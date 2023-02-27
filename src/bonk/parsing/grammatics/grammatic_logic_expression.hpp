@@ -7,6 +7,6 @@
 
 namespace bonk {
 
-tree_node* parse_grammatic_logic_expression(parser* parser);
+TreeNode* parse_grammatic_logic_expression(Parser* parser);
 
 }

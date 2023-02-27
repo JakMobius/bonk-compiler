@@ -2,11 +2,11 @@
 
 namespace bonk {
 
-struct tree_node_check;
+struct TreeNodeCheck;
 
 }
 
-#include "../../../utils/json_serializer.hpp"
+#include "../../../utils/JsonSerializer.hpp"
 #include "../../../utils/list.hpp"
 #include "call_parameter.hpp"
 #include "identifier.hpp"
@@ -15,17 +15,17 @@ struct tree_node_check;
 
 namespace bonk {
 
-struct tree_node_block_definition : tree_node {
+struct TreeNodeBlockDefinition : TreeNode {
 
-    tree_node_identifier* block_name;
-    tree_node_list<tree_node*>* body;
+    TreeNodeIdentifier* block_name;
+    TreeNodeList<TreeNode*>* body;
     bool is_promise;
 
-    tree_node_block_definition();
+    TreeNodeBlockDefinition();
 
-    ~tree_node_block_definition();
+    ~TreeNodeBlockDefinition();
 
-    void serialize(json_serializer* file) override;
+    void serialize(JsonSerializer* file) override;
 };
 
 } // namespace bonk

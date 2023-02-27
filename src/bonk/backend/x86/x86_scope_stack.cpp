@@ -3,26 +3,26 @@
 
 namespace bonk::x86_backend {
 
-scope_stack::scope_stack() {
+ScopeStack::ScopeStack() {
 }
 
-void scope_stack::push_scope(field_list* scope) {
+void ScopeStack::push_scope(FieldList* scope) {
     scopes.push_back(scope);
 }
 
-void scope_stack::pop_scope() {
+void ScopeStack::pop_scope() {
     scopes.pop_back();
 }
 
-field_list* scope_stack::top() {
+FieldList* ScopeStack::top() {
     return scopes[scopes.size() - 1];
 }
 
-variable* scope_stack::get_variable(tree_node_identifier* identifier, field_list** scope) {
+Variable* ScopeStack::get_variable(TreeNodeIdentifier* identifier, FieldList** scope) {
 
     for (long long i = scopes.size() - 1; i >= 0; i--) {
 
-        variable* var = scopes[i]->get_variable(identifier);
+        Variable* var = scopes[i]->get_variable(identifier);
 
         if (var != nullptr) {
             if (scope)

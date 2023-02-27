@@ -7,6 +7,6 @@
 
 namespace bonk {
 
-tree_node* parse_grammatic_unary_operator(parser* parser);
+TreeNode* parse_grammatic_unary_operator(Parser* parser);
 
 }

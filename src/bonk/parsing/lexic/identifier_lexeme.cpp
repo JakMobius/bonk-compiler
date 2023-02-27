@@ -8,10 +8,10 @@
 
 namespace bonk {
 
-bool lexical_analyzer::parse_identifier_lexeme(lexeme* target) {
+bool LexicalAnalyzer::parse_identifier_lexeme(Lexeme* target) {
     const char* name_start = text + position.index;
 
-    parser_position identifier_position = position;
+    ParserPosition identifier_position = position;
 
     while (true) {
         char c = next_char();
@@ -28,9 +28,9 @@ bool lexical_analyzer::parse_identifier_lexeme(lexeme* target) {
     if (identifier_position.index == position.index)
         return false;
 
-    keyword_type keyword = keyword_from_string(
+    KeywordType keyword = keyword_from_string(
         std::string_view(name_start, position.index - identifier_position.index));
-    if (keyword != (keyword_type)-1) {
+    if (keyword != (KeywordType)-1) {
         target->type = BONK_LEXEME_KEYWORD;
         target->keyword_data.keyword_type = keyword;
         return true;
@@ -38,7 +38,7 @@ bool lexical_analyzer::parse_identifier_lexeme(lexeme* target) {
 
     unsigned long length = position.index - identifier_position.index;
 
-    tree_node_identifier* identifier = new tree_node_identifier(std::string(name_start, length));
+    TreeNodeIdentifier* identifier = new TreeNodeIdentifier(std::string(name_start, length));
 
     identifier->source_position = identifier_position.clone();
 
@@ -47,14 +47,14 @@ bool lexical_analyzer::parse_identifier_lexeme(lexeme* target) {
     return true;
 }
 
-keyword_type lexical_analyzer::keyword_from_string(std::string_view string) {
-    for (int keyword = 0; BONK_KEYWORD_NAMES[(keyword_type)keyword]; keyword++) {
+KeywordType LexicalAnalyzer::keyword_from_string(std::string_view string) {
+    for (int keyword = 0; BONK_KEYWORD_NAMES[(KeywordType)keyword]; keyword++) {
         if (strncmp(string.data(), BONK_KEYWORD_NAMES[keyword], string.size()) == 0) {
             if (BONK_KEYWORD_NAMES[keyword][string.size()] == '\0')
-                return (keyword_type)keyword;
+                return (KeywordType)keyword;
         }
     }
-    return (keyword_type)-1;
+    return (KeywordType)-1;
 }
 
 } // namespace bonk

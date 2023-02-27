@@ -2,10 +2,10 @@
 
 namespace bonk::x86_backend {
 
-struct asm_command;
-struct command_parameter;
+struct AsmCommand;
+struct CommandParameter;
 
-enum asm_command_type {
+enum AsmCommandType {
     COMMAND_COLORIZER_SCOPE_DEAD_END,
     COMMAND_COLORIZER_SCOPE_POP,
     COMMAND_COLORIZER_SCOPE,
@@ -64,52 +64,52 @@ extern const char* ASM_REGISTERS_8[];
 
 namespace bonk::x86_backend {
 
-struct backend_context;
+struct BackendContext;
 
-struct command_parameter_memory {
+struct CommandParameterMemory {
     int32_t displacement;
-    abstract_register reg_a;
-    abstract_register reg_b;
+    AbstractRegister reg_a;
+    AbstractRegister reg_b;
     uint8_t reg_a_constant;
 
     uint8_t register_amount();
 
-    abstract_register get_register(uint8_t index);
+    AbstractRegister get_register(uint8_t index);
 
-    void set_register(uint8_t index, abstract_register reg);
+    void set_register(uint8_t index, AbstractRegister reg);
 
-    static command_parameter_memory create_reg(abstract_register reg);
+    static CommandParameterMemory create_reg(AbstractRegister reg);
 
-    static command_parameter_memory create_displ(int32_t displacement);
+    static CommandParameterMemory create_displ(int32_t displacement);
 
-    static command_parameter_memory create_reg_displ(abstract_register reg, int32_t displacement);
+    static CommandParameterMemory create_reg_displ(AbstractRegister reg, int32_t displacement);
 
-    static command_parameter_memory create_reg_reg(abstract_register reg_a,
-                                                   abstract_register reg_b);
+    static CommandParameterMemory create_reg_reg(AbstractRegister reg_a,
+                                                   AbstractRegister reg_b);
 
-    static command_parameter_memory
-    create_reg_reg_displ(abstract_register reg_a, abstract_register reg_b, int32_t displacement);
+    static CommandParameterMemory
+    create_reg_reg_displ(AbstractRegister reg_a, AbstractRegister reg_b, int32_t displacement);
 
-    static command_parameter_memory
-    create_reg_const_displ(abstract_register reg, uint8_t reg_a_constant, int32_t displacement);
+    static CommandParameterMemory
+    create_reg_const_displ(AbstractRegister reg, uint8_t reg_a_constant, int32_t displacement);
 
-    static command_parameter_memory create_reg_const_reg_displ(abstract_register reg_a,
+    static CommandParameterMemory create_reg_const_reg_displ(AbstractRegister reg_a,
                                                                uint8_t reg_a_constant,
-                                                               abstract_register reg_b,
+                                                               AbstractRegister reg_b,
                                                                int32_t displacement);
 };
 
-struct command_parameter_symbol {
+struct CommandParameterSymbol {
     uint32_t symbol;
     bool ip_relative;
 
-    command_parameter_symbol(bool ip_relative, uint32_t symbol);
+    CommandParameterSymbol(bool ip_relative, uint32_t symbol);
 
-    command_parameter_symbol() : symbol(0), ip_relative(false) {
+    CommandParameterSymbol() : symbol(0), ip_relative(false) {
     }
 };
 
-enum command_parameter_type {
+enum CommandParameterType {
     PARAMETER_TYPE_UNSET,
     PARAMETER_TYPE_REG_64,
     PARAMETER_TYPE_REG_8,
@@ -119,51 +119,51 @@ enum command_parameter_type {
     PARAMETER_TYPE_SYMBOL
 };
 
-struct command_parameter {
+struct CommandParameter {
     union {
         long long imm;
-        abstract_register reg;
-        jmp_label* label;
-        command_parameter_memory memory;
-        command_parameter_symbol symbol;
+        AbstractRegister reg;
+        JmpLabel* label;
+        CommandParameterMemory memory;
+        CommandParameterSymbol symbol;
     };
-    command_parameter_type type;
+    CommandParameterType type;
 
-    command_parameter() : type(PARAMETER_TYPE_UNSET){};
+    CommandParameter() : type(PARAMETER_TYPE_UNSET){};
 
-    command_parameter(command_parameter_type type) : type(type){};
+    CommandParameter(CommandParameterType type) : type(type){};
 
-    static command_parameter create_register_64(abstract_register reg);
+    static CommandParameter create_register_64(AbstractRegister reg);
 
-    static command_parameter create_register_8(abstract_register reg);
+    static CommandParameter create_register_8(AbstractRegister reg);
 
-    static command_parameter create_imm32(long long imm);
+    static CommandParameter create_imm32(long long imm);
 
-    static command_parameter create_label(jmp_label* label);
+    static CommandParameter create_label(JmpLabel* label);
 
-    static command_parameter create_memory(command_parameter_memory memory);
+    static CommandParameter create_memory(CommandParameterMemory memory);
 
-    static command_parameter create_symbol(command_parameter_symbol symbol);
+    static CommandParameter create_symbol(CommandParameterSymbol symbol);
 };
 
-struct asm_command {
-    asm_command_type type;
+struct AsmCommand {
+    AsmCommandType type;
     long offset;
 
-    std::vector<abstract_register> read_registers;
-    std::vector<abstract_register> write_registers;
-    std::vector<command_parameter> parameters;
+    std::vector<AbstractRegister> read_registers;
+    std::vector<AbstractRegister> write_registers;
+    std::vector<CommandParameter> parameters;
 
-    void set_read_register(abstract_register reg);
+    void set_read_register(AbstractRegister reg);
 
-    void set_write_register(abstract_register reg);
+    void set_write_register(AbstractRegister reg);
 
-    virtual void to_bytes(command_encoder* buffer);
+    virtual void to_bytes(CommandEncoder* buffer);
 
-    virtual asm_command* clone() = 0;
+    virtual AsmCommand* clone() = 0;
 
   protected:
-    void copy_parameters(asm_command* other);
+    void copy_parameters(AsmCommand* other);
 };
 
 }; // namespace bonk::x86_backend

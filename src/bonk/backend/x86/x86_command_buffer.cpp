@@ -16,35 +16,35 @@
 
 namespace bonk::x86_backend {
 
-command_buffer::command_buffer(macho::macho_file* file) {
+CommandBuffer::CommandBuffer(macho::MachoFile* file) {
     this->file = file;
     allocator.set_page_capacity(4096);
     root_list = next_command_list();
 }
 
-command_buffer::command_buffer(register_descriptor_list* descriptor_list, macho::macho_file* file) {
+CommandBuffer::CommandBuffer(RegisterDescriptorList* descriptor_list, macho::MachoFile* file) {
     this->file = file;
     allocator.set_page_capacity(4096);
     root_list = next_command_list();
 }
 
-command_buffer::~command_buffer() {
+CommandBuffer::~CommandBuffer() {
     for (int i = 0; i < lists.size(); i++) {
         delete lists[i];
     }
 }
 
-command_list* command_buffer::next_command_list() {
-    auto* next_list = new command_list(this);
+CommandList* CommandBuffer::next_command_list() {
+    auto* next_list = new CommandList(this);
     lists.push_back(next_list);
     return next_list;
 }
 
-command_encoder* command_buffer::to_bytes() {
-    command_encoder* encoder = new command_encoder();
+CommandEncoder* CommandBuffer::to_bytes() {
+    CommandEncoder* encoder = new CommandEncoder();
 
     for (auto i = root_list->begin(); i != root_list->end(); root_list->next_iterator(&i)) {
-        asm_command* command = root_list->get(i);
+        AsmCommand* command = root_list->get(i);
         command->offset = encoder->buffer.size();
         command->to_bytes(encoder);
     }
@@ -52,8 +52,8 @@ command_encoder* command_buffer::to_bytes() {
     return encoder;
 }
 
-void command_buffer::write_block_to_object_file(const std::string& block_name,
-                                                macho::macho_file* target) {
+void CommandBuffer::write_block_to_object_file(const std::string& block_name,
+                                                macho::MachoFile* target) {
 
     auto encoder = to_bytes();
     auto offset = target->section_text.size;
@@ -70,9 +70,9 @@ void command_buffer::write_block_to_object_file(const std::string& block_name,
     target->add_code({encoder->buffer.data(), encoder->buffer.size()});
 }
 
-void command_list::append_read_register(std::set<abstract_register>* tree) {
+void CommandList::append_read_register(std::set<AbstractRegister>* tree) {
     for (auto i = begin(); i != end(); next_iterator(&i)) {
-        asm_command* command = get(i);
+        AsmCommand* command = get(i);
         for (int j = 0; j < command->read_registers.size(); j++) {
             auto reg = command->read_registers[j];
             if (parent_buffer->descriptors.get_descriptor(reg)->owner == this)
@@ -82,9 +82,9 @@ void command_list::append_read_register(std::set<abstract_register>* tree) {
     }
 }
 
-void command_list::append_write_register(std::set<abstract_register>* tree) {
+void CommandList::append_write_register(std::set<AbstractRegister>* tree) {
     for (auto i = begin(); i != end(); i = next_iterator(&i)) {
-        asm_command* command = get(i);
+        AsmCommand* command = get(i);
         for (int j = 0; j < command->read_registers.size(); j++) {
             auto reg = command->read_registers[j];
             if (parent_buffer->descriptors.get_descriptor(reg)->owner == this)
@@ -94,7 +94,7 @@ void command_list::append_write_register(std::set<abstract_register>* tree) {
     }
 }
 
-command_list::command_list(command_buffer* parent_buffer) {
+CommandList::CommandList(CommandBuffer* parent_buffer) {
     this->parent_buffer = parent_buffer;
 }
 } // namespace bonk::x86_backend

@@ -61,13 +61,13 @@ int main(int argc, const char* argv[]) {
         return 0;
     }
 
-    bonk::compiler_config config = {};
+    bonk::CompilerConfig config = {};
     config.error_file = stderr;
 
     if(target_flag == "x86") {
-        config.compile_backend = new bonk::x86_backend::backend();
+        config.compile_backend = new bonk::x86_backend::Backend();
     } else if(target_flag == "ede") {
-        config.compile_backend = new bonk::ede_backend::backend();
+        config.compile_backend = new bonk::ede_backend::Backend();
     } else {
         init_fatal_error("unknown compile target: %s", target_flag.c_str());
         return 1;
@@ -88,13 +88,13 @@ int main(int argc, const char* argv[]) {
         }
     }
 
-    bonk::compiler compiler(&config);
+    bonk::Compiler compiler(&config);
 
-    bonk::tree_node_list<bonk::tree_node*>* ast = compiler.get_ast_of_file_at_path(input.c_str());
+    bonk::TreeNodeList<bonk::TreeNode*>* ast = compiler.get_ast_of_file_at_path(input.c_str());
 
     if (ast) {
         if (ast_flag) {
-            auto* serializer = new json_serializer(output_file);
+            auto* serializer = new JsonSerializer(output_file);
             ast->serialize(serializer);
             delete serializer;
         } else {

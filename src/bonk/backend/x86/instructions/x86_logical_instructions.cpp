@@ -3,7 +3,7 @@
 
 namespace bonk::x86_backend {
 
-and_command::and_command(command_parameter target, command_parameter source) {
+AndCommand::AndCommand(CommandParameter target, CommandParameter source) {
     type = COMMAND_AND;
 
     assert(target.type == PARAMETER_TYPE_REG_8 && source.type == PARAMETER_TYPE_REG_8);
@@ -17,10 +17,10 @@ and_command::and_command(command_parameter target, command_parameter source) {
     set_write_register(target.reg);
 }
 
-void and_command::to_bytes(command_encoder* buffer) {
+void AndCommand::to_bytes(CommandEncoder* buffer) {
 
-    command_parameter target = parameters[0];
-    command_parameter source = parameters[1];
+    CommandParameter target = parameters[0];
+    CommandParameter source = parameters[1];
 
     if (target.type == PARAMETER_TYPE_REG_8 && source.type == PARAMETER_TYPE_REG_8) {
         buffer->write_prefix_opcode_modrm_sib(0x22, target, source);
@@ -31,7 +31,7 @@ void and_command::to_bytes(command_encoder* buffer) {
     assert(!"Cannot encode command");
 }
 
-or_command::or_command(command_parameter target, command_parameter source) {
+OrCommand::OrCommand(CommandParameter target, CommandParameter source) {
     type = COMMAND_OR;
 
     assert(target.type == PARAMETER_TYPE_REG_8 && source.type == PARAMETER_TYPE_REG_8);
@@ -45,10 +45,10 @@ or_command::or_command(command_parameter target, command_parameter source) {
     set_write_register(target.reg);
 }
 
-void or_command::to_bytes(command_encoder* buffer) {
+void OrCommand::to_bytes(CommandEncoder* buffer) {
 
-    command_parameter target = parameters[0];
-    command_parameter source = parameters[1];
+    CommandParameter target = parameters[0];
+    CommandParameter source = parameters[1];
 
     if (target.type == PARAMETER_TYPE_REG_8 && source.type == PARAMETER_TYPE_REG_8) {
         buffer->write_prefix_opcode_modrm_sib(0x0A, target, source);

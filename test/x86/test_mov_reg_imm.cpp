@@ -7,12 +7,12 @@
 using namespace bonk::x86_backend;
 
 TEST(EncodingX86, MovCommandRegImm) {
-    auto* cbuffer = new command_buffer();
+    auto* cbuffer = new CommandBuffer();
 
     for (int i = 0; i < 16; i++) {
         cbuffer->root_list->insert_tail(
-            new mov_command(command_parameter::create_register_64(i),
-                            command_parameter::create_imm32(0xBEBEBEBEFAFAFAFAll)));
+            new MovCommand(CommandParameter::create_register_64(i),
+                            CommandParameter::create_imm32(0xBEBEBEBEFAFAFAFAll)));
     }
 
     auto encoder = cbuffer->to_bytes();
