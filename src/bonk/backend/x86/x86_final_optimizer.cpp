@@ -18,7 +18,7 @@ static bool is_conditional_jump(AsmCommandType type) {
 }
 
 void FinalOptimizer::optimize(CommandBuffer* buffer) {
-    FinalOptimizer optimizer = {buffer};
+    FinalOptimizer optimizer = FinalOptimizer(buffer);
     optimizer.remove_useless_movs();
     optimizer.apply_label_map();
     optimizer.remove_useless_labels();
@@ -44,11 +44,8 @@ FinalOptimizer::FinalOptimizer(CommandBuffer* the_buffer) {
     buffer = the_buffer;
 }
 
-void FinalOptimizer::apply_label_map() const {
-    for (auto i = buffer->root_list->commands.begin(); i != buffer->root_list->commands.end();
-         ++i) {
-        AsmCommand* command = *i;
-
+void FinalOptimizer::apply_label_map() {
+    for (auto command : buffer->root_list->commands) {
         for (auto & parameter : command->parameters) {
             auto param = parameter;
             if (param.type == PARAMETER_TYPE_LABEL) {

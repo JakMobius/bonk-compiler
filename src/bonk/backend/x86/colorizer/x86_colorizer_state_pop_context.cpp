@@ -23,18 +23,17 @@ bool ColorizerStatePopContext::count_transform() {
 
         // Joining transform map to our target transform
 
-        for (auto it = single_transform.begin(); it != single_transform.end(); ++it) {
-            target_transform.insert({it->first, it->second});
+        for (auto & it : single_transform) {
+            target_transform.insert({it.first, it.second});
         }
 
         // Removing registers we've owned in current state
 
-        for (auto it = target_transform.begin(); it != target_transform.end();) {
+        for (auto it = target_transform.begin(); it != target_transform.end();++it) {
             if (it->second.owner == list) {
                 it = target_transform.erase(it);
                 continue;
             }
-            ++it;
         }
     }
 

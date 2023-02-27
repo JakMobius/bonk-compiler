@@ -23,8 +23,7 @@ template <typename T> struct bin_heap {
     T get_min();
 };
 
-template <typename T> bin_heap<T>::bin_heap() {
-}
+template <typename T> bin_heap<T>::bin_heap() = default;
 
 template <typename T> T bin_heap<T>::pop() {
     assert(length > 0);

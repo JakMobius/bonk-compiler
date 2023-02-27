@@ -15,16 +15,13 @@ ScopeCommand::ScopeCommand(CommandList* nested_list) {
 
     commands = nested_list;
 
-    for (auto i = commands->commands.begin(); i != commands->commands.end(); ++i) {
-        AsmCommand* command = *i;
-        for (int j = 0; j < command->read_registers.size(); j++) {
-            auto reg = command->read_registers[j];
+    for (auto command : commands->commands) {
+        for (long long reg : command->read_registers) {
             if (read_registers_tree.erase(reg)) {
                 set_read_register(reg);
             }
         }
-        for (int j = 0; j < command->write_registers.size(); j++) {
-            auto reg = command->write_registers[j];
+        for (long long reg : command->write_registers) {
             if (write_registers_tree.erase(reg)) {
                 set_write_register(reg);
             }

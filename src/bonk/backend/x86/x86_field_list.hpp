@@ -26,7 +26,7 @@ struct FieldList {
 
     Variable* get_variable(TreeNodeIdentifier* identifier);
 
-    bool add_variable(Variable* variable) const;
+    void add_variable(Variable* variable);
 };
 
 } // namespace bonk::x86_backend

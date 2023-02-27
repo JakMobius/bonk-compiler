@@ -5,36 +5,35 @@ namespace bonk::ede_backend {
 
 ScopeStack::ScopeStack() = default;
 
-bool ScopeStack::push_scope(FieldList* scope) {
+void ScopeStack::push_scope(FieldList* scope) {
 
-    if (scopes.size() > 0) {
+    if (!scopes.empty()) {
         FieldList* previous_scope = scopes[scopes.size() - 1];
 
         scope->byte_offset = previous_scope->byte_offset + previous_scope->frame_size;
     }
 
     scopes.push_back(scope);
-    return true;
 }
 
 void ScopeStack::pop_scope() {
     scopes.pop_back();
 }
 
-FieldList* ScopeStack::top() {
+FieldList* ScopeStack::top() const {
     return scopes[scopes.size() - 1];
 }
 
 unsigned long ScopeStack::frame_size() {
     unsigned long scope_offset = 0;
-    for (int i = 0; i < scopes.size(); i++) {
-        scope_offset += scopes[i]->frame_size;
+    for (auto & scope : scopes) {
+        scope_offset += scope->frame_size;
     }
 
     return scope_offset;
 }
 
-Variable* ScopeStack::get_variable(TreeNodeIdentifier* identifier, FieldList** scope) {
+Variable* ScopeStack::get_variable(TreeNodeIdentifier* identifier, FieldList** scope) const {
 
     for (int i = scopes.size() - 1; i >= 0; i--) {
 

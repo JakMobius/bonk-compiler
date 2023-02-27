@@ -34,10 +34,6 @@ TreeNode* parse_grammatic_comparation(Parser* parser) {
         }
 
         auto* sum = new TreeNodeOperator(operator_type);
-        if (!sum) {
-            parser->linked_compiler->out_of_memory();
-            return nullptr;
-        }
         sum->left = result;
         sum->right = next_term;
         result = sum;

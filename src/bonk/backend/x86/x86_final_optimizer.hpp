@@ -23,7 +23,7 @@ struct FinalOptimizer {
 
     bool remove_dead_ends() const;
 
-    void apply_label_map() const;
+    void apply_label_map();
 };
 
 } // namespace bonk::x86_backend

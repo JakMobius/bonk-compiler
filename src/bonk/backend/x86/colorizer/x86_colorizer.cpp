@@ -656,9 +656,7 @@ void RegisterColorizer::locate_register_at_machine_register(AbstractRegister reg
 void RegisterColorizer::run_colorizer() {
     auto list = state->source;
     bool end = false;
-    for (auto i = list->commands.begin(); i != list->commands.end() && !end; ++i) {
-        AsmCommand* command = *i;
-
+    for (AsmCommand* command : list->commands) {
         switch (command->type) {
         case COMMAND_COLORIZER_SCOPE_DEAD_END:
             end = true;
@@ -909,7 +907,7 @@ void RegisterColorizer::flush_unused_registers() {
 }
 
 void RegisterColorizer::release_register_immediately(MachineRegister reg,
-                                                      bool released_by_command) const {
+                                                      bool released_by_command) {
     assert(reg != rinvalid);
     COLORIZER_DEBUG("; release immediately: %s\n", ASM_REGISTERS_64[reg]);
 
@@ -955,8 +953,8 @@ MachineRegister RegisterColorizer::effective_unused_register(AsmCommand* cmd,
 }
 
 bool RegisterColorizer::is_unused_register(MachineRegister reg) {
-    for (int i = 0; i < unused_registers_stack.size(); i++) {
-        if (unused_registers_stack[i] == reg)
+    for (auto & i : unused_registers_stack) {
+        if (i == reg)
             return true;
     }
     return false;
@@ -964,11 +962,9 @@ bool RegisterColorizer::is_unused_register(MachineRegister reg) {
 
 void RegisterColorizer::transform_labels() const {
     auto list = output->root_list;
-    for (auto i = list->commands.begin(); i != list->commands.end(); ++i) {
-        auto command = *i;
-
-        for (int j = 0; j < command->parameters.size(); j++) {
-            auto parameter = command->parameters[j];
+    for (auto command : list->commands) {
+        for (auto & j : command->parameters) {
+            auto parameter = j;
 
             if (parameter.type == PARAMETER_TYPE_LABEL) {
                 auto it = label_map.find(parameter.label);
@@ -977,7 +973,7 @@ void RegisterColorizer::transform_labels() const {
                 } else {
                     parameter.label = nullptr;
                 }
-                command->parameters[j] = parameter;
+                j = parameter;
             }
         }
     }
@@ -994,8 +990,8 @@ bool bonk::x86_backend::RegisterColorizer::command_uses_register(AsmCommand* cmd
             descriptor->last_register_location == reg)
             return true;
         if (ignore_used)
-            for (int j = 0; j < registers_released_by_command.size(); j++) {
-                if (registers_released_by_command[j] == reg)
+            for (auto & j : registers_released_by_command) {
+                if (j == reg)
                     return true;
             }
     }
@@ -1006,8 +1002,8 @@ bool bonk::x86_backend::RegisterColorizer::command_uses_register(AsmCommand* cmd
             descriptor->last_register_location == reg)
             return true;
         if (ignore_used)
-            for (int j = 0; j < registers_released_by_command.size(); j++) {
-                if (registers_released_by_command[j] == reg)
+            for (auto & j : registers_released_by_command) {
+                if (j == reg)
                     return true;
             }
     }

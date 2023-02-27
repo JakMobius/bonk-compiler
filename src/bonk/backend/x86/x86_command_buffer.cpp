@@ -29,8 +29,8 @@ CommandBuffer::CommandBuffer(RegisterDescriptorList* descriptor_list, macho::Mac
 }
 
 CommandBuffer::~CommandBuffer() {
-    for (int i = 0; i < lists.size(); i++) {
-        delete lists[i];
+    for (auto & list : lists) {
+        delete list;
     }
 }
 
@@ -43,8 +43,7 @@ CommandList* CommandBuffer::next_command_list() {
 CommandEncoder* CommandBuffer::to_bytes() {
     auto* encoder = new CommandEncoder();
 
-    for (auto i = root_list->commands.begin(); i != root_list->commands.end(); ++i) {
-        AsmCommand* command = *i;
+    for (auto command : root_list->commands) {
         command->offset = encoder->buffer.size();
         command->to_bytes(encoder);
     }
@@ -59,9 +58,7 @@ void CommandBuffer::write_block_to_object_file(const std::string& block_name,
     auto offset = target->section_text.size;
 
     encoder->do_emplacements();
-    for (int i = 0; i < encoder->relocation_requests.size(); i++) {
-        auto& relocation_request = encoder->relocation_requests[i];
-
+    for (auto & relocation_request : encoder->relocation_requests) {
         target->add_relocation(relocation_request.relocation, relocation_request.address + offset,
                                relocation_request.pc_rel, relocation_request.data_length);
     }
@@ -71,10 +68,8 @@ void CommandBuffer::write_block_to_object_file(const std::string& block_name,
 }
 
 void CommandList::append_read_register(std::set<AbstractRegister>* tree) {
-    for (auto i = commands.begin(); i != commands.end(); ++i) {
-        AsmCommand* command = *i;
-        for (int j = 0; j < command->read_registers.size(); j++) {
-            auto reg = command->read_registers[j];
+    for (auto command : commands) {
+        for (long long reg : command->read_registers) {
             if (parent_buffer->descriptors.get_descriptor(reg)->owner == this)
                 continue;
             tree->insert(reg);
@@ -83,10 +78,8 @@ void CommandList::append_read_register(std::set<AbstractRegister>* tree) {
 }
 
 void CommandList::append_write_register(std::set<AbstractRegister>* tree) {
-    for (auto i = commands.begin(); i != commands.end(); i = ++i) {
-        AsmCommand* command = *i;
-        for (int j = 0; j < command->read_registers.size(); j++) {
-            auto reg = command->read_registers[j];
+    for (auto* command : commands) {
+        for (long long reg : command->read_registers) {
             if (parent_buffer->descriptors.get_descriptor(reg)->owner == this)
                 continue;
             tree->insert(reg);

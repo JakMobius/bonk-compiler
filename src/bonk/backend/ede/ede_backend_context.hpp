@@ -16,9 +16,9 @@ struct BackendContext {
 
     BackendContext(Compiler* compiler, FILE* destination);
 
-    void field_list_declare_variable(TreeNodeVariableDefinition* node);
+    void field_list_declare_variable(TreeNodeVariableDefinition* node) const;
 
-    void field_list_declare_block(TreeNodeBlockDefinition* node);
+    void field_list_declare_block(TreeNodeBlockDefinition* node) const;
 
     void error_already_defined(TreeNodeIdentifier* identifier) const;
 
@@ -28,7 +28,7 @@ struct BackendContext {
 
     const char* get_comparsion_instruction_negated(OperatorType operator_type);
 
-    void reference_variable(TreeNodeIdentifier* identifier);
+    void reference_variable(TreeNodeIdentifier* identifier) const;
 
     void compile_term(TreeNode* node);
 

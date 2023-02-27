@@ -117,7 +117,7 @@ struct RegisterColorizer {
 
     void destroy_register_if_unused(AbstractRegister reg);
 
-    void release_register_immediately(MachineRegister reg, bool b) const;
+    void release_register_immediately(MachineRegister reg, bool b);
 
     void release_register_after_command(MachineRegister reg);
 

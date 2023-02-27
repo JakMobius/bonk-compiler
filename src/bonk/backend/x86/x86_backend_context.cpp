@@ -52,9 +52,7 @@ void BackendContext::compile_program(TreeNodeList<TreeNode*>* ast) {
 
         std::list<TreeNode*>* list = &ast->list;
 
-        for (auto i = ast->list.begin(); i != ast->list.end(); ++i) {
-            auto* next_node = *i;
-
+        for (auto next_node : ast->list) {
             if (next_node->type == TREE_NODE_TYPE_BLOCK_DEFINITION) {
                 write_block_definition((TreeNodeBlockDefinition*)next_node);
             } else if (next_node->type == TREE_NODE_TYPE_VAR_DEFINITION) {
@@ -63,9 +61,7 @@ void BackendContext::compile_program(TreeNodeList<TreeNode*>* ast) {
         }
 
         int total_global_variables = 0;
-        for (auto i = list->begin(); i != list->end(); ++i) {
-            auto* next_node = *i;
-
+        for (auto next_node : *list) {
             if (next_node->type == TREE_NODE_TYPE_VAR_DEFINITION) {
                 auto* var_definition = (TreeNodeVariableDefinition*)next_node;
                 if (var_definition->variable_value != nullptr) {
@@ -86,8 +82,7 @@ void BackendContext::compile_program(TreeNodeList<TreeNode*>* ast) {
             }
         }
 
-        for (int i = 0; i < scope->variables.size(); i++) {
-            Variable* var = scope->variables[i];
+        for (auto var : scope->variables) {
             if (var->type == VARIABLE_TYPE_NUMBER) {
                 auto descriptor = global_descriptors->get_descriptor(var->storage);
                 descriptor->has_symbol_position = true;
@@ -97,9 +92,7 @@ void BackendContext::compile_program(TreeNodeList<TreeNode*>* ast) {
             }
         }
 
-        for (auto i = ast->list.begin(); i != ast->list.end(); ++i) {
-            auto* next_node = *i;
-
+        for (auto next_node : ast->list) {
             if (next_node->type == TREE_NODE_TYPE_BLOCK_DEFINITION) {
                 auto* definition = (TreeNodeBlockDefinition*)next_node;
                 if (definition->is_promise) {
@@ -140,9 +133,7 @@ FieldList* BackendContext::read_scope_variables(TreeNodeList<TreeNode*>* node) {
 
     std::list<TreeNode*>* list = &node->list;
 
-    for (auto i = list->begin(); i != list->end(); ++i) {
-        auto* next_node = *i;
-
+    for (auto next_node : *list) {
         TreeNodeType node_type = next_node->type;
         if (node_type == TREE_NODE_TYPE_VAR_DEFINITION) {
             auto definition = (TreeNodeVariableDefinition*)next_node;
@@ -166,14 +157,10 @@ FieldList* BackendContext::read_scope_variables(TreeNodeList<TreeNode*>* node) {
 
 FieldList* BackendContext::field_list_find_block_parameters(TreeNodeBlockDefinition* block) const {
     auto* argument_list = new FieldList(current_descriptors, state);
-    if (!argument_list)
-        return nullptr;
 
     std::list<TreeNode*>* list = &block->body->list;
 
-    for (auto i = list->begin(); i != list->end(); ++i) {
-        auto* next_node = *i;
-
+    for (auto next_node : *list) {
         TreeNodeType node_type = next_node->type;
         if (node_type != TREE_NODE_TYPE_VAR_DEFINITION)
             break;
@@ -184,12 +171,7 @@ FieldList* BackendContext::field_list_find_block_parameters(TreeNodeBlockDefinit
             break;
 
         Variable* number = new VariableNumber(var_definition);
-
-        if (!number || !argument_list->add_variable(number)) {
-            linked_compiler->out_of_memory();
-            delete argument_list;
-            return nullptr;
-        }
+        argument_list->add_variable(number);
     }
 
     return argument_list;
@@ -208,9 +190,7 @@ void BackendContext::field_list_declare_block(TreeNodeBlockDefinition* node) {
             func = new VariableFunction(identifier, argument_list);
 
         FieldList* top_scope = scope_stack->top();
-
-        if (!func || !top_scope->add_variable((Variable*)func))
-            linked_compiler->out_of_memory();
+        top_scope->add_variable((Variable*)func);
     } else {
         error_already_defined(identifier);
     }
@@ -222,8 +202,7 @@ void BackendContext::compile_block(TreeNodeList<TreeNode*>* block) {
     if (!linked_compiler->state) {
         std::list<TreeNode*>* list = &block->list;
 
-        for (auto i = list->begin(); i != list->end(); ++i) {
-            auto* next_node = *i;
+        for (auto next_node : *list) {
             compile_line(next_node);
         }
     }
@@ -449,9 +428,9 @@ AbstractRegister BackendContext::get_variable(TreeNodeIdentifier* identifier) {
     return variable->storage;
 }
 
-void BackendContext::push_state() const {
+void BackendContext::push_state() {
     auto new_command_list = procedure_command_buffer->next_command_list();
-    state_stack.push_back({new_command_list});
+    state_stack.emplace_back(new_command_list);
     state = &state_stack[state_stack.size() - 1];
 }
 
@@ -464,7 +443,7 @@ void BackendContext::pop_state() {
 }
 
 void BackendContext::push_initial_state() {
-    state_stack.push_back({procedure_command_buffer->root_list});
+    state_stack.emplace_back(procedure_command_buffer->root_list);
     state = &state_stack[state_stack.size() - 1];
 }
 

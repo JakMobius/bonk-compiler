@@ -9,27 +9,25 @@ FieldList::FieldList() {
 
 Variable* FieldList::get_variable(TreeNodeIdentifier* identifier) {
 
-    for (int i = 0; i < variables.size(); i++) {
-        if (variables[i]->identifier->contents_equal(identifier)) {
-            return variables[i];
+    for (auto & variable : variables) {
+        if (variable->identifier->contents_equal(identifier)) {
+            return variable;
         }
     }
 
     return nullptr;
 }
 
-bool FieldList::add_variable(Variable* variable) {
+void FieldList::add_variable(Variable* variable) {
     variable->byte_offset = frame_size + byte_offset;
 
     frame_size += 8;
     variables.push_back(variable);
-
-    return true;
 }
 
 FieldList::~FieldList() {
-    for (int i = 0; i < variables.size(); i++) {
-        delete variables[i];
+    for (auto & variable : variables) {
+        delete variable;
     }
 }
 

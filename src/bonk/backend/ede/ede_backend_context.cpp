@@ -1,6 +1,6 @@
 
-#include <list>
 #include "ede_backend_context.hpp"
+#include <list>
 
 namespace bonk::ede_backend {
 
@@ -20,7 +20,7 @@ void BackendContext::error_undefined_reference(TreeNodeIdentifier* node) const {
                                       node->variable_name.c_str());
 }
 
-void BackendContext::reference_variable(TreeNodeIdentifier* identifier) {
+void BackendContext::reference_variable(TreeNodeIdentifier* identifier) const {
     FieldList* scope = nullptr;
     Variable* variable = scope_stack.get_variable(identifier, &scope);
 
@@ -186,16 +186,14 @@ void BackendContext::compile_math_comparsion(TreeNode* node) {
 }
 
 TreeNode*
-BackendContext::call_argument_list_get_value(
-    TreeNodeList<TreeNodeCallParameter*>* argument_list, TreeNodeIdentifier* identifier) {
+BackendContext::call_argument_list_get_value(TreeNodeList<TreeNodeCallParameter*>* argument_list,
+                                             TreeNodeIdentifier* identifier) {
     if (!argument_list)
         return nullptr;
 
     std::list<TreeNodeCallParameter*>* list = &argument_list->list;
 
-    for (auto i = list->begin(); i != list->end(); ++i) {
-        auto* parameter = *i;
-
+    for (auto parameter : *list) {
         if (parameter->parameter_name->contents_equal(identifier)) {
             return parameter->parameter_value;
         }
@@ -357,7 +355,7 @@ void BackendContext::compile_inline_assembly(TreeNodeOperator* node) {
 }
 
 void BackendContext::compile_bonk_statement(TreeNodeOperator* node,
-                                             unsigned long stack_bytes_expected) {
+                                            unsigned long stack_bytes_expected) {
     if (stack_bytes_expected > 0) {
         linked_compiler->error_positioned(node->source_position, "bonk does not return anything");
     }
@@ -372,7 +370,7 @@ void BackendContext::compile_bonk_statement(TreeNodeOperator* node,
 }
 
 void BackendContext::compile_brek_statement(TreeNodeOperator* node,
-                                             unsigned long stack_bytes_expected) const {
+                                            unsigned long stack_bytes_expected) const {
     if (cycle_label_id == 0) {
         linked_compiler->error_positioned(node->source_position, "brek statement outside cycle");
     } else {
@@ -385,7 +383,7 @@ void BackendContext::compile_brek_statement(TreeNodeOperator* node,
 }
 
 void BackendContext::compile_rebonk_statement(TreeNodeOperator* node,
-                                               unsigned long stack_bytes_expected) const {
+                                              unsigned long stack_bytes_expected) const {
     if (cycle_label_id == 0) {
         linked_compiler->error_positioned(node->source_position, "rebonk statement outside cycle");
     } else {
@@ -398,7 +396,7 @@ void BackendContext::compile_rebonk_statement(TreeNodeOperator* node,
 }
 
 void BackendContext::compile_assignment(TreeNodeIdentifier* variable, TreeNode* value,
-                                         unsigned long stack_bytes_expected) {
+                                        unsigned long stack_bytes_expected) {
     compile_expression(value, 8);
     if (stack_bytes_expected != 0) {
         fprintf(target, "pop.d rax\n"
@@ -529,8 +527,7 @@ void BackendContext::compile_expression(TreeNode* node, unsigned long stack_byte
             compile_rebonk_statement(oper, stack_bytes_expected);
             break;
         case BONK_OPERATOR_ASSIGNMENT:
-            compile_assignment((TreeNodeIdentifier*)oper->left, oper->right,
-                               stack_bytes_expected);
+            compile_assignment((TreeNodeIdentifier*)oper->left, oper->right, stack_bytes_expected);
             break;
         case BONK_OPERATOR_OR:
         case BONK_OPERATOR_AND:
@@ -574,7 +571,7 @@ void BackendContext::error_already_defined(TreeNodeIdentifier* identifier) const
                                       identifier->variable_name.c_str());
 }
 
-void BackendContext::field_list_declare_variable(TreeNodeVariableDefinition* node) {
+void BackendContext::field_list_declare_variable(TreeNodeVariableDefinition* node) const {
 
     Variable* var = scope_stack.get_variable(node->variable_name, nullptr);
 
@@ -582,11 +579,7 @@ void BackendContext::field_list_declare_variable(TreeNodeVariableDefinition* nod
         var = new VariableNumber(node->variable_name);
 
         FieldList* top_scope = scope_stack.top();
-
-        if (!var)
-            linked_compiler->out_of_memory();
-        else
-            top_scope->add_variable(var);
+        top_scope->add_variable(var);
     } else {
         error_already_defined(node->variable_name);
     }
@@ -594,14 +587,10 @@ void BackendContext::field_list_declare_variable(TreeNodeVariableDefinition* nod
 
 FieldList* BackendContext::field_list_find_block_parameters(TreeNodeBlockDefinition* block) const {
     auto* argument_list = new FieldList();
-    if (!argument_list)
-        return nullptr;
 
     auto* list = &block->body->list;
 
-    for (auto i = list->begin(); i != list->end(); ++i) {
-        auto* next_node = *i;
-
+    for (auto next_node : *list) {
         TreeNodeType node_type = next_node->type;
         if (node_type != TREE_NODE_TYPE_VAR_DEFINITION)
             break;
@@ -612,18 +601,13 @@ FieldList* BackendContext::field_list_find_block_parameters(TreeNodeBlockDefinit
             break;
 
         Variable* number = new VariableNumber(var_definition->variable_name);
-
-        if (!number || !argument_list->add_variable(number)) {
-            linked_compiler->out_of_memory();
-            delete argument_list;
-            return nullptr;
-        }
+        argument_list->add_variable(number);
     }
 
     return argument_list;
 }
 
-void BackendContext::field_list_declare_block(TreeNodeBlockDefinition* node) {
+void BackendContext::field_list_declare_block(TreeNodeBlockDefinition* node) const {
     auto* identifier = node->block_name;
 
     Variable* var = scope_stack.get_variable(identifier, nullptr);
@@ -637,30 +621,24 @@ void BackendContext::field_list_declare_block(TreeNodeBlockDefinition* node) {
 
         FieldList* top_scope = scope_stack.top();
 
-        if (!func || !top_scope->add_variable((Variable*)func))
-            linked_compiler->out_of_memory();
+        top_scope->add_variable((Variable*)func);
     } else {
         error_already_defined(identifier);
     }
 }
 
 FieldList* BackendContext::read_scope_variables(TreeNodeList<TreeNode*>* node,
-                                                  bool reset_frame_offset) {
+                                                bool reset_frame_offset) {
 
     auto* scope = new FieldList();
-    if (!scope || !scope_stack.push_scope(scope)) {
-        linked_compiler->out_of_memory();
-        return nullptr;
-    }
+    scope_stack.push_scope(scope);
 
     if (reset_frame_offset)
         scope->byte_offset = 0;
 
     std::list<TreeNode*>* list = &node->list;
 
-    for (auto i = list->begin(); i != list->end(); ++i) {
-        auto* next_node = *i;
-
+    for (auto next_node : *list) {
         TreeNodeType node_type = next_node->type;
         if (node_type == TREE_NODE_TYPE_VAR_DEFINITION) {
             field_list_declare_variable((TreeNodeVariableDefinition*)next_node);
@@ -682,8 +660,7 @@ void BackendContext::compile_block(TreeNodeList<TreeNode*>* node, bool reset_fra
     if (!linked_compiler->state) {
         std::list<TreeNode*>* list = &node->list;
 
-        for (auto i = list->begin(); i != list->end(); ++i) {
-            auto* next_node = *i;
+        for (auto next_node : *list) {
             compile_expression(next_node, 0);
         }
     }
@@ -718,9 +695,7 @@ void BackendContext::compile_program(TreeNodeList<TreeNode*>* node) {
 
         std::list<TreeNode*>* list = &node->list;
 
-        for (auto i = list->begin(); i != list->end(); ++i) {
-            auto* next_node = *i;
-
+        for (auto next_node : *list) {
             if (next_node->type == TREE_NODE_TYPE_VAR_DEFINITION) {
                 auto* var_definition = (TreeNodeVariableDefinition*)next_node;
                 if (var_definition->variable_value) {
@@ -740,9 +715,7 @@ void BackendContext::compile_program(TreeNodeList<TreeNode*>* node) {
         fprintf(target, "call _bs_main\n");
         fprintf(target, "hlt\n");
 
-        for (auto i = node->list.begin(); i != node->list.end(); ++i) {
-            auto* next_node = *i;
-
+        for (auto next_node : node->list) {
             if (next_node->type == TREE_NODE_TYPE_BLOCK_DEFINITION) {
                 compile_callable_block((TreeNodeBlockDefinition*)next_node);
             }

@@ -69,7 +69,7 @@ struct BackendContext {
 
     ~BackendContext();
 
-    void push_state() const;
+    void push_state();
 
     void pop_state();
 

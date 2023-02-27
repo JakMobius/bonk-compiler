@@ -18,15 +18,15 @@ struct ScopeStack {
 
     ScopeStack();
 
-    bool push_scope(FieldList* scope);
+    void push_scope(FieldList* scope);
 
     void pop_scope();
 
-    FieldList* top();
+    FieldList* top() const;
 
     unsigned long frame_size();
 
-    Variable* get_variable(TreeNodeIdentifier* identifier, FieldList** scope);
+    Variable* get_variable(TreeNodeIdentifier* identifier, FieldList** scope) const;
 };
 
 } // namespace bonk::ede_backend

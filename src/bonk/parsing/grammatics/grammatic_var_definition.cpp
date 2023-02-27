@@ -37,7 +37,7 @@ TreeNodeVariableDefinition* parse_grammatic_var_definition(Parser* parser) {
 
     parser->eat_lexeme();
 
-    TreeNodeVariableDefinition* definition =
+    auto* definition =
         new TreeNodeVariableDefinition(is_contextual, next->identifier_data.identifier);
 
     definition->source_position = next->position->clone();

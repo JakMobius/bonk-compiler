@@ -6,5 +6,6 @@ set(CMAKE_CXX_FLAGS -fsanitize=address)
 
 file(GLOB_RECURSE SOURCES src/*.cpp src/*.hpp)
 add_executable(bonk ${SOURCES})
+target_include_directories(bonk PUBLIC src)
 
 add_subdirectory(test)

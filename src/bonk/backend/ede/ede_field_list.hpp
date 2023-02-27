@@ -13,9 +13,9 @@ struct FieldList;
 namespace bonk::ede_backend {
 
 struct FieldList {
-    std::vector<Variable*> variables;
+    std::vector<Variable*> variables{};
     unsigned long byte_offset;
-    unsigned long frame_size;
+    unsigned long frame_size{};
 
     FieldList();
 
@@ -23,7 +23,7 @@ struct FieldList {
 
     Variable* get_variable(TreeNodeIdentifier* identifier);
 
-    bool add_variable(Variable* variable);
+    void add_variable(Variable* variable);
 };
 
 } // namespace bonk::ede_backend
