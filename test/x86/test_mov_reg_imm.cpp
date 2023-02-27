@@ -10,7 +10,7 @@ TEST(EncodingX86, MovCommandRegImm) {
     auto* cbuffer = new CommandBuffer();
 
     for (int i = 0; i < 16; i++) {
-        cbuffer->root_list->insert_tail(
+        cbuffer->root_list->commands.push_back(
             new MovCommand(CommandParameter::create_register_64(i),
                             CommandParameter::create_imm32(0xBEBEBEBEFAFAFAFAll)));
     }

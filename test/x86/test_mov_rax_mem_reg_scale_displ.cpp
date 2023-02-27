@@ -14,7 +14,7 @@ TEST(EncodingX86, MovCommandRaxMemRegScalePlusDispl) {
         if (i == rsp)
             continue;
 
-        cbuffer->root_list->insert_tail(
+        cbuffer->root_list->commands.push_back(
             new MovCommand(CommandParameter::create_register_64(rax),
                             CommandParameter::create_memory(
                                 CommandParameterMemory::create_reg_const_displ(i, 2, -512))));

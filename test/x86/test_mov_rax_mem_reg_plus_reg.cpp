@@ -15,7 +15,7 @@ TEST(EncodingX86, MovCommandRaxMemRegPlusReg) {
             // rsp cannot be used as an index register, so skip it
             if (i == rsp && j == rsp)
                 continue;
-            cbuffer->root_list->insert_tail(new MovCommand(
+            cbuffer->root_list->commands.push_back(new MovCommand(
                 CommandParameter::create_register_64(0),
                 CommandParameter::create_memory(CommandParameterMemory::create_reg_reg(i, j))));
         }

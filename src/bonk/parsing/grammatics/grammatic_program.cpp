@@ -42,10 +42,7 @@ bool parse_grammatic_program(Parser* parser, TreeNodeList<TreeNode*>* target) {
     }
 
     while (block) {
-        if (target->list.insert_tail(block)) {
-            parser->linked_compiler->out_of_memory();
-            return false;
-        }
+        target->list.push_back(block);
 
         block = parse_grammatic_global_definition(parser);
     }

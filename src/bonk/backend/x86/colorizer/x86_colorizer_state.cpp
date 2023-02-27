@@ -26,13 +26,13 @@ void RegisterColorizeContextState::add_register_usage(AbstractRegister reg,
 bool RegisterColorizeContextState::create_usage_heap_array() {
     int instruction_index = 0;
 
-    for (auto i = source->begin(); i != source->end(); source->next_iterator(&i)) {
-        AsmCommand* command = source->get(i);
+    for (auto i = source->commands.begin(); i != source->commands.end(); ++i) {
+        AsmCommand* command = *i;
 
         if (command->type == COMMAND_COLORIZER_REPEAT_SCOPE) {
             duplicate_usages();
             // "repeat scope" should be last command in the scope.
-            assert(source->next_iterator(i) == source->end());
+            assert(++i == source->commands.end());
         }
 
         for (auto reg : command->read_registers) {
@@ -56,7 +56,7 @@ void RegisterColorizeContextState::duplicate_usages() {
         auto& usage_heap = i->second;
 
         if (source->parent_buffer->descriptors.get_descriptor(key)->owner != source) {
-            usage_heap->push({(long)(source->get_size() + 1), false});
+            usage_heap->push({(long)(source->commands.size() + 1), false});
         }
     }
 }

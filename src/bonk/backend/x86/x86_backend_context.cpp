@@ -50,10 +50,10 @@ void BackendContext::compile_program(TreeNodeList<TreeNode*>* ast) {
 
     if (!linked_compiler->state) {
 
-        MList<TreeNode*>* list = &ast->list;
+        std::list<TreeNode*>* list = &ast->list;
 
-        for (auto i = ast->list.begin(); i != ast->list.end(); ast->list.next_iterator(&i)) {
-            auto* next_node = ast->list.get(i);
+        for (auto i = ast->list.begin(); i != ast->list.end(); ++i) {
+            auto* next_node = *i;
 
             if (next_node->type == TREE_NODE_TYPE_BLOCK_DEFINITION) {
                 write_block_definition((TreeNodeBlockDefinition*)next_node);
@@ -63,8 +63,8 @@ void BackendContext::compile_program(TreeNodeList<TreeNode*>* ast) {
         }
 
         int total_global_variables = 0;
-        for (auto i = list->begin(); i != list->end(); list->next_iterator(&i)) {
-            auto* next_node = ast->list.get(i);
+        for (auto i = list->begin(); i != list->end(); ++i) {
+            auto* next_node = *i;
 
             if (next_node->type == TREE_NODE_TYPE_VAR_DEFINITION) {
                 auto* var_definition = (TreeNodeVariableDefinition*)next_node;
@@ -97,8 +97,8 @@ void BackendContext::compile_program(TreeNodeList<TreeNode*>* ast) {
             }
         }
 
-        for (auto i = ast->list.begin(); i != ast->list.end(); ast->list.next_iterator(&i)) {
-            auto* next_node = ast->list.get(i);
+        for (auto i = ast->list.begin(); i != ast->list.end(); ++i) {
+            auto* next_node = *i;
 
             if (next_node->type == TREE_NODE_TYPE_BLOCK_DEFINITION) {
                 auto* definition = (TreeNodeBlockDefinition*)next_node;
@@ -138,10 +138,10 @@ FieldList* BackendContext::read_scope_variables(TreeNodeList<TreeNode*>* node) {
     FieldList* scope = new FieldList(current_descriptors, state);
     scope_stack->push_scope(scope);
 
-    MList<TreeNode*>* list = &node->list;
+    std::list<TreeNode*>* list = &node->list;
 
-    for (auto i = list->begin(); i != list->end(); list->next_iterator(&i)) {
-        auto* next_node = node->list.get(i);
+    for (auto i = list->begin(); i != list->end(); ++i) {
+        auto* next_node = *i;
 
         TreeNodeType node_type = next_node->type;
         if (node_type == TREE_NODE_TYPE_VAR_DEFINITION) {
@@ -169,10 +169,10 @@ FieldList* BackendContext::field_list_find_block_parameters(TreeNodeBlockDefinit
     if (!argument_list)
         return nullptr;
 
-    MList<TreeNode*>* list = &block->body->list;
+    std::list<TreeNode*>* list = &block->body->list;
 
-    for (auto i = list->begin(); i != list->end(); list->next_iterator(&i)) {
-        auto* next_node = list->get(i);
+    for (auto i = list->begin(); i != list->end(); ++i) {
+        auto* next_node = *i;
 
         TreeNodeType node_type = next_node->type;
         if (node_type != TREE_NODE_TYPE_VAR_DEFINITION)
@@ -220,10 +220,10 @@ void BackendContext::compile_block(TreeNodeList<TreeNode*>* block) {
     FieldList* scope = read_scope_variables(block);
 
     if (!linked_compiler->state) {
-        MList<TreeNode*>* list = &block->list;
+        std::list<TreeNode*>* list = &block->list;
 
-        for (auto i = list->begin(); i != list->end(); list->next_iterator(&i)) {
-            auto* next_node = list->get(i);
+        for (auto i = list->begin(); i != list->end(); ++i) {
+            auto* next_node = *i;
             compile_line(next_node);
         }
     }
@@ -240,7 +240,7 @@ void BackendContext::preserve_callee_registers() {
         registers.push_back(SYSTEM_V_CALLEE_PRESERVED_REGISTERS[i]);
     }
 
-    state->current_command_list->insert_tail(new RegPreserveCommand(registers));
+    state->current_command_list->commands.push_back(new RegPreserveCommand(registers));
 }
 
 void BackendContext::compile_block_definition(TreeNodeBlockDefinition* block) {
@@ -254,7 +254,7 @@ void BackendContext::compile_block_definition(TreeNodeBlockDefinition* block) {
     procedure_body_container = state->current_command_list;
 
     preserve_callee_registers();
-    state->current_command_list->insert_tail(new FrameCreateCommand());
+    state->current_command_list->commands.push_back(new FrameCreateCommand());
 
     // As function body is a block which may use
     // caller-preserved registers, we should create
@@ -266,8 +266,8 @@ void BackendContext::compile_block_definition(TreeNodeBlockDefinition* block) {
 
     pop_state();
 
-    state->current_command_list->insert_tail(new FrameDestroyCommand());
-    state->current_command_list->insert_tail(new RetCommand());
+    state->current_command_list->commands.push_back(new FrameDestroyCommand());
+    state->current_command_list->commands.push_back(new RetCommand());
     preserve_callee_registers();
 
     pop_state();
@@ -460,7 +460,7 @@ void BackendContext::pop_state() {
     auto* command = new ScopeCommand(state->current_command_list);
     state_stack.pop_back();
     state = previous_state;
-    state->current_command_list->insert_tail(command);
+    state->current_command_list->commands.push_back(command);
 }
 
 void BackendContext::push_initial_state() {
@@ -485,15 +485,15 @@ void BackendContext::compile_cycle(TreeNodeCycle* cycle) {
     cycle_tail = create_label();
 
     cycle_container = state->current_command_list;
-    state->current_command_list->insert_tail(cycle_head);
+    state->current_command_list->commands.push_back(cycle_head);
 
     push_state();
     compile_block(cycle->body);
-    state->current_command_list->insert_tail(new ScopeRepeatCommand());
+    state->current_command_list->commands.push_back(new ScopeRepeatCommand());
     pop_state();
 
-    state->current_command_list->insert_tail(new JumpCommand(cycle_head, COMMAND_JMP));
-    state->current_command_list->insert_tail(cycle_tail);
+    state->current_command_list->commands.push_back(new JumpCommand(cycle_head, COMMAND_JMP));
+    state->current_command_list->commands.push_back(cycle_tail);
 
     cycle_container = old_cycle_container;
     cycle_body = old_cycle_body;
@@ -516,7 +516,7 @@ void BackendContext::error_undefined_reference(TreeNodeIdentifier* node) {
 void BackendContext::pop_to_scope(CommandList* scope) {
     for (int i = state_stack.size() - 1, pop = 0;; i--, pop++) {
         if (scope == state_stack[i].current_command_list) {
-            state->current_command_list->insert_tail(new ScopePopCommand(pop));
+            state->current_command_list->commands.push_back(new ScopePopCommand(pop));
             return;
         }
         assert(i != 0);
@@ -528,16 +528,16 @@ void BackendContext::compile_bonk_statement(TreeNodeOperator* oper) {
         compile_expression(oper->right);
         state->register_stack.pop(procedure_return_register);
     } else {
-        state->current_command_list->insert_tail(
+        state->current_command_list->commands.push_back(
             new XorCommand(CommandParameter::create_register_64(procedure_return_register),
                             CommandParameter::create_register_64(procedure_return_register)));
     }
 
     pop_to_scope(procedure_body_container);
 
-    state->current_command_list->insert_tail(new FrameDestroyCommand());
-    state->current_command_list->insert_tail(new RetCommand(procedure_return_register));
-    state->current_command_list->insert_tail(new ScopeDeadEndCommand());
+    state->current_command_list->commands.push_back(new FrameDestroyCommand());
+    state->current_command_list->commands.push_back(new RetCommand(procedure_return_register));
+    state->current_command_list->commands.push_back(new ScopeDeadEndCommand());
 }
 
 bool BackendContext::can_use_fast_logic(TreeNodeOperator* oper) {
@@ -561,7 +561,7 @@ bool BackendContext::compile_logic_operand_recursive(TreeNode* node, JmpLabel* c
     if (!guard)
         return false;
     pop_to_scope(control_label_list);
-    state->current_command_list->insert_tail(new JumpCommand(control_label, COMMAND_JMP));
+    state->current_command_list->commands.push_back(new JumpCommand(control_label, COMMAND_JMP));
     guard->set_label(insert_label());
     return true;
 }
@@ -607,23 +607,23 @@ void BackendContext::compile_jump_logical(TreeNodeOperator* oper) {
         auto end_label_list = state->current_command_list;
         auto end_label = create_label();
         push_state();
-        state->current_command_list->insert_tail(new MovCommand(
+        state->current_command_list->commands.push_back(new MovCommand(
             CommandParameter::create_register_8(flag), CommandParameter::create_imm32(is_and)));
         pop_to_scope(end_label_list);
-        state->current_command_list->insert_tail(new JumpCommand(end_label, COMMAND_JMP));
-        state->current_command_list->insert_tail(new ScopeDeadEndCommand());
+        state->current_command_list->commands.push_back(new JumpCommand(end_label, COMMAND_JMP));
+        state->current_command_list->commands.push_back(new ScopeDeadEndCommand());
         pop_state();
 
-        state->current_command_list->insert_tail(control_label);
+        state->current_command_list->commands.push_back(control_label);
 
         push_state();
-        state->current_command_list->insert_tail(new MovCommand(
+        state->current_command_list->commands.push_back(new MovCommand(
             CommandParameter::create_register_8(flag), CommandParameter::create_imm32(!is_and)));
         pop_state();
 
-        state->current_command_list->insert_tail(end_label);
+        state->current_command_list->commands.push_back(end_label);
     } else {
-        state->current_command_list->insert_tail(control_label);
+        state->current_command_list->commands.push_back(control_label);
     }
 }
 
@@ -717,7 +717,7 @@ JumpCommand* BackendContext::append_oper_jmp_command(TreeNodeOperator* oper, boo
     if (inversed) {
         jmp->invert_condition();
     }
-    state->current_command_list->insert_tail(jmp);
+    state->current_command_list->commands.push_back(jmp);
     return jmp;
 }
 
@@ -751,7 +751,7 @@ JumpCommand* BackendContext::compile_boolean_jump(TreeNode* node, bool check_for
         } else {
             jmp = new JumpCommand(nullptr, COMMAND_JE);
         }
-        state->current_command_list->insert_tail(jmp);
+        state->current_command_list->commands.push_back(jmp);
     }
 
     return jmp;
@@ -776,7 +776,7 @@ void BackendContext::compile_brek_statement(TreeNodeOperator* oper) {
     }
 
     pop_to_scope(cycle_container);
-    state->current_command_list->insert_tail(new JumpCommand(cycle_tail, COMMAND_JMP));
+    state->current_command_list->commands.push_back(new JumpCommand(cycle_tail, COMMAND_JMP));
 }
 
 void BackendContext::compile_rebonk_statement(TreeNodeOperator* oper) {
@@ -787,7 +787,7 @@ void BackendContext::compile_rebonk_statement(TreeNodeOperator* oper) {
     }
 
     pop_to_scope(cycle_body);
-    state->current_command_list->insert_tail(new JumpCommand(cycle_head, COMMAND_JMP));
+    state->current_command_list->commands.push_back(new JumpCommand(cycle_head, COMMAND_JMP));
 }
 
 JmpLabel* BackendContext::create_label() {
@@ -796,7 +796,7 @@ JmpLabel* BackendContext::create_label() {
 
 JmpLabel* BackendContext::insert_label() {
     auto nop = new JmpLabel(state->current_command_list->parent_buffer->labels++);
-    state->current_command_list->insert_tail(nop);
+    state->current_command_list->commands.push_back(nop);
     return nop;
 }
 
@@ -806,10 +806,10 @@ BackendContext::call_argument_list_get_value(
     if (!argument_list)
         return nullptr;
 
-    MList<TreeNodeCallParameter*>* list = &argument_list->list;
+    std::list<TreeNodeCallParameter*>* list = &argument_list->list;
 
-    for (auto i = list->begin(); i != list->end(); list->next_iterator(&i)) {
-        auto* parameter = list->get(i);
+    for (auto i = list->begin(); i != list->end(); ++i) {
+        auto* parameter = *i;
 
         if (parameter->parameter_name->contents_equal(identifier)) {
             return parameter->parameter_value;
@@ -870,7 +870,7 @@ void BackendContext::compile_call(TreeNodeCall* call) {
     }
     int stack_arguments = function_arguments->variables.size() - register_arguments;
 
-    state->current_command_list->insert_tail(AlignStackCommand::create_before(stack_arguments));
+    state->current_command_list->commands.push_back(AlignStackCommand::create_before(stack_arguments));
 
     for (int i = function_arguments->variables.size() - 1; i >= SYSTEM_V_ARGUMENT_REGISTERS_COUNT;
          i--) {
@@ -880,7 +880,7 @@ void BackendContext::compile_call(TreeNodeCall* call) {
 
         AbstractRegister reg = state->register_stack.get_head_register_number();
         state->register_stack.decrease_stack_size();
-        state->current_command_list->insert_tail(new PushCommand(reg));
+        state->current_command_list->commands.push_back(new PushCommand(reg));
     }
 
     AbstractRegister arguments[SYSTEM_V_ARGUMENT_REGISTERS_COUNT] = {};
@@ -907,15 +907,15 @@ void BackendContext::compile_call(TreeNodeCall* call) {
         caller_preserved_registers.push_back(reg);
     }
 
-    state->current_command_list->insert_tail(new RegPreserveCommand(caller_preserved_registers));
+    state->current_command_list->commands.push_back(new RegPreserveCommand(caller_preserved_registers));
 
     // Now it's safe to call the function
 
-    state->current_command_list->insert_tail(new CallCommand(CommandParameterSymbol(true,
+    state->current_command_list->commands.push_back(new CallCommand(CommandParameterSymbol(true,
                                  target->get_symbol_from_name(call->call_function->variable_name)),
         arguments, register_arguments));
 
-    state->current_command_list->insert_tail(AlignStackCommand::create_after(stack_arguments));
+    state->current_command_list->commands.push_back(AlignStackCommand::create_after(stack_arguments));
     state->register_stack.push_reg64(
         procedure_command_buffer->descriptors.next_constrained_register(
             rax, state->current_command_list));
@@ -936,11 +936,11 @@ void BackendContext::write_global_var_definition(TreeNodeVariableDefinition* def
 void BackendContext::locate_procedure_parameter(Variable* parameter) {
     if (procedure_parameters < SYSTEM_V_ARGUMENT_REGISTERS_COUNT) {
         MachineRegister reg = SYSTEM_V_ARGUMENT_REGISTERS[procedure_parameters];
-        state->current_command_list->insert_tail(
+        state->current_command_list->commands.push_back(
             new LocateRegCommand(parameter->storage, CommandParameter::create_register_64(reg)));
     } else {
         int state_position = (procedure_parameters - SYSTEM_V_ARGUMENT_REGISTERS_COUNT + 2) * -8;
-        state->current_command_list->insert_tail(new LocateRegCommand(
+        state->current_command_list->commands.push_back(new LocateRegCommand(
             parameter->storage, CommandParameter::create_imm32(state_position)));
     }
 

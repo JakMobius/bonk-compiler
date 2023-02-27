@@ -31,8 +31,8 @@ extern const char* OPERATOR_TYPE_NAMES[];
 
 } // namespace bonk
 
-#include "../../../utils/JsonSerializer.hpp"
 #include "node.hpp"
+#include "utils/json_serializer.hpp"
 
 namespace bonk {
 

@@ -122,11 +122,7 @@ TreeNodeList<TreeNodeCallParameter*>* parse_grammatic_arguments(Parser* parser) 
 
         auto* argument = new TreeNodeCallParameter(parameter_name, parameter_value);
 
-        if (!argument || argument_list->list.insert_tail(argument)) {
-            delete argument_list;
-            parser->linked_compiler->out_of_memory();
-            return nullptr;
-        }
+        argument_list->list.push_back(argument);
 
         next = parser->next_lexeme();
         if (next->type != BONK_LEXEME_COMMA) {

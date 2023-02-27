@@ -36,11 +36,7 @@ TreeNodeList<TreeNode*>* parse_grammatic_block(Parser* parser) {
         if (!block)
             break;
 
-        if (list->list.insert_tail(block)) {
-            parser->linked_compiler->out_of_memory();
-            delete list;
-            return nullptr;
-        }
+        list->list.push_back(block);
     } while (true);
 
     return result;

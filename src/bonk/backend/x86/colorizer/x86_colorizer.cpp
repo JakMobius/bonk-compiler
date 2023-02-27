@@ -70,7 +70,7 @@ void RegisterColorizer::move_register_to_register(AbstractRegister reg, MachineR
     assert(!is_unused_register(target));
     assert(machine_register_map[target] == -1);
 
-    output->root_list->insert_tail(new MovCommand(
+    output->root_list->commands.push_back(new MovCommand(
         CommandParameter::create_register_64(output->descriptors.machine_register(target)),
         CommandParameter::create_register_64(
             output->descriptors.machine_register(descriptor->last_register_location))));
@@ -92,7 +92,7 @@ void RegisterColorizer::move_register_to_stack(AbstractRegister reg, long long f
 
     assert(descriptor->located_in_register);
 
-    output->root_list->insert_tail(
+    output->root_list->commands.push_back(
         new MovCommand(CommandParameter::create_memory(CommandParameterMemory::create_reg_displ(
                             output->descriptors.machine_register(rbp), -frame_position)),
                         CommandParameter::create_register_64(output->descriptors.machine_register(
@@ -112,7 +112,7 @@ void RegisterColorizer::restore_register_from_stack(AbstractRegister reg, Machin
     auto* descriptor = source->descriptors.get_descriptor(reg);
     assert(descriptor->located_in_memory && !descriptor->located_in_register);
 
-    output->root_list->insert_tail(new MovCommand(
+    output->root_list->commands.push_back(new MovCommand(
         CommandParameter::create_register_64(output->descriptors.machine_register(target)),
         CommandParameter::create_memory(CommandParameterMemory::create_reg_displ(
             output->descriptors.machine_register(rbp), -descriptor->last_memory_position))));
@@ -225,7 +225,7 @@ void RegisterColorizer::exchange_registers(AbstractRegister reg_a, AbstractRegis
     save_register_location(reg_a);
     save_register_location(reg_b);
 
-    output->root_list->insert_tail(new XchgCommand(
+    output->root_list->commands.push_back(new XchgCommand(
         CommandParameter::create_register_64(
             output->descriptors.machine_register(descriptor_a->last_register_location)),
         CommandParameter::create_register_64(
@@ -586,7 +586,7 @@ void RegisterColorizer::handle_general_command(AsmCommand* command) {
     printf("\n\n");
 #endif
 
-    output->root_list->insert_tail(new_command);
+    output->root_list->commands.push_back(new_command);
     registers_released_by_command.clear();
 }
 
@@ -656,8 +656,8 @@ void RegisterColorizer::locate_register_at_machine_register(AbstractRegister reg
 void RegisterColorizer::run_colorizer() {
     auto list = state->source;
     bool end = false;
-    for (auto i = list->begin(); i != list->end() && !end; list->next_iterator(&i)) {
-        AsmCommand* command = list->get(i);
+    for (auto i = list->commands.begin(); i != list->commands.end() && !end; ++i) {
+        AsmCommand* command = *i;
 
         switch (command->type) {
         case COMMAND_COLORIZER_SCOPE_DEAD_END:
@@ -698,8 +698,8 @@ void RegisterColorizer::replace_frame_commands() {
     int additional_rsp_offset = 0;
     std::vector<int> aligns = {};
 
-    for (auto i = list->begin(); i != list->end();) {
-        auto command = list->get(i);
+    for (auto i = list->commands.begin(); i != list->commands.end();) {
+        auto command = *i;
 
         if (command->type == COMMAND_PUSH)
             additional_rsp_offset++;
@@ -707,36 +707,33 @@ void RegisterColorizer::replace_frame_commands() {
             additional_rsp_offset--;
         else if (command->type == COMMAND_COLORIZER_FRAME_CREATE) {
             if (frame_size == 0) {
-                auto old = i;
-                list->next_iterator(&i);
-                list->remove(old);
+                i = list->commands.erase(i);
                 continue;
             }
             // push rbp
             // mov rbp, rsp
             // sub rsp, ...
-            list->insert_before(i, new PushCommand(output->descriptors.machine_register(rbp)));
-            list->insert_before(i, new MovCommand(CommandParameter::create_register_64(
+
+            list->commands.insert(i, new PushCommand(output->descriptors.machine_register(rbp)));
+            list->commands.insert(i, new MovCommand(CommandParameter::create_register_64(
                                                        output->descriptors.machine_register(rbp)),
                                                    CommandParameter::create_register_64(
                                                        output->descriptors.machine_register(rsp))));
-            list->set(i, new SubCommand(CommandParameter::create_register_64(
+            *i = new SubCommand(CommandParameter::create_register_64(
                                              output->descriptors.machine_register(rsp)),
-                                         CommandParameter::create_imm32(frame_size)));
+                                         CommandParameter::create_imm32(frame_size));
         } else if (command->type == COMMAND_COLORIZER_FRAME_DESTROY) {
             if (frame_size == 0) {
-                auto old = i;
-                list->next_iterator(&i);
-                list->remove(old);
+                i = list->commands.erase(i);
                 continue;
             }
             // add rsp, ...
             // pop rbp
 
-            list->insert_before(i, new AddCommand(CommandParameter::create_register_64(
+            list->commands.insert(i, new AddCommand(CommandParameter::create_register_64(
                                                        output->descriptors.machine_register(rsp)),
                                                    CommandParameter::create_imm32(frame_size)));
-            list->set(i, new PopCommand(output->descriptors.machine_register(rbp)));
+            *i = new PopCommand(output->descriptors.machine_register(rbp));
         } else if (command->type == COMMAND_COLORIZER_ALIGN_STACK_BEFORE ||
                    command->type == COMMAND_COLORIZER_ALIGN_STACK_AFTER) {
             int stack_entries = ((AlignStackCommand*)command)->get_stack_entries();
@@ -754,9 +751,9 @@ void RegisterColorizer::replace_frame_commands() {
             if (command->type == COMMAND_COLORIZER_ALIGN_STACK_BEFORE) {
                 if (total_bytes % 16 != 0) {
                     additional_rsp_offset += 8;
-                    list->set(i, new SubCommand(CommandParameter::create_register_64(
+                    *i = new SubCommand(CommandParameter::create_register_64(
                                                      output->descriptors.machine_register(rsp)),
-                                                 CommandParameter::create_imm32(8)));
+                                                 CommandParameter::create_imm32(8));
                     aligns.push_back(8);
                 } else {
                     ignore = true;
@@ -768,18 +765,16 @@ void RegisterColorizer::replace_frame_commands() {
                 additional_rsp_offset -= align;
                 align += stack_entries * 8;
                 if (align != 0) {
-                    list->set(i, new AddCommand(CommandParameter::create_register_64(
+                    *i = new AddCommand(CommandParameter::create_register_64(
                                                      output->descriptors.machine_register(rsp)),
-                                                 CommandParameter::create_imm32(align)));
+                                                 CommandParameter::create_imm32(align));
                 } else {
                     ignore = true;
                 }
             }
 
             if (ignore) {
-                auto old = i;
-                list->next_iterator(&i);
-                list->remove(old);
+                i = list->commands.erase(i);
                 continue;
             }
         } else {
@@ -802,7 +797,7 @@ void RegisterColorizer::replace_frame_commands() {
                 }
         }
 
-        list->next_iterator(&i);
+        ++i;
     }
 }
 
@@ -969,8 +964,8 @@ bool RegisterColorizer::is_unused_register(MachineRegister reg) {
 
 void RegisterColorizer::transform_labels() {
     auto list = output->root_list;
-    for (auto i = list->begin(); i != list->end(); list->next_iterator(&i)) {
-        auto command = list->get(i);
+    for (auto i = list->commands.begin(); i != list->commands.end(); ++i) {
+        auto command = *i;
 
         for (int j = 0; j < command->parameters.size(); j++) {
             auto parameter = command->parameters[j];
@@ -1029,7 +1024,7 @@ void RegisterColorizer::move_register_to_symbol(AbstractRegister reg) {
     assert(reg != -1);
     assert(descriptor->located_in_register);
 
-    output->root_list->insert_tail(
+    output->root_list->commands.push_back(
         new MovCommand(CommandParameter::create_symbol(CommandParameterSymbol(true, descriptor->symbol_position)),
                         CommandParameter::create_register_64(output->descriptors.machine_register(
                             descriptor->last_register_location))));
@@ -1049,7 +1044,7 @@ void RegisterColorizer::restore_register_from_symbol(AbstractRegister reg, Machi
     assert(reg != -1 && target != rinvalid);
     assert(descriptor->located_in_symbol && !descriptor->located_in_register);
 
-    output->root_list->insert_tail(new MovCommand(
+    output->root_list->commands.push_back(new MovCommand(
         CommandParameter::create_register_64(output->descriptors.machine_register(target)),
         CommandParameter::create_symbol(
             CommandParameterSymbol(true, descriptor->symbol_position))));

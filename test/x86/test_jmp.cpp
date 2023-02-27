@@ -11,15 +11,15 @@ TEST(EncodingX86, JmpCommand) {
     auto* cbuffer = new CommandBuffer();
 
     auto* label = new JmpLabel(0);
-    cbuffer->root_list->insert_tail(label);
+    cbuffer->root_list->commands.push_back(label);
 
-    cbuffer->root_list->insert_tail(new JumpCommand(label, COMMAND_JMP));
-    cbuffer->root_list->insert_tail(new JumpCommand(label, COMMAND_JE));
-    cbuffer->root_list->insert_tail(new JumpCommand(label, COMMAND_JNE));
-    cbuffer->root_list->insert_tail(new JumpCommand(label, COMMAND_JG));
-    cbuffer->root_list->insert_tail(new JumpCommand(label, COMMAND_JNG));
-    cbuffer->root_list->insert_tail(new JumpCommand(label, COMMAND_JL));
-    cbuffer->root_list->insert_tail(new JumpCommand(label, COMMAND_JNL));
+    cbuffer->root_list->commands.push_back(new JumpCommand(label, COMMAND_JMP));
+    cbuffer->root_list->commands.push_back(new JumpCommand(label, COMMAND_JE));
+    cbuffer->root_list->commands.push_back(new JumpCommand(label, COMMAND_JNE));
+    cbuffer->root_list->commands.push_back(new JumpCommand(label, COMMAND_JG));
+    cbuffer->root_list->commands.push_back(new JumpCommand(label, COMMAND_JNG));
+    cbuffer->root_list->commands.push_back(new JumpCommand(label, COMMAND_JL));
+    cbuffer->root_list->commands.push_back(new JumpCommand(label, COMMAND_JNL));
 
     auto encoder = cbuffer->to_bytes();
     encoder->do_emplacements();

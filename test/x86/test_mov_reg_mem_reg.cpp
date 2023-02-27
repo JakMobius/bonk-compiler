@@ -12,7 +12,7 @@ TEST(EncodingX86, MovCommandRegMemReg) {
     // mov reg, [reg]
     for(int i = 0; i < 16; i++) {
         for(int j = 0; j < 16; j++) {
-            cbuffer->root_list->insert_tail(new MovCommand(
+            cbuffer->root_list->commands.push_back(new MovCommand(
                 CommandParameter::create_memory(CommandParameterMemory::create_reg(i)),
                 CommandParameter::create_register_64(j)
                     ));

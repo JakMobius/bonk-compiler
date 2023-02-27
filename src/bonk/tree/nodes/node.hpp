@@ -1,7 +1,7 @@
 #pragma once
 
 #include <cstdio>
-#include "../../../utils/JsonSerializer.hpp"
+#include "../../../utils/json_serializer.hpp"
 #include "../../parsing/parser_position.hpp"
 
 namespace bonk {

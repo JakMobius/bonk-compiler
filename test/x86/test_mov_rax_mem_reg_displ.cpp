@@ -11,7 +11,7 @@ TEST(EncodingX86, MovCommandRaxMemRegPlusDispl) {
 
     // mov rax, [reg + disp32]
     for (int i = 0; i < 16; i++) {
-        cbuffer->root_list->insert_tail(new MovCommand(
+        cbuffer->root_list->commands.push_back(new MovCommand(
             CommandParameter::create_register_64(rax),
             CommandParameter::create_memory(CommandParameterMemory::create_reg_displ(i, -512))));
     }

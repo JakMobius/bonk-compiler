@@ -1,5 +1,5 @@
 
-#include "JsonSerializer.hpp"
+#include "json_serializer.hpp"
 
 JsonSerializer::JsonSerializer(FILE* file) {
     target = file;

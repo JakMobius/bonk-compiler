@@ -45,9 +45,9 @@ FinalOptimizer::FinalOptimizer(CommandBuffer* the_buffer) {
 }
 
 void FinalOptimizer::apply_label_map() {
-    for (auto i = buffer->root_list->begin(); i != buffer->root_list->end();
-         i = buffer->root_list->end()) {
-        AsmCommand* command = buffer->root_list->get(i);
+    for (auto i = buffer->root_list->commands.begin(); i != buffer->root_list->commands.end();
+         ++i) {
+        AsmCommand* command = *i;
 
         for (auto & parameter : command->parameters) {
             auto param = parameter;
@@ -70,8 +70,8 @@ void FinalOptimizer::apply_label_map() {
 }
 
 void FinalOptimizer::remove_useless_movs() const {
-    for (auto i = buffer->root_list->begin(); i != buffer->root_list->end();) {
-        AsmCommand* command = buffer->root_list->get(i);
+    for (auto i = buffer->root_list->commands.begin(); i != buffer->root_list->commands.end();) {
+        AsmCommand* command = *i;
 
         // Removing mov rax, rax commands
         if (command->type == COMMAND_MOV) {
@@ -80,48 +80,46 @@ void FinalOptimizer::remove_useless_movs() const {
 
             if (left_param.type == PARAMETER_TYPE_REG_64 &&
                 right_param.type == PARAMETER_TYPE_REG_64 && left_param.reg == right_param.reg) {
-                auto old = i;
-                i = buffer->root_list->next_iterator(i);
-                buffer->root_list->remove(old);
+
+                i = buffer->root_list->commands.erase(i);
                 continue;
             }
         }
-        i = buffer->root_list->next_iterator(i);
+        ++i;
     }
 }
 
 bool FinalOptimizer::remove_double_jmps() const {
     bool result = false;
-    for (auto i = buffer->root_list->begin(); i != buffer->root_list->end();) {
-        AsmCommand* command = buffer->root_list->get(i);
+    for (auto i = buffer->root_list->commands.begin(); i != buffer->root_list->commands.end();) {
+        AsmCommand* command = *i;
 
         // Removing mov rax, rax commands
         if (is_conditional_jump(command->type)) {
             auto* jmp = (JumpCommand*)command;
             auto walker = i;
-            buffer->root_list->next_iterator(&walker);
+            ++walker;
 
-            if (walker == buffer->root_list->end())
+            if (walker == buffer->root_list->commands.end())
                 break;
-            AsmCommand* first_next_command = buffer->root_list->get(walker);
-            buffer->root_list->next_iterator(&walker);
-            if (walker == buffer->root_list->end())
+            AsmCommand* first_next_command = *walker;
+            ++walker;
+            if (walker == buffer->root_list->commands.end())
                 break;
-            AsmCommand* second_next_command = buffer->root_list->get(walker);
+            AsmCommand* second_next_command = *walker;
 
             if (jmp->get_label() == second_next_command &&
                 first_next_command->type == COMMAND_JMP) {
                 ((JumpCommand*)first_next_command)->type = jmp->type;
                 ((JumpCommand*)first_next_command)->invert_condition();
-                auto old = i;
+
                 jmp->set_label(nullptr);
-                i = buffer->root_list->next_iterator(i);
-                buffer->root_list->remove(old);
+                i = buffer->root_list->commands.erase(i);
                 result = true;
                 continue;
             }
         }
-        i = buffer->root_list->next_iterator(i);
+        ++i;
     }
     return result;
 }
@@ -130,8 +128,8 @@ void FinalOptimizer::remove_useless_labels() const {
 
     std::vector<bool> label_used;
 
-    for (auto i = buffer->root_list->begin(); i != buffer->root_list->end();) {
-        AsmCommand* command = buffer->root_list->get(i);
+    for (auto i = buffer->root_list->commands.begin(); i != buffer->root_list->commands.end();) {
+        AsmCommand* command = *i;
 
         for (auto param : command->parameters) {
             if (param.type == PARAMETER_TYPE_LABEL) {
@@ -141,39 +139,37 @@ void FinalOptimizer::remove_useless_labels() const {
                 label_used[param.label->get_index()] = true;
             }
         }
-        i = buffer->root_list->next_iterator(i);
+        ++i;
     }
 
-    for (auto i = buffer->root_list->begin(); i != buffer->root_list->end();) {
-        AsmCommand* command = buffer->root_list->get(i);
+    for (auto i = buffer->root_list->commands.begin(); i != buffer->root_list->commands.end();) {
+        AsmCommand* command = *i;
 
         if (command->type == COMMAND_JMP_LABEL) {
             auto* label = (JmpLabel*)command;
             if (!label_used[label->get_index()]) {
-                auto old = i;
-                i = buffer->root_list->next_iterator(i);
-                buffer->root_list->remove(old);
+
+                i = buffer->root_list->commands.erase(i);
                 continue;
             }
         }
-        i = buffer->root_list->next_iterator(i);
+        ++i;
     }
 }
 
 bool FinalOptimizer::remove_dead_ends() const {
     bool result = false;
-    for (auto i = buffer->root_list->begin(); i != buffer->root_list->end();) {
-        AsmCommand* command = buffer->root_list->get(i);
-        i = buffer->root_list->next_iterator(i);
+    for (auto i = buffer->root_list->commands.begin(); i != buffer->root_list->commands.end();) {
+        AsmCommand* command = *i;
+        ++i;
 
         if (command->type == COMMAND_RET || command->type == COMMAND_JMP) {
-            while (i != buffer->root_list->end()) {
-                command = buffer->root_list->get(i);
+            while (i != buffer->root_list->commands.end()) {
+                command = *i;
                 if (command->type == COMMAND_JMP_LABEL)
                     break;
-                auto old = i;
-                i = buffer->root_list->next_iterator(i);
-                buffer->root_list->remove(old);
+
+                i = buffer->root_list->commands.erase(i);
                 result = true;
             }
         }
@@ -182,18 +178,16 @@ bool FinalOptimizer::remove_dead_ends() const {
 }
 
 void FinalOptimizer::optimize_mov_zeroes() const {
-    for (auto i = buffer->root_list->begin(); i != buffer->root_list->end();
-         buffer->root_list->next_iterator(&i)) {
-        AsmCommand* command = buffer->root_list->get(i);
+    for (auto i = buffer->root_list->commands.begin(); i != buffer->root_list->commands.end(); ++i) {
+        AsmCommand* command = *i;
 
         if (command->type == COMMAND_MOV) {
             auto first_param = command->parameters[0];
             auto second_param = command->parameters[1];
             if (first_param.type == PARAMETER_TYPE_REG_64 &&
                 second_param.type == PARAMETER_TYPE_IMM32 && second_param.imm == 0) {
-                buffer->root_list->set(
-                    i, new XorCommand(CommandParameter::create_register_64(first_param.reg),
-                                       CommandParameter::create_register_64(first_param.reg)));
+                *i = new XorCommand(CommandParameter::create_register_64(first_param.reg),
+                                       CommandParameter::create_register_64(first_param.reg));
             }
         }
     }

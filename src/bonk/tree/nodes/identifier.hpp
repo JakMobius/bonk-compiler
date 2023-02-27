@@ -3,8 +3,8 @@
 #include <cstdio>
 #include <cstdlib>
 #include <string>
-#include "../../../utils/JsonSerializer.hpp"
 #include "node.hpp"
+#include "utils/json_serializer.hpp"
 
 namespace bonk {
 

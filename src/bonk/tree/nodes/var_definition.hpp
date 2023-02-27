@@ -5,9 +5,9 @@ struct TreeNodeVariableDefinition;
 
 }
 
-#include "../../../utils/JsonSerializer.hpp"
 #include "identifier.hpp"
 #include "node.hpp"
+#include "utils/json_serializer.hpp"
 
 namespace bonk {
 

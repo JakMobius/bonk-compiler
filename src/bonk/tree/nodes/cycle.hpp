@@ -5,9 +5,9 @@ struct TreeNodeCycle;
 
 }
 
-#include "../../../utils/JsonSerializer.hpp"
 #include "list.hpp"
 #include "node.hpp"
+#include "utils/json_serializer.hpp"
 
 namespace bonk {
 

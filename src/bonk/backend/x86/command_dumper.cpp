@@ -156,8 +156,8 @@ void command_dumper::dump(AsmCommand* command, FILE* file, int depth) {
 void command_dumper::dump_list(struct CommandList* list, FILE* file, int depth) {
     auto old_list = command_list;
     command_list = list;
-    for (auto i = list->begin(); i != list->end(); list->next_iterator(&i)) {
-        dump(list->get(i), file, depth);
+    for (auto i = list->commands.begin(); i != list->commands.end(); ++i) {
+        dump(*i, file, depth);
         fputc('\n', file);
     }
     command_list = old_list;

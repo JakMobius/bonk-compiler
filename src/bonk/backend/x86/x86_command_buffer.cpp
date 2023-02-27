@@ -43,8 +43,8 @@ CommandList* CommandBuffer::next_command_list() {
 CommandEncoder* CommandBuffer::to_bytes() {
     CommandEncoder* encoder = new CommandEncoder();
 
-    for (auto i = root_list->begin(); i != root_list->end(); root_list->next_iterator(&i)) {
-        AsmCommand* command = root_list->get(i);
+    for (auto i = root_list->commands.begin(); i != root_list->commands.end(); ++i) {
+        AsmCommand* command = *i;
         command->offset = encoder->buffer.size();
         command->to_bytes(encoder);
     }
@@ -71,8 +71,8 @@ void CommandBuffer::write_block_to_object_file(const std::string& block_name,
 }
 
 void CommandList::append_read_register(std::set<AbstractRegister>* tree) {
-    for (auto i = begin(); i != end(); next_iterator(&i)) {
-        AsmCommand* command = get(i);
+    for (auto i = commands.begin(); i != commands.end(); ++i) {
+        AsmCommand* command = *i;
         for (int j = 0; j < command->read_registers.size(); j++) {
             auto reg = command->read_registers[j];
             if (parent_buffer->descriptors.get_descriptor(reg)->owner == this)
@@ -83,8 +83,8 @@ void CommandList::append_read_register(std::set<AbstractRegister>* tree) {
 }
 
 void CommandList::append_write_register(std::set<AbstractRegister>* tree) {
-    for (auto i = begin(); i != end(); i = next_iterator(&i)) {
-        AsmCommand* command = get(i);
+    for (auto i = commands.begin(); i != commands.end(); i = ++i) {
+        AsmCommand* command = *i;
         for (int j = 0; j < command->read_registers.size(); j++) {
             auto reg = command->read_registers[j];
             if (parent_buffer->descriptors.get_descriptor(reg)->owner == this)

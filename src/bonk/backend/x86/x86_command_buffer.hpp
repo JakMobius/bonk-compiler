@@ -16,13 +16,13 @@ struct CommandList;
 
 namespace bonk::x86_backend {
 
-struct CommandList : MList<AsmCommand*> {
-    CommandBuffer* parent_buffer;
+struct CommandList {
+    CommandBuffer* parent_buffer {};
+    std::list<AsmCommand*> commands {};
 
     CommandList(CommandBuffer* parent_buffer);
 
     void append_read_register(std::set<AbstractRegister>* tree);
-
     void append_write_register(std::set<AbstractRegister>* tree);
 };
 

@@ -1,4 +1,5 @@
 
+#include <list>
 #include "ede_backend_context.hpp"
 
 namespace bonk::ede_backend {
@@ -190,10 +191,10 @@ BackendContext::call_argument_list_get_value(
     if (!argument_list)
         return nullptr;
 
-    MList<TreeNodeCallParameter*>* list = &argument_list->list;
+    std::list<TreeNodeCallParameter*>* list = &argument_list->list;
 
-    for (auto i = list->begin(); i != list->end(); list->next_iterator(&i)) {
-        auto* parameter = list->get(i);
+    for (auto i = list->begin(); i != list->end(); ++i) {
+        auto* parameter = *i;
 
         if (parameter->parameter_name->contents_equal(identifier)) {
             return parameter->parameter_value;
@@ -596,10 +597,10 @@ FieldList* BackendContext::field_list_find_block_parameters(TreeNodeBlockDefinit
     if (!argument_list)
         return nullptr;
 
-    MList<TreeNode*>* list = &block->body->list;
+    auto* list = &block->body->list;
 
-    for (auto i = list->begin(); i != list->end(); list->next_iterator(&i)) {
-        auto* next_node = list->get(i);
+    for (auto i = list->begin(); i != list->end(); ++i) {
+        auto* next_node = *i;
 
         TreeNodeType node_type = next_node->type;
         if (node_type != TREE_NODE_TYPE_VAR_DEFINITION)
@@ -655,10 +656,10 @@ FieldList* BackendContext::read_scope_variables(TreeNodeList<TreeNode*>* node,
     if (reset_frame_offset)
         scope->byte_offset = 0;
 
-    MList<TreeNode*>* list = &node->list;
+    std::list<TreeNode*>* list = &node->list;
 
-    for (auto i = list->begin(); i != list->end(); list->next_iterator(&i)) {
-        auto* next_node = node->list.get(i);
+    for (auto i = list->begin(); i != list->end(); ++i) {
+        auto* next_node = *i;
 
         TreeNodeType node_type = next_node->type;
         if (node_type == TREE_NODE_TYPE_VAR_DEFINITION) {
@@ -679,10 +680,10 @@ void BackendContext::compile_block(TreeNodeList<TreeNode*>* node, bool reset_fra
     FieldList* scope = read_scope_variables(node, reset_frame_offset);
 
     if (!linked_compiler->state) {
-        MList<TreeNode*>* list = &node->list;
+        std::list<TreeNode*>* list = &node->list;
 
-        for (auto i = list->begin(); i != list->end(); list->next_iterator(&i)) {
-            auto* next_node = node->list.get(i);
+        for (auto i = list->begin(); i != list->end(); ++i) {
+            auto* next_node = *i;
             compile_expression(next_node, 0);
         }
     }
@@ -715,10 +716,10 @@ void BackendContext::compile_program(TreeNodeList<TreeNode*>* node) {
 
     if (!linked_compiler->state) {
 
-        MList<TreeNode*>* list = &node->list;
+        std::list<TreeNode*>* list = &node->list;
 
-        for (auto i = list->begin(); i != list->end(); list->next_iterator(&i)) {
-            auto* next_node = node->list.get(i);
+        for (auto i = list->begin(); i != list->end(); ++i) {
+            auto* next_node = *i;
 
             if (next_node->type == TREE_NODE_TYPE_VAR_DEFINITION) {
                 auto* var_definition = (TreeNodeVariableDefinition*)next_node;
@@ -739,8 +740,8 @@ void BackendContext::compile_program(TreeNodeList<TreeNode*>* node) {
         fprintf(target, "call _bs_main\n");
         fprintf(target, "hlt\n");
 
-        for (auto i = node->list.begin(); i != node->list.end(); node->list.next_iterator(&i)) {
-            auto* next_node = node->list.get(i);
+        for (auto i = node->list.begin(); i != node->list.end(); ++i) {
+            auto* next_node = *i;
 
             if (next_node->type == TREE_NODE_TYPE_BLOCK_DEFINITION) {
                 compile_callable_block((TreeNodeBlockDefinition*)next_node);

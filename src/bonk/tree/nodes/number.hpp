@@ -5,8 +5,8 @@ struct TreeNodeNumber;
 
 }
 
-#include "../../../utils/JsonSerializer.hpp"
 #include "node.hpp"
+#include "utils/json_serializer.hpp"
 
 namespace bonk {
 

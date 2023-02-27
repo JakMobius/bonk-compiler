@@ -1,14 +1,14 @@
 #pragma once
 
-#include "../../../utils/JsonSerializer.hpp"
-#include "../../../utils/list.hpp"
+#include <list>
+#include "../../../utils/json_serializer.hpp"
 #include "node.hpp"
 
 namespace bonk {
 
 template <typename T> struct TreeNodeList : TreeNode {
 
-    MList<T> list;
+    std::list<T> list;
 
     TreeNodeList();
 
@@ -24,8 +24,8 @@ template <typename T> TreeNodeList<T>::TreeNodeList() {
 }
 
 template <typename T> TreeNodeList<T>::~TreeNodeList() {
-    for (auto i = list.begin(); i != list.end(); list.next_iterator(&i)) {
-        delete list.get(i);
+    for (auto i = list.begin(); i != list.end(); ++i) {
+        delete *i;
     }
 }
 
@@ -35,8 +35,8 @@ template <typename T> void TreeNodeList<T>::serialize(JsonSerializer* serializer
     serializer->block_string_field("type", "list");
     serializer->block_start_array("contents");
 
-    for (auto i = list.begin(); i != list.end(); list.next_iterator(&i)) {
-        auto* element = list.get(i);
+    for (auto i = list.begin(); i != list.end(); ++i) {
+        auto* element = *i;
         if (element) {
             serializer->array_add_block();
             element->serialize(serializer);

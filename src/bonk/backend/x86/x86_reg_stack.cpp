@@ -16,7 +16,7 @@ RegStack::RegStack(CommandList* list) {
 
 void RegStack::push_imm64(uint64_t value) {
     push_next_register(false);
-    list->insert_tail(
+    list->commands.push_back(
         new MovCommand(CommandParameter::create_register_64(get_head_register().reg),
                                       CommandParameter::create_imm32(value)));
 }
@@ -28,7 +28,7 @@ AbstractRegister RegStack::push_placeholder(bool is_logical) {
 
 void RegStack::push_reg64(AbstractRegister reg) {
     push_next_register(false);
-    list->insert_tail(
+    list->commands.push_back(
         new MovCommand(CommandParameter::create_register_64(get_head_register().reg),
                                       CommandParameter::create_register_64(reg)));
 }
@@ -38,7 +38,7 @@ void RegStack::logical_and() {
     decrease_stack_size();
     AbstractRegister destination = get_head_register_logical();
 
-    list->insert_tail(new AndCommand(CommandParameter::create_register_8(destination),
+    list->commands.push_back(new AndCommand(CommandParameter::create_register_8(destination),
                                       CommandParameter::create_register_8(source)));
 
     set_head_type(true);
@@ -49,7 +49,7 @@ void RegStack::logical_or() {
     decrease_stack_size();
     AbstractRegister destination = get_head_register_logical();
 
-    list->insert_tail(new OrCommand(CommandParameter::create_register_8(destination),
+    list->commands.push_back(new OrCommand(CommandParameter::create_register_8(destination),
                                      CommandParameter::create_register_8(source)));
 
     set_head_type(true);
@@ -59,10 +59,10 @@ void RegStack::test() {
     RegStackEntry entry = get_head_register();
 
     if (entry.is_logical) {
-        list->insert_tail(new TestCommand(CommandParameter::create_register_8(entry.reg),
+        list->commands.push_back(new TestCommand(CommandParameter::create_register_8(entry.reg),
                                            CommandParameter::create_register_8(entry.reg)));
     } else {
-        list->insert_tail(new TestCommand(CommandParameter::create_register_64(entry.reg),
+        list->commands.push_back(new TestCommand(CommandParameter::create_register_64(entry.reg),
                                            CommandParameter::create_register_64(entry.reg)));
     }
 
@@ -82,10 +82,10 @@ void RegStack::compare() {
             convert_logical_to_number(left.reg);
     }
     if (right.is_logical) {
-        list->insert_tail(new CmpCommand(CommandParameter::create_register_8(left.reg),
+        list->commands.push_back(new CmpCommand(CommandParameter::create_register_8(left.reg),
                                           CommandParameter::create_register_8(right.reg)));
     } else {
-        list->insert_tail(new CmpCommand(CommandParameter::create_register_64(left.reg),
+        list->commands.push_back(new CmpCommand(CommandParameter::create_register_64(left.reg),
                                           CommandParameter::create_register_64(right.reg)));
     }
 }
@@ -93,37 +93,37 @@ void RegStack::compare() {
 void RegStack::equals() {
     compare();
     push_next_register(true);
-    list->insert_tail(new CSetCommand(get_head_register().reg, COMMAND_SETE));
+    list->commands.push_back(new CSetCommand(get_head_register().reg, COMMAND_SETE));
 }
 
 void RegStack::less_than() {
     compare();
     push_next_register(true);
-    list->insert_tail(new CSetCommand(get_head_register().reg, COMMAND_SETL));
+    list->commands.push_back(new CSetCommand(get_head_register().reg, COMMAND_SETL));
 }
 
 void RegStack::less_or_equal_than() {
     compare();
     push_next_register(true);
-    list->insert_tail(new CSetCommand(get_head_register().reg, COMMAND_SETNG));
+    list->commands.push_back(new CSetCommand(get_head_register().reg, COMMAND_SETNG));
 }
 
 void RegStack::greater_than() {
     compare();
     push_next_register(true);
-    list->insert_tail(new CSetCommand(get_head_register().reg, COMMAND_SETG));
+    list->commands.push_back(new CSetCommand(get_head_register().reg, COMMAND_SETG));
 }
 
 void RegStack::greater_or_equal_than() {
     compare();
     push_next_register(true);
-    list->insert_tail(new CSetCommand(get_head_register().reg, COMMAND_SETNL));
+    list->commands.push_back(new CSetCommand(get_head_register().reg, COMMAND_SETNL));
 }
 
 void RegStack::not_equal() {
     compare();
     push_next_register(true);
-    list->insert_tail(new CSetCommand(get_head_register().reg, COMMAND_SETNE));
+    list->commands.push_back(new CSetCommand(get_head_register().reg, COMMAND_SETNE));
 }
 
 void RegStack::add() {
@@ -131,7 +131,7 @@ void RegStack::add() {
     decrease_stack_size();
     AbstractRegister destination = get_head_register_number();
 
-    list->insert_tail(new AddCommand(CommandParameter::create_register_64(destination),
+    list->commands.push_back(new AddCommand(CommandParameter::create_register_64(destination),
                                       CommandParameter::create_register_64(source)));
 
     set_head_type(false);
@@ -141,7 +141,7 @@ void RegStack::sub() {
     AbstractRegister source = get_head_register_number();
     decrease_stack_size();
     AbstractRegister destination = get_head_register_number();
-    list->insert_tail(new SubCommand(CommandParameter::create_register_64(destination),
+    list->commands.push_back(new SubCommand(CommandParameter::create_register_64(destination),
                                       CommandParameter::create_register_64(source)));
 
     set_head_type(false);
@@ -151,7 +151,7 @@ void RegStack::mul() {
     AbstractRegister source = get_head_register_number();
     decrease_stack_size();
     AbstractRegister destination = get_head_register_number();
-    list->insert_tail(new IMulCommand(destination, source));
+    list->commands.push_back(new IMulCommand(destination, source));
 
     set_head_type(false);
 }
@@ -166,12 +166,12 @@ void RegStack::div() {
     AbstractRegister rax_handle =
         list->parent_buffer->descriptors.next_constrained_register(rax, list);
 
-    list->insert_tail(new XorCommand(CommandParameter::create_register_64(rdx_handle),
+    list->commands.push_back(new XorCommand(CommandParameter::create_register_64(rdx_handle),
                                       CommandParameter::create_register_64(rdx_handle)));
-    list->insert_tail(new MovCommand(CommandParameter::create_register_64(rax_handle),
+    list->commands.push_back(new MovCommand(CommandParameter::create_register_64(rax_handle),
                                       CommandParameter::create_register_64(destination)));
-    list->insert_tail(new IDivCommand(source, rax_handle, rdx_handle));
-    list->insert_tail(new MovCommand(CommandParameter::create_register_64(destination),
+    list->commands.push_back(new IDivCommand(source, rax_handle, rdx_handle));
+    list->commands.push_back(new MovCommand(CommandParameter::create_register_64(destination),
                                       CommandParameter::create_register_64(rax_handle)));
 
     set_head_type(false);
@@ -197,7 +197,7 @@ void RegStack::decrease_stack_size() {
 }
 
 void RegStack::write_head(AbstractRegister reg) {
-    list->insert_tail(
+    list->commands.push_back(
         new MovCommand(CommandParameter::create_register_64(reg),
                         CommandParameter::create_register_64(get_head_register().reg)));
 }
@@ -208,14 +208,14 @@ void RegStack::pop(AbstractRegister reg) {
 }
 
 void RegStack::convert_logical_to_number(AbstractRegister reg) {
-    list->insert_tail(new MovZXCommand(CommandParameter::create_register_64(reg),
+    list->commands.push_back(new MovZXCommand(CommandParameter::create_register_64(reg),
                                         CommandParameter::create_register_8(reg)));
 }
 
 void RegStack::convert_number_to_logical(AbstractRegister reg) {
-    list->insert_tail(new TestCommand(CommandParameter::create_register_64(reg),
+    list->commands.push_back(new TestCommand(CommandParameter::create_register_64(reg),
                                        CommandParameter::create_register_64(reg)));
-    list->insert_tail(new CSetCommand(reg, COMMAND_SETNE));
+    list->commands.push_back(new CSetCommand(reg, COMMAND_SETNE));
 }
 
 AbstractRegister RegStack::get_head_register_number() {

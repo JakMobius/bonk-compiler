@@ -15,8 +15,8 @@ ScopeCommand::ScopeCommand(CommandList* nested_list) {
 
     commands = nested_list;
 
-    for (auto i = commands->begin(); i != commands->end(); commands->next_iterator(&i)) {
-        AsmCommand* command = commands->get(i);
+    for (auto i = commands->commands.begin(); i != commands->commands.end(); ++i) {
+        AsmCommand* command = *i;
         for (int j = 0; j < command->read_registers.size(); j++) {
             auto reg = command->read_registers[j];
             if (read_registers_tree.erase(reg)) {

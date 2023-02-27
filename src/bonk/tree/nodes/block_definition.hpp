@@ -6,12 +6,11 @@ struct TreeNodeCheck;
 
 }
 
-#include "../../../utils/JsonSerializer.hpp"
-#include "../../../utils/list.hpp"
 #include "call_parameter.hpp"
 #include "identifier.hpp"
 #include "list.hpp"
 #include "node.hpp"
+#include "utils/json_serializer.hpp"
 
 namespace bonk {
 

@@ -8,7 +8,6 @@ struct BackendContext;
 }
 
 #include "../../../utils/linear_allocator.hpp"
-#include "../../../utils/list.hpp"
 #include "../../compiler.hpp"
 #include "../../target/macho/macho.hpp"
 #include "colorizer/x86_colorizer.hpp"

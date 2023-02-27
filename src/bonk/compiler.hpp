@@ -14,7 +14,7 @@ enum CompilerState {
 } // namespace bonk
 
 #include <cstdio>
-#include "bonk/backend/backend.hpp"
+#include "backend/backend.hpp"
 #include "errors.hpp"
 #include "parsing/lexic/lexical_analyzer.hpp"
 #include "parsing/parser.hpp"
