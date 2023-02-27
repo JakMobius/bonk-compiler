@@ -25,7 +25,6 @@ void TreeNodeIdentifier::serialize(JsonSerializer* serializer) {
 }
 void TreeNodeIdentifier::accept(ASTVisitor* visitor) {
     visitor->visit(this);
-    visitor->leave(this);
 }
 
 } // namespace bonk

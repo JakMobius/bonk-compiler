@@ -37,9 +37,6 @@ void TreeNodeBlockDefinition::serialize(JsonSerializer* serializer) {
 }
 void TreeNodeBlockDefinition::accept(ASTVisitor* visitor) {
     visitor->visit(this);
-    block_name->accept(visitor);
-    body->accept(visitor);
-    visitor->leave(this);
 }
 
 } // namespace bonk

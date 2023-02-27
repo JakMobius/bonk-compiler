@@ -42,9 +42,6 @@ TreeNodeVariableDefinition::~TreeNodeVariableDefinition() {
 }
 void TreeNodeVariableDefinition::accept(ASTVisitor* visitor) {
     visitor->visit(this);
-    variable_name->accept(visitor);
-    variable_value->accept(visitor);
-    visitor->leave(this);
 }
 
 } // namespace bonk

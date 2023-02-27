@@ -53,10 +53,6 @@ void TreeNodeCheck::serialize(JsonSerializer* serializer) {
 }
 void TreeNodeCheck::accept(ASTVisitor* visitor) {
     visitor->visit(this);
-    condition->accept(visitor);
-    check_body->accept(visitor);
-    or_body->accept(visitor);
-    visitor->leave(this);
 }
 
 } // namespace bonk

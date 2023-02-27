@@ -24,17 +24,6 @@ class ASTVisitor {
     virtual void visit(TreeNodeCheck* node) = 0;
     virtual void visit(TreeNodeNumber* node) = 0;
     virtual void visit(TreeNodeList* node) = 0;
-
-    virtual void leave(TreeNodeVariableDefinition* node) = 0;
-    virtual void leave(TreeNodeIdentifier* node) = 0;
-    virtual void leave(TreeNodeBlockDefinition* node) = 0;
-    virtual void leave(TreeNodeOperator* node) = 0;
-    virtual void leave(TreeNodeCycle* node) = 0;
-    virtual void leave(TreeNodeCallParameter* node) = 0;
-    virtual void leave(TreeNodeCall* node) = 0;
-    virtual void leave(TreeNodeCheck* node) = 0;
-    virtual void leave(TreeNodeNumber* node) = 0;
-    virtual void leave(TreeNodeList* node) = 0;
 };
 
 }

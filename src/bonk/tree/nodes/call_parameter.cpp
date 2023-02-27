@@ -40,8 +40,5 @@ void TreeNodeCallParameter::serialize(JsonSerializer* serializer) {
 }
 void TreeNodeCallParameter::accept(ASTVisitor* visitor) {
     visitor->visit(this);
-    parameter_name->accept(visitor);
-    parameter_value->accept(visitor);
-    visitor->leave(this);
 }
 } // namespace bonk

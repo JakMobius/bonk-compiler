@@ -54,9 +54,6 @@ void TreeNodeOperator::serialize(JsonSerializer* serializer) {
 }
 void TreeNodeOperator::accept(ASTVisitor* visitor) {
     visitor->visit(this);
-    left->accept(visitor);
-    right->accept(visitor);
-    visitor->leave(this);
 }
 
 } // namespace bonk

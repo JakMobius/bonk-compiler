@@ -34,10 +34,6 @@ void TreeNodeList::serialize(JsonSerializer* serializer) {
 
 void TreeNodeList::accept(ASTVisitor* visitor) {
     visitor->visit(this);
-    for (auto element : list) {
-        if (element) element->accept(visitor);
-    }
-    visitor->leave(this);
 }
 
 }
