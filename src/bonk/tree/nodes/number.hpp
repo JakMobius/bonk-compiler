@@ -16,6 +16,8 @@ struct TreeNodeNumber : TreeNode {
 
     TreeNodeNumber(long double float_value, long long integer_value);
 
+    void accept(ASTVisitor* visitor) override;
+
     void serialize(JsonSerializer* serializer) override;
 };
 

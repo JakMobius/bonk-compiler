@@ -11,12 +11,13 @@ namespace bonk {
 struct TreeNodeCall : TreeNode {
 
     TreeNodeIdentifier* call_function;
-    TreeNodeList<TreeNodeCallParameter*>* call_parameters;
+    TreeNodeList* call_parameters;
 
-    TreeNodeCall(TreeNodeIdentifier* function,
-                   TreeNodeList<TreeNodeCallParameter*>* parameters);
+    TreeNodeCall(TreeNodeIdentifier* function, TreeNodeList* parameters);
 
     ~TreeNodeCall() override;
+
+    void accept(ASTVisitor* visitor) override;
 
     void serialize(JsonSerializer* serializer) override;
 };

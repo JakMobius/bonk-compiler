@@ -24,7 +24,7 @@ Compiler::~Compiler() {
     parser = nullptr;
 }
 
-TreeNodeList<TreeNode*>* Compiler::get_ast_of_file_at_path(const char* file_path) {
+TreeNodeList* Compiler::get_ast_of_file_at_path(const char* file_path) {
     FileOpResult file_read_result = FILE_OP_READ_ERROR;
     unsigned long file_length = 0;
     const char* real_path = realpath(file_path, nullptr);
@@ -45,7 +45,7 @@ TreeNodeList<TreeNode*>* Compiler::get_ast_of_file_at_path(const char* file_path
     return parser->parse_file(&lexemes);
 }
 
-bool Compiler::compile_ast(TreeNodeList<TreeNode*>* ast, FILE* target) {
+bool Compiler::compile_ast(TreeNodeList* ast, FILE* target) {
     if (!config->compile_backend) {
         fatal_error("backend has not been specified");
         return false;

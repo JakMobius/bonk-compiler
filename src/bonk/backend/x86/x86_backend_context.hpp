@@ -73,9 +73,9 @@ struct BackendContext {
 
     void pop_state();
 
-    void compile_program(TreeNodeList<TreeNode*>* ast);
+    void compile_program(TreeNodeList* ast);
 
-    FieldList* read_scope_variables(TreeNodeList<TreeNode*>* scope);
+    FieldList* read_scope_variables(TreeNodeList* scope);
 
     void error_already_defined(TreeNodeIdentifier* identifier);
 
@@ -91,7 +91,7 @@ struct BackendContext {
 
     void write_block_implementation(TreeNodeBlockDefinition* block);
 
-    void compile_block(TreeNodeList<TreeNode*>* block);
+    void compile_block(TreeNodeList* block);
 
     void compile_line(TreeNode* node);
 
@@ -172,13 +172,13 @@ struct BackendContext {
     void write_block_definition(TreeNodeBlockDefinition* definition) const;
 
     TreeNode*
-    call_argument_list_get_value(TreeNodeList<TreeNodeCallParameter*>* argument_list,
+    call_argument_list_get_value(TreeNodeList* argument_list,
                                  TreeNodeIdentifier* identifier);
 
     void locate_procedure_parameter(Variable* parameter);
 
     TreeNode* compile_nth_argument(VariableFunction* func,
-                                   TreeNodeList<TreeNodeCallParameter*>* argument_list,
+                                   TreeNodeList* argument_list,
                                     int i);
 
     void write_global_var_definition(TreeNodeVariableDefinition* definition) const;

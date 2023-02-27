@@ -7,7 +7,7 @@
 
 namespace bonk {
 
-bool parse_grammatic_global(Parser* parser, TreeNodeList<TreeNode*>* target) {
+bool parse_grammatic_global(Parser* parser, TreeNodeList* target) {
 
     while (true) {
         unsigned long old_position = parser->position;

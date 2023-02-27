@@ -1,5 +1,6 @@
 
 #include "identifier.hpp"
+#include "bonk/tree/ast_visitor.hpp"
 
 namespace bonk {
 
@@ -21,6 +22,10 @@ void TreeNodeIdentifier::serialize(JsonSerializer* serializer) {
 
     serializer->block_string_field("type", "identifier");
     serializer->block_string_field("identifier", variable_name.c_str());
+}
+void TreeNodeIdentifier::accept(ASTVisitor* visitor) {
+    visitor->visit(this);
+    visitor->leave(this);
 }
 
 } // namespace bonk

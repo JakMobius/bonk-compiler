@@ -21,6 +21,8 @@ struct TreeNodeCallParameter : TreeNode {
 
     ~TreeNodeCallParameter() override;
 
+    void accept(ASTVisitor* visitor) override;
+
     void serialize(JsonSerializer* serializer) override;
 };
 

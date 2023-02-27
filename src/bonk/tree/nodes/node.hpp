@@ -1,17 +1,10 @@
 #pragma once
 
-#include <cstdio>
-#include "../../../utils/json_serializer.hpp"
-#include "../../parsing/parser_position.hpp"
-
 namespace bonk {
 
 struct TreeNode;
 struct TreeNodeMethods;
-
-} // namespace bonk
-
-namespace bonk {
+struct ASTVisitor;
 
 enum TreeNodeType {
     TREE_NODE_TYPE_NUMBER,
@@ -27,6 +20,14 @@ enum TreeNodeType {
     TREE_NODE_TYPE_INVALID
 };
 
+} // namespace bonk
+
+#include <cstdio>
+#include "../../../utils/json_serializer.hpp"
+#include "../../parsing/parser_position.hpp"
+
+namespace bonk {
+
 struct TreeNode {
     TreeNodeType type = TREE_NODE_TYPE_INVALID;
     ParserPosition* source_position = nullptr;
@@ -34,6 +35,8 @@ struct TreeNode {
     TreeNode() = default;
 
     virtual ~TreeNode() = default;
+
+    virtual void accept(ASTVisitor* visitor) {}
 
     virtual void serialize(JsonSerializer* file);
 };

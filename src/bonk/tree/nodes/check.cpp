@@ -1,5 +1,6 @@
 
 #include "check.hpp"
+#include "bonk/tree/ast_visitor.hpp"
 
 namespace bonk {
 
@@ -49,6 +50,13 @@ void TreeNodeCheck::serialize(JsonSerializer* serializer) {
     } else {
         serializer->block_string_field("condition", nullptr);
     }
+}
+void TreeNodeCheck::accept(ASTVisitor* visitor) {
+    visitor->visit(this);
+    condition->accept(visitor);
+    check_body->accept(visitor);
+    or_body->accept(visitor);
+    visitor->leave(this);
 }
 
 } // namespace bonk

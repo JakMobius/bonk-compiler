@@ -3,7 +3,7 @@
 
 namespace bonk::ede_backend {
 
-bool Backend::compile_ast(Compiler* linked_compiler, TreeNodeList<bonk::TreeNode*>* ast,
+bool Backend::compile_ast(Compiler* linked_compiler, TreeNodeList* ast,
                           FILE* target) {
 
     BackendContext context(linked_compiler, target);

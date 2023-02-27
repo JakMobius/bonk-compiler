@@ -1,5 +1,6 @@
 
 #include "var_definition.hpp"
+#include "bonk/tree/ast_visitor.hpp"
 
 namespace bonk {
 
@@ -38,6 +39,12 @@ TreeNodeVariableDefinition::~TreeNodeVariableDefinition() {
 
     variable_name = nullptr;
     variable_value = nullptr;
+}
+void TreeNodeVariableDefinition::accept(ASTVisitor* visitor) {
+    visitor->visit(this);
+    variable_name->accept(visitor);
+    variable_value->accept(visitor);
+    visitor->leave(this);
 }
 
 } // namespace bonk

@@ -7,7 +7,7 @@ namespace bonk {
 
 TreeNode* parse_grammatic_sub_block(Parser* parser);
 
-TreeNodeList<TreeNode*>* parse_grammatic_nested_block(Parser* parser);
+TreeNodeList* parse_grammatic_nested_block(Parser* parser);
 
 TreeNodeCycle* parse_grammatic_cycle(Parser* parser);
 

@@ -14,7 +14,7 @@ struct Backend : bonk::Backend {
 
     ~Backend() override = default;
 
-    bool compile_ast(Compiler* linked_compiler, TreeNodeList<bonk::TreeNode*>* ast,
+    bool compile_ast(Compiler* linked_compiler, TreeNodeList* ast,
                      FILE* target) override;
 };
 

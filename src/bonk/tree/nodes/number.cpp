@@ -1,5 +1,6 @@
 
 #include "number.hpp"
+#include "bonk/tree/ast_visitor.hpp"
 
 namespace bonk {
 
@@ -16,6 +17,10 @@ void TreeNodeNumber::serialize(JsonSerializer* serializer) {
     serializer->block_string_field("type", "root_list");
     serializer->block_number_field("float_value", float_value);
     serializer->block_number_field("integer_value", integer_value);
+}
+void TreeNodeNumber::accept(ASTVisitor* visitor) {
+    visitor->visit(this);
+    visitor->leave(this);
 }
 
 } // namespace bonk

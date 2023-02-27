@@ -1,11 +1,10 @@
 
 #include "call.hpp"
+#include "bonk/tree/ast_visitor.hpp"
 
 namespace bonk {
 
-TreeNodeCall::TreeNodeCall(TreeNodeIdentifier* function,
-                               TreeNodeList<TreeNodeCallParameter*>* parameters)
-    : TreeNode() {
+TreeNodeCall::TreeNodeCall(TreeNodeIdentifier* function, TreeNodeList* parameters) : TreeNode() {
     call_function = function;
     call_parameters = parameters;
     type = TREE_NODE_TYPE_CALL;
@@ -37,5 +36,12 @@ void TreeNodeCall::serialize(JsonSerializer* serializer) {
     } else {
         serializer->block_string_field("call_parameters", nullptr);
     }
+}
+
+void TreeNodeCall::accept(ASTVisitor* visitor) {
+    visitor->visit(this);
+    call_function->accept(visitor);
+    call_parameters->accept(visitor);
+    visitor->leave(this);
 }
 } // namespace bonk

@@ -59,20 +59,20 @@ struct BackendContext {
 
     void compile_call(TreeNodeCall* call);
 
-    void compile_block(TreeNodeList<TreeNode*>*, bool reset_frame_offset);
+    void compile_block(TreeNodeList*, bool reset_frame_offset);
 
     void compile_callable_block(TreeNodeBlockDefinition* node);
 
-    FieldList* read_scope_variables(TreeNodeList<TreeNode*>*, bool reset_frame_offset);
+    FieldList* read_scope_variables(TreeNodeList*, bool reset_frame_offset);
 
     FieldList* field_list_find_block_parameters(TreeNodeBlockDefinition* block) const;
 
     unsigned long next_label_id();
 
-    void compile_program(TreeNodeList<TreeNode*>* node);
+    void compile_program(TreeNodeList* node);
 
     TreeNode*
-    call_argument_list_get_value(TreeNodeList<TreeNodeCallParameter*>* argument_list,
+    call_argument_list_get_value(TreeNodeList* argument_list,
                                  TreeNodeIdentifier* identifier);
 
     void compile_print(TreeNodeOperator* node);

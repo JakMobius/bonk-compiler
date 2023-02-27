@@ -1,5 +1,6 @@
 
 #include "block_definition.hpp"
+#include "bonk/tree/ast_visitor.hpp"
 
 namespace bonk {
 
@@ -12,9 +13,9 @@ TreeNodeBlockDefinition::TreeNodeBlockDefinition() : TreeNode() {
 
 TreeNodeBlockDefinition::~TreeNodeBlockDefinition() {
 
-        delete body;
+    delete body;
 
-        delete block_name;
+    delete block_name;
 
     body = nullptr;
     block_name = nullptr;
@@ -33,6 +34,12 @@ void TreeNodeBlockDefinition::serialize(JsonSerializer* serializer) {
     } else {
         serializer->block_string_field("body", nullptr);
     }
+}
+void TreeNodeBlockDefinition::accept(ASTVisitor* visitor) {
+    visitor->visit(this);
+    block_name->accept(visitor);
+    body->accept(visitor);
+    visitor->leave(this);
 }
 
 } // namespace bonk

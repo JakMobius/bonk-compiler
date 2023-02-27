@@ -4,7 +4,7 @@
 
 namespace bonk {
 
-bool parse_grammatic_help(Parser* thou, TreeNodeList<TreeNode*>* target) {
+bool parse_grammatic_help(Parser* thou, TreeNodeList* target) {
     Lexeme* next = thou->next_lexeme();
     if (next->type == BONK_LEXEME_KEYWORD && next->keyword_data.keyword_type == BONK_KEYWORD_HELP) {
         thou->eat_lexeme();

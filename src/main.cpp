@@ -90,7 +90,7 @@ int main(int argc, const char* argv[]) {
 
     bonk::Compiler compiler(&config);
 
-    bonk::TreeNodeList<bonk::TreeNode*>* ast = compiler.get_ast_of_file_at_path(input.c_str());
+    bonk::TreeNodeList* ast = compiler.get_ast_of_file_at_path(input.c_str());
 
     if (ast) {
         if (ast_flag) {

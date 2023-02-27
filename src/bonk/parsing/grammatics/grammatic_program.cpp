@@ -34,7 +34,7 @@ TreeNode* parse_grammatic_global_definition(Parser* parser) {
     return nullptr;
 }
 
-bool parse_grammatic_program(Parser* parser, TreeNodeList<TreeNode*>* target) {
+bool parse_grammatic_program(Parser* parser, TreeNodeList* target) {
 
     TreeNode* block = parse_grammatic_global_definition(parser);
     if (!block) {

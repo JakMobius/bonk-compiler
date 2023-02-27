@@ -1,5 +1,6 @@
 
 #include "operator.hpp"
+#include "bonk/tree/ast_visitor.hpp"
 
 namespace bonk {
 
@@ -50,6 +51,12 @@ void TreeNodeOperator::serialize(JsonSerializer* serializer) {
     } else {
         serializer->block_string_field("right", nullptr);
     }
+}
+void TreeNodeOperator::accept(ASTVisitor* visitor) {
+    visitor->visit(this);
+    left->accept(visitor);
+    right->accept(visitor);
+    visitor->leave(this);
 }
 
 } // namespace bonk

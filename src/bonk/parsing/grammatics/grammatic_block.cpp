@@ -17,9 +17,9 @@ TreeNode* parse_code_line(Parser* parser) {
     return nullptr;
 }
 
-TreeNodeList<TreeNode*>* parse_grammatic_block(Parser* parser) {
+TreeNodeList* parse_grammatic_block(Parser* parser) {
 
-    auto* list = new TreeNodeList<TreeNode*>();
+    auto* list = new TreeNodeList();
 
     if (!list) {
         parser->linked_compiler->out_of_memory();

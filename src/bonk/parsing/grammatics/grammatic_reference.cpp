@@ -73,7 +73,7 @@ TreeNode* parse_grammatic_reference(Parser* parser) {
     return variable;
 }
 
-TreeNodeList<TreeNodeCallParameter*>* parse_grammatic_arguments(Parser* parser) {
+TreeNodeList* parse_grammatic_arguments(Parser* parser) {
 
     Lexeme* next = parser->next_lexeme();
     if (next->type != BONK_LEXEME_BRACE || next->brace_data.brace_type != BONK_BRACE_L_SB) {
@@ -82,11 +82,7 @@ TreeNodeList<TreeNodeCallParameter*>* parse_grammatic_arguments(Parser* parser) 
 
     parser->eat_lexeme();
 
-    auto* argument_list = new TreeNodeList<TreeNodeCallParameter*>();
-    if (!argument_list) {
-        parser->linked_compiler->out_of_memory();
-        return nullptr;
-    }
+    auto* argument_list = new TreeNodeList();
 
     next = parser->next_lexeme();
 

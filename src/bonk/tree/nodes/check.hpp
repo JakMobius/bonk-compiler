@@ -14,12 +14,14 @@ namespace bonk {
 struct TreeNodeCheck : TreeNode {
 
     TreeNode* condition;
-    TreeNodeList<TreeNode*>* check_body;
-    TreeNodeList<TreeNode*>* or_body;
+    TreeNodeList* check_body;
+    TreeNodeList* or_body;
 
     TreeNodeCheck();
 
     ~TreeNodeCheck() override;
+
+    void accept(ASTVisitor* visitor) override;
 
     void serialize(JsonSerializer* serializer) override;
 };

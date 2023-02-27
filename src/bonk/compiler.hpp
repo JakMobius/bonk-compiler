@@ -54,9 +54,9 @@ struct Compiler {
 
     void fatal_error(const char* format, ...);
 
-    TreeNodeList<TreeNode*>* get_ast_of_file_at_path(const char* file_path);
+    TreeNodeList* get_ast_of_file_at_path(const char* file_path);
 
-    bool compile_ast(TreeNodeList<TreeNode*>* ast, FILE* target);
+    bool compile_ast(TreeNodeList* ast, FILE* target);
 };
 
 } // namespace bonk

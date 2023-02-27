@@ -58,7 +58,7 @@ TreeNodeCheck* parse_grammatic_check(Parser* parser) {
 
     auto* check = new TreeNodeCheck();
 
-    TreeNodeList<TreeNode*>* else_block = nullptr;
+    TreeNodeList* else_block = nullptr;
 
     next = parser->next_lexeme();
 
@@ -109,7 +109,7 @@ TreeNodeCycle* parse_grammatic_cycle(Parser* parser) {
     return cycle;
 }
 
-TreeNodeList<TreeNode*>* parse_grammatic_nested_block(Parser* parser) {
+TreeNodeList* parse_grammatic_nested_block(Parser* parser) {
     Lexeme* next = parser->next_lexeme();
 
     if (next->type != BONK_LEXEME_BRACE || next->brace_data.brace_type != BONK_BRACE_L_CB) {
@@ -119,7 +119,7 @@ TreeNodeList<TreeNode*>* parse_grammatic_nested_block(Parser* parser) {
 
     parser->eat_lexeme();
 
-    TreeNodeList<TreeNode*>* block = parse_grammatic_block(parser);
+    TreeNodeList* block = parse_grammatic_block(parser);
     if (!block) {
         if (parser->linked_compiler->state)
             return nullptr;

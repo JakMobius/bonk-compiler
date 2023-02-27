@@ -44,7 +44,7 @@ BackendContext::~BackendContext() {
     current_descriptors = nullptr;
 }
 
-void BackendContext::compile_program(TreeNodeList<TreeNode*>* ast) {
+void BackendContext::compile_program(TreeNodeList* ast) {
 
     FieldList* scope = read_scope_variables(ast);
 
@@ -127,7 +127,7 @@ Variable* BackendContext::field_list_declare_variable(TreeNodeVariableDefinition
     return nullptr;
 }
 
-FieldList* BackendContext::read_scope_variables(TreeNodeList<TreeNode*>* node) {
+FieldList* BackendContext::read_scope_variables(TreeNodeList* node) {
     auto* scope = new FieldList(current_descriptors, state);
     scope_stack->push_scope(scope);
 
@@ -196,7 +196,7 @@ void BackendContext::field_list_declare_block(TreeNodeBlockDefinition* node) {
     }
 }
 
-void BackendContext::compile_block(TreeNodeList<TreeNode*>* block) {
+void BackendContext::compile_block(TreeNodeList* block) {
     FieldList* scope = read_scope_variables(block);
 
     if (!linked_compiler->state) {
@@ -781,24 +781,23 @@ JmpLabel* BackendContext::insert_label() const {
 
 TreeNode*
 BackendContext::call_argument_list_get_value(
-    TreeNodeList<TreeNodeCallParameter*>* argument_list, TreeNodeIdentifier* identifier) {
+    TreeNodeList* argument_list, TreeNodeIdentifier* identifier) {
     if (!argument_list)
         return nullptr;
 
-    std::list<TreeNodeCallParameter*>* list = &argument_list->list;
+    std::list<TreeNode*>* list = &argument_list->list;
 
-    for (auto i = list->begin(); i != list->end(); ++i) {
-        auto* parameter = *i;
-
-        if (parameter->parameter_name->contents_equal(identifier)) {
-            return parameter->parameter_value;
+    for (auto parameter : *list) {
+        auto call_parameter = (TreeNodeCallParameter*)parameter;
+        if (call_parameter->parameter_name->contents_equal(identifier)) {
+            return call_parameter->parameter_value;
         }
     }
 
     return nullptr;
 }
 
-TreeNode* BackendContext::compile_nth_argument(VariableFunction* func, TreeNodeList<TreeNodeCallParameter*>* argument_list, int i) {
+TreeNode* BackendContext::compile_nth_argument(VariableFunction* func, TreeNodeList* argument_list, int i) {
     Variable* argument = func->argument_list->variables[i];
 
     TreeNode* value = call_argument_list_get_value(argument_list, argument->identifier);

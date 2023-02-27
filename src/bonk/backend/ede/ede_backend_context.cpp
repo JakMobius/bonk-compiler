@@ -186,16 +186,17 @@ void BackendContext::compile_math_comparsion(TreeNode* node) {
 }
 
 TreeNode*
-BackendContext::call_argument_list_get_value(TreeNodeList<TreeNodeCallParameter*>* argument_list,
+BackendContext::call_argument_list_get_value(TreeNodeList* argument_list,
                                              TreeNodeIdentifier* identifier) {
     if (!argument_list)
         return nullptr;
 
-    std::list<TreeNodeCallParameter*>* list = &argument_list->list;
+    std::list<TreeNode*>* list = &argument_list->list;
 
     for (auto parameter : *list) {
-        if (parameter->parameter_name->contents_equal(identifier)) {
-            return parameter->parameter_value;
+        auto* call_parameter = (TreeNodeCallParameter*)parameter;
+        if (call_parameter->parameter_name->contents_equal(identifier)) {
+            return call_parameter->parameter_value;
         }
     }
 
@@ -627,7 +628,7 @@ void BackendContext::field_list_declare_block(TreeNodeBlockDefinition* node) con
     }
 }
 
-FieldList* BackendContext::read_scope_variables(TreeNodeList<TreeNode*>* node,
+FieldList* BackendContext::read_scope_variables(TreeNodeList* node,
                                                 bool reset_frame_offset) {
 
     auto* scope = new FieldList();
@@ -654,7 +655,7 @@ FieldList* BackendContext::read_scope_variables(TreeNodeList<TreeNode*>* node,
     return scope;
 }
 
-void BackendContext::compile_block(TreeNodeList<TreeNode*>* node, bool reset_frame_offset) {
+void BackendContext::compile_block(TreeNodeList* node, bool reset_frame_offset) {
     FieldList* scope = read_scope_variables(node, reset_frame_offset);
 
     if (!linked_compiler->state) {
@@ -687,7 +688,7 @@ void BackendContext::compile_callable_block(TreeNodeBlockDefinition* node) {
                     "ret\n");
 }
 
-void BackendContext::compile_program(TreeNodeList<TreeNode*>* node) {
+void BackendContext::compile_program(TreeNodeList* node) {
 
     FieldList* scope = read_scope_variables(node, false);
 

@@ -12,9 +12,11 @@ struct TreeNodeCycle;
 namespace bonk {
 
 struct TreeNodeCycle : TreeNode {
-    TreeNodeList<TreeNode*>* body = nullptr;
+    TreeNodeList* body = nullptr;
 
     TreeNodeCycle();
+
+    void accept(ASTVisitor* visitor) override;
 
     void serialize(JsonSerializer* serializer) override;
 };

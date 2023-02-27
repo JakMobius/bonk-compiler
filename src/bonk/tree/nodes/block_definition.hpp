@@ -17,12 +17,14 @@ namespace bonk {
 struct TreeNodeBlockDefinition : TreeNode {
 
     TreeNodeIdentifier* block_name;
-    TreeNodeList<TreeNode*>* body;
+    TreeNodeList* body;
     bool is_promise{};
 
     TreeNodeBlockDefinition();
 
     ~TreeNodeBlockDefinition() override;
+
+    void accept(ASTVisitor* visitor) override;
 
     void serialize(JsonSerializer* file) override;
 };

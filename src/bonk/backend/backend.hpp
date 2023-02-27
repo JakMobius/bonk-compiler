@@ -16,7 +16,7 @@ struct Backend {
 
     virtual ~Backend() = default;
 
-    virtual bool compile_ast(Compiler* linked_compiler, TreeNodeList<TreeNode*>* ast,
+    virtual bool compile_ast(Compiler* linked_compiler, TreeNodeList* ast,
                              FILE* target);
 };
 

@@ -38,9 +38,9 @@ struct Parser {
 
     Parser(Compiler* compiler);
 
-    TreeNodeList<TreeNode*>* parse_file(std::vector<Lexeme>* lexemes);
+    TreeNodeList* parse_file(std::vector<Lexeme>* lexemes);
 
-    bool append_file(std::vector<Lexeme>* lexemes, TreeNodeList<TreeNode*>* target);
+    bool append_file(std::vector<Lexeme>* lexemes, TreeNodeList* target);
 };
 
 } // namespace bonk

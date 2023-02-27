@@ -1,5 +1,6 @@
 
 #include "cycle.hpp"
+#include "bonk/tree/ast_visitor.hpp"
 
 namespace bonk {
 
@@ -17,6 +18,11 @@ void TreeNodeCycle::serialize(JsonSerializer* serializer) {
     } else {
         serializer->block_string_field("body", nullptr);
     }
+}
+void TreeNodeCycle::accept(ASTVisitor* visitor) {
+    visitor->visit(this);
+    body->accept(visitor);
+    visitor->leave(this);
 }
 
 } // namespace bonk
