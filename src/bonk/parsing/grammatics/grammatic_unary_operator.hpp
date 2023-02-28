@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include "../../tree/nodes/node.hpp"
+#include "bonk/tree/ast.hpp"
 #include "../parser.hpp"
 
 namespace bonk {

@@ -8,7 +8,7 @@ struct FieldList;
 }
 
 #include <vector>
-#include "../../tree/nodes/nodes.hpp"
+#include "bonk/tree/ast.hpp"
 #include "x86_backend_context.hpp"
 #include "x86_variable.hpp"
 

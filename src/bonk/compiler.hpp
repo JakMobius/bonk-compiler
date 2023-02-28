@@ -18,7 +18,7 @@ enum CompilerState {
 #include "errors.hpp"
 #include "parsing/lexic/lexical_analyzer.hpp"
 #include "parsing/parser.hpp"
-#include "tree/nodes/nodes.hpp"
+#include "tree/ast.hpp"
 
 namespace bonk {
 

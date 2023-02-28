@@ -9,7 +9,7 @@ enum VariableType { VARIABLE_TYPE_NUMBER, VARIABLE_TYPE_FUNCTION };
 
 } // namespace bonk::ede_backend
 
-#include "../../tree/nodes/identifier.hpp"
+#include "bonk/tree/ast.hpp"
 #include "ede_field_list.hpp"
 
 namespace bonk::ede_backend {

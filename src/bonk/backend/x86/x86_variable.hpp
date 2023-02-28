@@ -9,7 +9,7 @@ enum VariableType { VARIABLE_TYPE_NUMBER, VARIABLE_TYPE_FUNCTION };
 
 } // namespace bonk::x86_backend
 
-#include "../../tree/nodes/identifier.hpp"
+#include "bonk/tree/ast.hpp"
 #include "x86_abstract_register.hpp"
 #include "x86_field_list.hpp"
 

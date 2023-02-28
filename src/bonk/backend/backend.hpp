@@ -7,7 +7,7 @@ struct Backend;
 }
 
 #include "../compiler.hpp"
-#include "../tree/nodes/nodes.hpp"
+#include "../tree/ast.hpp"
 
 namespace bonk {
 

@@ -1,14 +1,6 @@
 #pragma once
 
-#include "nodes/var_definition.hpp"
-#include "nodes/identifier.hpp"
-#include "nodes/block_definition.hpp"
-#include "nodes/operator.hpp"
-#include "nodes/cycle.hpp"
-#include "nodes/call_parameter.hpp"
-#include "nodes/call.hpp"
-#include "nodes/check.hpp"
-#include "nodes/number.hpp"
+#include "ast.hpp"
 
 namespace bonk {
 

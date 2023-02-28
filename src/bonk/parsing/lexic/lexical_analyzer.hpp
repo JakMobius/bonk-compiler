@@ -49,8 +49,8 @@ enum BraceType {
 } // namespace bonk
 
 #include <cctype>
-#include "../../compiler.hpp"
-#include "../../tree/nodes/nodes.hpp"
+#include "bonk/compiler.hpp"
+#include "bonk/tree/ast.hpp"
 #include "../parser.hpp"
 #include "../parser_position.hpp"
 #include "identifier_lexeme.hpp"

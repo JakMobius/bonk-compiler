@@ -1,7 +1,7 @@
 #pragma once
 
 #include "../parser.hpp"
-#include "../../tree/nodes/nodes.hpp"
+#include "../../tree/ast.hpp"
 #include "grammatic_assignment.hpp"
 #include "grammatic_logic_expression.hpp"
 #include "grammatic_sub_block.hpp"

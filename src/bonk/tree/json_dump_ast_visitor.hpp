@@ -1,6 +1,8 @@
 #pragma once
 
+#include "ast.hpp"
 #include "ast_visitor.hpp"
+#include "utils/json_serializer.hpp"
 
 namespace bonk {
 
