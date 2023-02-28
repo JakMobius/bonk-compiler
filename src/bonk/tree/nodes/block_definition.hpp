@@ -25,8 +25,6 @@ struct TreeNodeBlockDefinition : TreeNode {
     ~TreeNodeBlockDefinition() override;
 
     void accept(ASTVisitor* visitor) override;
-
-    void serialize(JsonSerializer* file) override;
 };
 
 } // namespace bonk

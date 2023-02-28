@@ -18,8 +18,6 @@ struct TreeNodeCall : TreeNode {
     ~TreeNodeCall() override;
 
     void accept(ASTVisitor* visitor) override;
-
-    void serialize(JsonSerializer* serializer) override;
 };
 
 } // namespace bonk

@@ -44,8 +44,6 @@ struct TreeNodeOperator : TreeNode {
     explicit TreeNodeOperator(OperatorType oper);
 
     void accept(ASTVisitor* visitor) override;
-
-    void serialize(JsonSerializer* file) override;
 };
 
 } // namespace bonk

@@ -18,26 +18,6 @@ TreeNodeCallParameter::~TreeNodeCallParameter() {
     parameter_value = nullptr;
 }
 
-void TreeNodeCallParameter::serialize(JsonSerializer* serializer) {
-    TreeNode::serialize(serializer);
-
-    serializer->block_string_field("type", "call_parameter");
-    if (parameter_name) {
-        serializer->block_start_block("parameter_name");
-        parameter_name->serialize(serializer);
-        serializer->close_block();
-    } else {
-        serializer->block_string_field("parameter_name", nullptr);
-    }
-
-    if (parameter_value) {
-        serializer->block_start_block("parameter_value");
-        parameter_value->serialize(serializer);
-        serializer->close_block();
-    } else {
-        serializer->block_string_field("parameter_value", nullptr);
-    }
-}
 void TreeNodeCallParameter::accept(ASTVisitor* visitor) {
     visitor->visit(this);
 }

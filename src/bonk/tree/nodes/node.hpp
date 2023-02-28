@@ -37,8 +37,6 @@ struct TreeNode {
     virtual ~TreeNode() = default;
 
     virtual void accept(ASTVisitor* visitor) {}
-
-    virtual void serialize(JsonSerializer* file);
 };
 
 } // namespace bonk

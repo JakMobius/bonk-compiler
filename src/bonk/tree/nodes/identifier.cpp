@@ -17,12 +17,6 @@ void TreeNodeIdentifier::print(FILE* file) const {
     fprintf(file, "%s", variable_name.c_str());
 }
 
-void TreeNodeIdentifier::serialize(JsonSerializer* serializer) {
-    TreeNode::serialize(serializer);
-
-    serializer->block_string_field("type", "identifier");
-    serializer->block_string_field("identifier", variable_name.c_str());
-}
 void TreeNodeIdentifier::accept(ASTVisitor* visitor) {
     visitor->visit(this);
 }

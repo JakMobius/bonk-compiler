@@ -1,7 +1,8 @@
+#include "argparse/argparse.hpp"
 #include "bonk/backend/ede/ede_backend.hpp"
 #include "bonk/backend/x86/x86_backend.hpp"
 #include "bonk/compiler.hpp"
-#include "argparse/argparse.hpp"
+#include "bonk/tree/json_dump_ast_visitor.hpp"
 
 void init_fatal_error(const char* format, ...) {
     va_list ap;
@@ -94,9 +95,9 @@ int main(int argc, const char* argv[]) {
 
     if (ast) {
         if (ast_flag) {
-            auto* serializer = new JsonSerializer(output_file);
-            ast->serialize(serializer);
-            delete serializer;
+            JsonSerializer serializer{output_file};
+            bonk::JsonDumpAstVisitor visitor{&serializer};
+            ast->accept(&visitor);
         } else {
             compiler.compile_ast(ast, output_file);
         }

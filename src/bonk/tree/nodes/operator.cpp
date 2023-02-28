@@ -31,27 +31,6 @@ TreeNodeOperator::TreeNodeOperator(OperatorType oper) {
     type = TREE_NODE_TYPE_OPERATOR;
 }
 
-void TreeNodeOperator::serialize(JsonSerializer* serializer) {
-    TreeNode::serialize(serializer);
-
-    serializer->block_string_field("type", "operator");
-    serializer->block_string_field("operator_type", OPERATOR_TYPE_NAMES[oper_type]);
-
-    if (left) {
-        serializer->block_start_block("left");
-        left->serialize(serializer);
-        serializer->close_block();
-    } else {
-        serializer->block_string_field("left", nullptr);
-    }
-    if (right) {
-        serializer->block_start_block("right");
-        right->serialize(serializer);
-        serializer->close_block();
-    } else {
-        serializer->block_string_field("right", nullptr);
-    }
-}
 void TreeNodeOperator::accept(ASTVisitor* visitor) {
     visitor->visit(this);
 }

@@ -17,8 +17,6 @@ struct TreeNodeList : TreeNode {
     /* Override virtual methods */
 
     void accept(ASTVisitor* visitor) override;
-
-    void serialize(JsonSerializer* serializer) override;
 };
 
 } // namespace bonk

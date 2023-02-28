@@ -21,8 +21,6 @@ struct TreeNodeVariableDefinition : TreeNode {
     ~TreeNodeVariableDefinition() override;
 
     void accept(ASTVisitor* visitor) override;
-
-    void serialize(JsonSerializer* file) override;
 };
 
 } // namespace bonk

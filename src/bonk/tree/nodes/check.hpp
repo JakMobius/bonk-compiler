@@ -22,8 +22,6 @@ struct TreeNodeCheck : TreeNode {
     ~TreeNodeCheck() override;
 
     void accept(ASTVisitor* visitor) override;
-
-    void serialize(JsonSerializer* serializer) override;
 };
 
 } // namespace bonk
