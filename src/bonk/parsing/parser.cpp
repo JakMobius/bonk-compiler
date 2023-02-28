@@ -11,7 +11,7 @@ TreeNodeList* Parser::parse_file(std::vector<Lexeme>* lexemes) {
     input = lexemes;
     auto* target = new TreeNodeList();
 
-    if (!parse_grammatic_global(this, target)) {
+    if (!parse_global(target)) {
         delete target;
         return nullptr;
     }
@@ -22,7 +22,7 @@ TreeNodeList* Parser::parse_file(std::vector<Lexeme>* lexemes) {
 bool Parser::append_file(std::vector<Lexeme>* lexemes, TreeNodeList* target) {
     input = lexemes;
 
-    return parse_grammatic_global(this, target);
+    return parse_global(target);
 }
 
 void Parser::spit_lexeme() {

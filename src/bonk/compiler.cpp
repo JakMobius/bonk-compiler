@@ -1,5 +1,6 @@
 
 #include "compiler.hpp"
+#include "utils/file_io.hpp"
 
 namespace bonk {
 

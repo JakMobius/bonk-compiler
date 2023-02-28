@@ -3,20 +3,18 @@
  * $MATH_FACTOR := $REFERENCE|$NUMBER
  */
 
-#include "grammatic_math_factor.hpp"
+#include "../parser.hpp"
 
 namespace bonk {
 
-TreeNode* parse_grammatic_math_factor(Parser* parser) {
-    TreeNode* result = nullptr;
-
-    result = parse_grammatic_reference(parser);
+TreeNode* Parser::parse_math_factor() {
+    TreeNode* result = parse_reference();
     if (result)
         return result;
 
-    if (parser->next_lexeme()->type == BONK_LEXEME_NUMBER) {
-        result = (TreeNode*)parser->next_lexeme()->number_data.number;
-        parser->eat_lexeme();
+    if (next_lexeme()->type == BONK_LEXEME_NUMBER) {
+        result = (TreeNode*)next_lexeme()->number_data.number;
+        eat_lexeme();
         return result;
     }
 

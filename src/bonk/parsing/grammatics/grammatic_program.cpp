@@ -3,40 +3,40 @@
  * $PROGRAM = ($BLOCK_DEFINITION | $VAR_DEFINITION)+
  */
 
-#include "grammatic_program.hpp"
+#include "../parser.hpp"
 
 namespace bonk {
 
-TreeNode* parse_grammatic_global_definition(Parser* parser) {
-    TreeNode* expression = parse_grammatic_block_definition(parser);
+TreeNode* Parser::parse_global_definition() {
+    TreeNode* expression = parse_block_definition();
     if (expression)
         return expression;
-    if (parser->linked_compiler->state)
+    if (linked_compiler->state)
         return nullptr;
 
-    TreeNodeVariableDefinition* variable_definition = parse_grammatic_var_definition(parser);
+    TreeNodeVariableDefinition* variable_definition = parse_var_definition();
     if (variable_definition) {
         if (variable_definition->is_contextual) {
-            parser->error("global variables may not be contextual");
+            error("global variables may not be contextual");
             delete variable_definition;
             return nullptr;
         }
-        Lexeme* next = parser->next_lexeme();
+        Lexeme* next = next_lexeme();
         if (next->type != BONK_LEXEME_SEMICOLON) {
-            parser->error("expected semicolon");
+            error("expected semicolon");
             delete variable_definition;
             return nullptr;
         }
-        parser->eat_lexeme();
+        eat_lexeme();
         return variable_definition;
     }
 
     return nullptr;
 }
 
-bool parse_grammatic_program(Parser* parser, TreeNodeList* target) {
+bool Parser::parse_program(TreeNodeList* target) {
 
-    TreeNode* block = parse_grammatic_global_definition(parser);
+    TreeNode* block = parse_global_definition();
     if (!block) {
         return false;
     }
@@ -44,7 +44,7 @@ bool parse_grammatic_program(Parser* parser, TreeNodeList* target) {
     while (block) {
         target->list.push_back(block);
 
-        block = parse_grammatic_global_definition(parser);
+        block = parse_global_definition();
     }
 
     return true;

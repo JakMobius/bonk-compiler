@@ -3,33 +3,33 @@
  * $GLOBAL := ($PROGRAM) '\0'
  */
 
-#include "grammatic_global.hpp"
+#include "../parser.hpp"
 
 namespace bonk {
 
-bool parse_grammatic_global(Parser* parser, TreeNodeList* target) {
+bool Parser::parse_global(TreeNodeList* target) {
 
     while (true) {
-        unsigned long old_position = parser->position;
+        unsigned long old_position = position;
 
-        if (!parse_grammatic_help(parser, target)) {
-            if (old_position == parser->position)
+        if (!parse_help(target)) {
+            if (old_position == position)
                 break;
             continue;
         }
     }
 
-    if (!parse_grammatic_program(parser, target)) {
-        if (!parser->linked_compiler->state)
-            parser->error("empty program");
+    if (!parse_program(target)) {
+        if (!linked_compiler->state)
+            error("empty program");
         return false;
     }
 
-    Lexeme* next = parser->next_lexeme();
+    Lexeme* next = next_lexeme();
 
     if (next->type != BONK_LEXEME_NULL) {
-        if (!parser->linked_compiler->state)
-            parser->error("expected end of file");
+        if (!linked_compiler->state)
+            error("expected end of file");
         return false;
     }
 

@@ -1,20 +1,20 @@
 
-
-#include "grammatic_help.hpp"
+#include "../parser.hpp"
+#include "utils/file_io.hpp"
 
 namespace bonk {
 
-bool parse_grammatic_help(Parser* thou, TreeNodeList* target) {
-    Lexeme* next = thou->next_lexeme();
+bool Parser::parse_help(TreeNodeList* target) {
+    Lexeme* next = next_lexeme();
     if (next->type == BONK_LEXEME_KEYWORD && next->keyword_data.keyword_type == BONK_KEYWORD_HELP) {
-        thou->eat_lexeme();
+        eat_lexeme();
 
-        next = thou->next_lexeme();
+        next = next_lexeme();
         if (next->type != BONK_LEXEME_IDENTIFIER) {
-            thou->error("expected library or file name to import");
+            error("expected library or file name to import");
             return false;
         }
-        thou->eat_lexeme();
+        eat_lexeme();
 
         const char* library_storage = "/usr/local/lib/bonkScript/help/";
         const char* library_name = next->identifier_data.identifier->variable_name.c_str();
@@ -34,29 +34,23 @@ bool parse_grammatic_help(Parser* thou, TreeNodeList* target) {
         if (read_result == FILE_OP_NOT_ENOUGH_MEMORY) {
             free(full_path);
             free((void*)library_name);
-            thou->linked_compiler->out_of_memory();
+            linked_compiler->out_of_memory();
             return false;
         } else if (read_result != FILE_OP_OK) {
             free(full_path);
-            thou->error("failed to open '%s': '%s'", library_name, strerror(errno));
+            error("failed to open '%s': '%s'", library_name, strerror(errno));
             free((void*)library_name);
             return false;
         }
 
         free((void*)library_name);
 
-        if (!thou->linked_compiler->lexical_analyzer->file_already_compiled(full_path)) {
+        if (!linked_compiler->lexical_analyzer->file_already_compiled(full_path)) {
             std::vector<Lexeme> lexemes =
-                thou->linked_compiler->lexical_analyzer->parse_file(full_path, source);
+                linked_compiler->lexical_analyzer->parse_file(full_path, source);
 
-            if (!thou->linked_compiler->state) {
-                auto* nested_parser = new Parser(thou->linked_compiler);
-
-                if (!nested_parser) {
-                    free(full_path);
-                    thou->linked_compiler->out_of_memory();
-                    return false;
-                }
+            if (!linked_compiler->state) {
+                auto* nested_parser = new Parser(linked_compiler);
 
                 if (!nested_parser->append_file(&lexemes, target)) {
                     return false;

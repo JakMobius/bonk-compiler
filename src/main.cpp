@@ -1,3 +1,5 @@
+
+#include <sys/stat.h>
 #include "argparse/argparse.hpp"
 #include "bonk/backend/ede/ede_backend.hpp"
 #include "bonk/backend/x86/x86_backend.hpp"

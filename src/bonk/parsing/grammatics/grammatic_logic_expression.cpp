@@ -1,14 +1,14 @@
 
-#include "grammatic_logic_expression.hpp"
+#include "../parser.hpp"
 
 namespace bonk {
 
-TreeNode* parse_grammatic_logic_expression(Parser* parser) {
-    TreeNode* term = parse_grammatic_logic_term(parser);
+TreeNode* Parser::parse_logic_expression() {
+    TreeNode* term = parse_logic_term();
     TreeNode* result = term;
 
     do {
-        Lexeme* next = parser->next_lexeme();
+        Lexeme* next = next_lexeme();
         if (next->type != BONK_LEXEME_KEYWORD)
             break;
         auto oper_type = BONK_OPERATOR_INVALID;
@@ -24,12 +24,12 @@ TreeNode* parse_grammatic_logic_expression(Parser* parser) {
             return result;
         }
 
-        parser->eat_lexeme();
+        eat_lexeme();
 
-        TreeNode* next_term = parse_grammatic_expression(parser);
+        TreeNode* next_term = parse_expression();
         if (!next_term) {
-            if (!parser->linked_compiler->state) {
-                parser->error("expected expression");
+            if (!linked_compiler->state) {
+                error("expected expression");
             }
             return nullptr;
         }

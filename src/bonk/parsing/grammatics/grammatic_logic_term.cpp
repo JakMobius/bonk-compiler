@@ -1,26 +1,26 @@
 
-#include "grammatic_logic_term.hpp"
+#include "../parser.hpp"
 
 namespace bonk {
 
-TreeNode* parse_grammatic_logic_term(Parser* parser) {
+TreeNode* Parser::parse_logic_term() {
 
-    TreeNode* expression = parse_grammatic_unary_operator(parser);
+    TreeNode* expression = parse_unary_operator();
     if (expression)
         return expression;
-    if (parser->linked_compiler->state)
+    if (linked_compiler->state)
         return nullptr;
 
-    expression = parse_grammatic_assignment(parser);
+    expression = parse_assignment();
     if (expression)
         return expression;
-    if (parser->linked_compiler->state)
+    if (linked_compiler->state)
         return nullptr;
 
-    expression = parse_grammatic_comparation(parser);
+    expression = parse_comparison();
     if (expression)
         return expression;
-    if (parser->linked_compiler->state)
+    if (linked_compiler->state)
         return nullptr;
 
     return expression;

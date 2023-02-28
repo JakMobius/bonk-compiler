@@ -3,38 +3,38 @@
  * $ASSIGNMENT := $IDENTIFIER '=' $EXPRESSION
  */
 
-#include "grammatic_assignment.hpp"
+#include "../parser.hpp"
 
 namespace bonk {
 
-TreeNode* parse_grammatic_assignment(Parser* parser) {
+TreeNode* Parser::parse_assignment() {
 
-    Lexeme* lvalue = parser->next_lexeme();
+    Lexeme* lvalue = next_lexeme();
     if (lvalue->type == BONK_LEXEME_NULL)
         return nullptr;
 
-    parser->eat_lexeme();
-    Lexeme* assignment = parser->next_lexeme();
+    eat_lexeme();
+    Lexeme* assignment = next_lexeme();
 
     if (assignment->type != BONK_LEXEME_OPERATOR ||
         assignment->operator_data.operator_type != BONK_OPERATOR_ASSIGNMENT) {
         // This is not an assignment. Exit silently.
-        parser->spit_lexeme();
+        spit_lexeme();
         return nullptr;
     }
 
     if (lvalue->type != BONK_LEXEME_IDENTIFIER) {
-        parser->linked_compiler->error_positioned(lvalue->position, "expression is not assignable");
+        linked_compiler->error_positioned(lvalue->position, "expression is not assignable");
         return nullptr;
     }
 
-    parser->eat_lexeme();
+    eat_lexeme();
 
-    TreeNode* rvalue = parse_grammatic_expression(parser);
+    TreeNode* rvalue = parse_expression();
     if (!rvalue) {
-        if (parser->linked_compiler->state)
+        if (linked_compiler->state)
             return nullptr;
-        parser->error("expected value");
+        error("expected value");
         return nullptr;
     }
 

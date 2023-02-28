@@ -3,34 +3,29 @@
  * $BLOCK := $EXPRESSION*
  */
 
-#include "grammatic_block.hpp"
+#include "../parser.hpp"
 
 namespace bonk {
 
-TreeNode* parse_code_line(Parser* parser) {
-    TreeNode* expression = parse_grammatic_expression_leveled(parser, true);
+TreeNode* Parser::parse_code_line() {
+    TreeNode* expression = parse_expression_leveled(true);
     if (expression)
         return expression;
-    if (parser->linked_compiler->state)
+    if (linked_compiler->state)
         return nullptr;
 
     return nullptr;
 }
 
-TreeNodeList* parse_grammatic_block(Parser* parser) {
+TreeNodeList* Parser::parse_block() {
 
     auto* list = new TreeNodeList();
-
-    if (!list) {
-        parser->linked_compiler->out_of_memory();
-        return nullptr;
-    }
 
     auto* result = list;
 
     do {
-        TreeNode* block = parse_code_line(parser);
-        if (parser->linked_compiler->state)
+        TreeNode* block = parse_code_line();
+        if (linked_compiler->state)
             return nullptr;
 
         if (!block)
