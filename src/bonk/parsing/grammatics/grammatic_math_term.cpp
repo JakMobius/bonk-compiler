@@ -7,9 +7,8 @@
 
 namespace bonk {
 
-TreeNode* Parser::parse_math_term() {
-    TreeNode* term = parse_math_factor();
-    TreeNode* result = term;
+std::unique_ptr<TreeNode> Parser::parse_math_term() {
+    auto result = parse_math_factor();
 
     do {
         Lexeme* next = next_lexeme();
@@ -21,7 +20,7 @@ TreeNode* Parser::parse_math_term() {
 
         eat_lexeme();
 
-        TreeNode* next_term = parse_math_factor();
+        auto next_term = parse_math_factor();
         if (!next_term) {
             if (!linked_compiler->state) {
                 error("expected expression");
@@ -29,10 +28,11 @@ TreeNode* Parser::parse_math_term() {
             return nullptr;
         }
 
-        auto* sum = new TreeNodeOperator(operator_type);
-        sum->left = result;
-        sum->right = next_term;
-        result = sum;
+        auto sum = std::make_unique<TreeNodeOperator>();
+        sum->oper_type = operator_type;
+        sum->left = std::move(result);
+        sum->right = std::move(next_term);
+        result = std::move(sum);
 
     } while (true);
 

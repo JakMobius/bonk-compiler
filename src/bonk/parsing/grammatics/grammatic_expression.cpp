@@ -7,13 +7,13 @@
 
 namespace bonk {
 
-TreeNode* Parser::parse_expression() {
+std::unique_ptr<TreeNode> Parser::parse_expression() {
     return parse_expression_leveled(false);
 }
 
-TreeNode* Parser::parse_expression_leveled(bool top_level) {
+std::unique_ptr<TreeNode> Parser::parse_expression_leveled(bool top_level) {
 
-    TreeNode* expression = parse_logic_expression();
+    auto expression = parse_logic_expression();
     if (linked_compiler->state)
         return nullptr;
 

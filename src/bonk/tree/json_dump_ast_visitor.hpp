@@ -27,7 +27,7 @@ class JsonDumpAstVisitor : public ASTVisitor {
         serializer->block_string_field("type", "list");
         serializer->block_start_array("contents");
 
-        for (auto element : node->list) {
+        for (auto& element : node->list) {
             if (element) {
                 serializer->array_add_block();
                 element->accept(this);
@@ -42,8 +42,12 @@ class JsonDumpAstVisitor : public ASTVisitor {
     void visit(TreeNodeBlockDefinition* node) override {
         dump_node_location(node);
         serializer->block_string_field("type", "block_definition");
-        serializer->block_string_field(
-            "block_name", node->block_name ? node->block_name->variable_name.c_str() : nullptr);
+        if (node->block_name) {
+            std::string block_name{node->block_name->variable_name};
+            serializer->block_string_field("block_name", block_name.c_str());
+        } else {
+            serializer->block_string_field("block_name", nullptr);
+        }
         if (node->body) {
             serializer->block_start_block("body");
             node->body->accept(this);
@@ -189,8 +193,10 @@ class JsonDumpAstVisitor : public ASTVisitor {
     void visit(TreeNodeIdentifier* node) override {
         dump_node_location(node);
 
+        std::string identifier{node->variable_name};
+
         serializer->block_string_field("type", "identifier");
-        serializer->block_string_field("identifier", node->variable_name.c_str());
+        serializer->block_string_field("identifier", identifier.c_str());
     }
 };
 

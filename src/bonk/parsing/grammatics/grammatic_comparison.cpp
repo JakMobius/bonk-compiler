@@ -7,13 +7,13 @@
 
 namespace bonk {
 
-TreeNode* Parser::parse_comparison() {
+std::unique_ptr<TreeNode> Parser::parse_comparison() {
 
-    TreeNode* expression = parse_math_expression();
+    auto expression = parse_math_expression();
     if (!expression)
         return nullptr;
 
-    TreeNode* result = expression;
+    auto result = std::move(expression);
 
     do {
         Lexeme* next = next_lexeme();
@@ -25,7 +25,7 @@ TreeNode* Parser::parse_comparison() {
 
         eat_lexeme();
 
-        TreeNode* next_term = parse_math_term();
+        auto next_term = parse_math_term();
         if (!next_term) {
             if (!linked_compiler->state) {
                 error("expected expression");
@@ -33,10 +33,11 @@ TreeNode* Parser::parse_comparison() {
             return nullptr;
         }
 
-        auto* sum = new TreeNodeOperator(operator_type);
-        sum->left = result;
-        sum->right = next_term;
-        result = sum;
+        auto sum = std::make_unique<TreeNodeOperator>();
+        sum->oper_type = operator_type;
+        sum->left = std::move(result);
+        sum->right = std::move(next_term);
+        result = std::move(sum);
 
     } while (true);
 

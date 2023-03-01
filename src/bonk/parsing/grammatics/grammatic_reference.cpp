@@ -10,8 +10,8 @@
 
 namespace bonk {
 
-TreeNode* Parser::parse_reference() {
-    TreeNode* variable = nullptr;
+std::unique_ptr<TreeNode> Parser::parse_reference() {
+    std::unique_ptr<TreeNode> variable = nullptr;
 
     Lexeme* next = next_lexeme();
 
@@ -26,16 +26,19 @@ TreeNode* Parser::parse_reference() {
 
     if (next->type == BONK_LEXEME_BRACE && next->brace_data.brace_type == BONK_BRACE_L_RB) {
         eat_lexeme();
-        variable = parse_expression();
 
+        if (is_call) {
+            error("cannot call an expression");
+            return nullptr;
+        }
+
+        variable = parse_expression();
         next = next_lexeme();
 
         if (next->type != BONK_LEXEME_BRACE || next->brace_data.brace_type != BONK_BRACE_R_RB) {
             if (!linked_compiler->state) {
                 error("expected ')'");
             }
-
-            delete variable;
             return nullptr;
         }
         if (variable == nullptr) {
@@ -48,8 +51,23 @@ TreeNode* Parser::parse_reference() {
         }
         eat_lexeme();
     } else if (next->type == BONK_LEXEME_IDENTIFIER) {
-        variable = (TreeNode*)next->identifier_data.identifier;
+        auto identifier = std::make_unique<TreeNodeIdentifier>();
+        identifier->variable_name = next->identifier_data.identifier;
+        identifier->source_position = next->position;
         eat_lexeme();
+
+        if (is_call) {
+            auto arguments = parse_arguments();
+
+            auto call = std::make_unique<TreeNodeCall>();
+            call->source_position = identifier->source_position;
+            call->call_function = std::move(identifier);
+            call->call_parameters = std::move(arguments);
+
+            return call;
+        }
+
+        variable = std::move(identifier);
     }
 
     if (variable == nullptr) {
@@ -59,17 +77,10 @@ TreeNode* Parser::parse_reference() {
         return nullptr;
     }
 
-    if (is_call) {
-        auto* arguments = parse_arguments();
-
-        auto* call = new TreeNodeCall((TreeNodeIdentifier*)variable, arguments);
-        return call;
-    }
-
     return variable;
 }
 
-TreeNodeList* Parser::parse_arguments() {
+std::unique_ptr<TreeNodeList> Parser::parse_arguments() {
 
     Lexeme* next = next_lexeme();
     if (next->type != BONK_LEXEME_BRACE || next->brace_data.brace_type != BONK_BRACE_L_SB) {
@@ -78,7 +89,7 @@ TreeNodeList* Parser::parse_arguments() {
 
     eat_lexeme();
 
-    auto* argument_list = new TreeNodeList();
+    auto argument_list = std::make_unique<TreeNodeList>();
 
     next = next_lexeme();
 
@@ -86,11 +97,12 @@ TreeNodeList* Parser::parse_arguments() {
 
         if (next->type != BONK_LEXEME_IDENTIFIER) {
             error("expected parameter name");
-            delete argument_list;
             return nullptr;
         }
 
-        TreeNodeIdentifier* parameter_name = next->identifier_data.identifier;
+        auto parameter_name = std::make_unique<TreeNodeIdentifier>();
+        parameter_name->variable_name = next->identifier_data.identifier;
+        parameter_name->source_position = next->position;
 
         eat_lexeme();
         next = next_lexeme();
@@ -98,13 +110,12 @@ TreeNodeList* Parser::parse_arguments() {
         if (next->type != BONK_LEXEME_OPERATOR ||
             next->operator_data.operator_type != BONK_OPERATOR_ASSIGNMENT) {
             error("expected parameter value");
-            delete argument_list;
             return nullptr;
         }
 
         eat_lexeme();
 
-        TreeNode* parameter_value = parse_expression();
+        auto parameter_value = parse_expression();
         if (!parameter_value) {
             if (!linked_compiler->state) {
                 error("expected parameter value");
@@ -112,9 +123,11 @@ TreeNodeList* Parser::parse_arguments() {
             return nullptr;
         }
 
-        auto* argument = new TreeNodeCallParameter(parameter_name, parameter_value);
+        auto argument = std::make_unique<TreeNodeCallParameter>();
+        argument->parameter_name = std::move(parameter_name);
+        argument->parameter_value = std::move(parameter_value);
 
-        argument_list->list.push_back(argument);
+        argument_list->list.push_back(std::move(argument));
 
         next = next_lexeme();
         if (next->type != BONK_LEXEME_COMMA) {
@@ -126,7 +139,6 @@ TreeNodeList* Parser::parse_arguments() {
     }
 
     if (next->type != BONK_LEXEME_BRACE || next->brace_data.brace_type != BONK_BRACE_R_SB) {
-        delete argument_list;
         error("expected ']'");
         return nullptr;
     }

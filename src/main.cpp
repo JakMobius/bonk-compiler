@@ -1,4 +1,5 @@
 
+#include <fstream>
 #include <sys/stat.h>
 #include "argparse/argparse.hpp"
 #include "bonk/backend/ede/ede_backend.hpp"
@@ -23,16 +24,13 @@ void warning(const char* reason) {
 int main(int argc, const char* argv[]) {
 
     argparse::ArgumentParser program("bonk");
-    program.add_argument("input")
-        .help("path to the input file");
+    program.add_argument("input").help("path to the input file");
     program.add_argument("-h", "--help")
         .default_value(false)
         .implicit_value(true)
         .help("show this help message and exit");
-    program.add_argument("--ast")
-        .default_value(false)
-        .implicit_value(true)
-        .help("output AST as JSON");
+    program.add_argument("--ast").default_value(false).implicit_value(true).help(
+        "output AST as JSON");
     program.add_argument("-o", "--output-file")
         .default_value(std::string("out"))
         .nargs(1)
@@ -41,9 +39,7 @@ int main(int argc, const char* argv[]) {
         .default_value(std::string("ede"))
         .nargs(1)
         .help("compile target (ede or x86)");
-    program.add_argument("-l", "--log-file")
-        .nargs(1)
-        .help("path to the log file");
+    program.add_argument("-l", "--log-file").nargs(1).help("path to the log file");
 
     try {
         program.parse_args(argc, argv);
@@ -67,9 +63,9 @@ int main(int argc, const char* argv[]) {
     bonk::CompilerConfig config = {};
     config.error_file = stderr;
 
-    if(target_flag == "x86") {
+    if (target_flag == "x86") {
         config.compile_backend = new bonk::x86_backend::Backend();
-    } else if(target_flag == "ede") {
+    } else if (target_flag == "ede") {
         config.compile_backend = new bonk::ede_backend::Backend();
     } else {
         init_fatal_error("unknown compile target: %s", target_flag.c_str());
@@ -93,7 +89,18 @@ int main(int argc, const char* argv[]) {
 
     bonk::Compiler compiler(&config);
 
-    bonk::TreeNodeList* ast = compiler.get_ast_of_file_at_path(input.c_str());
+    std::string source;
+    std::ifstream file_stream(input);
+    if (!file_stream.is_open()) {
+        init_fatal_error("failed to open input file\n");
+        delete config.compile_backend;
+        return 1;
+    }
+
+    source.assign((std::istreambuf_iterator<char>(file_stream)), std::istreambuf_iterator<char>());
+
+    auto lexemes = compiler.lexical_analyzer->parse_file(input.c_str(), source.c_str());
+    auto ast = compiler.parser->parse_file(&lexemes);
 
     if (ast) {
         if (ast_flag) {

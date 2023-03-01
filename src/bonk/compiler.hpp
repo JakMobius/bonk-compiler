@@ -54,8 +54,6 @@ struct Compiler {
 
     void fatal_error(const char* format, ...);
 
-    TreeNodeList* get_ast_of_file_at_path(const char* file_path);
-
     bool compile_ast(TreeNodeList* ast, FILE* target);
 };
 

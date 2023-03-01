@@ -74,56 +74,48 @@ struct TreeNode {
 
 struct TreeNodeBlockDefinition : TreeNode {
 
-    TreeNodeIdentifier* block_name = nullptr;
-    TreeNodeList* body = nullptr;
+    std::unique_ptr<TreeNodeIdentifier> block_name;
+    std::unique_ptr<TreeNodeList> body;
     bool is_promise = false;
 
     TreeNodeBlockDefinition();
-
-    ~TreeNodeBlockDefinition() override;
 
     void accept(ASTVisitor* visitor) override;
 };
 
 struct TreeNodeCall : TreeNode {
 
-    TreeNodeIdentifier* call_function = nullptr;
-    TreeNodeList* call_parameters = nullptr;
+    std::unique_ptr<TreeNodeIdentifier> call_function;
+    std::unique_ptr<TreeNodeList> call_parameters;
 
-    TreeNodeCall(TreeNodeIdentifier* function, TreeNodeList* parameters);
-
-    ~TreeNodeCall() override;
+    TreeNodeCall();
 
     void accept(ASTVisitor* visitor) override;
 };
 
 struct TreeNodeCallParameter : TreeNode {
 
-    TreeNodeIdentifier* parameter_name = nullptr;
-    TreeNode* parameter_value = nullptr;
+    std::unique_ptr<TreeNodeIdentifier> parameter_name;
+    std::unique_ptr<TreeNode> parameter_value;
 
-    TreeNodeCallParameter(TreeNodeIdentifier* name, TreeNode* value);
-
-    ~TreeNodeCallParameter() override;
+    TreeNodeCallParameter();
 
     void accept(ASTVisitor* visitor) override;
 };
 
 struct TreeNodeCheck : TreeNode {
 
-    TreeNode* condition = nullptr;
-    TreeNodeList* check_body = nullptr;
-    TreeNodeList* or_body = nullptr;
+    std::unique_ptr<TreeNode> condition;
+    std::unique_ptr<TreeNodeList> check_body;
+    std::unique_ptr<TreeNodeList> or_body;
 
     TreeNodeCheck();
-
-    ~TreeNodeCheck() override;
 
     void accept(ASTVisitor* visitor) override;
 };
 
 struct TreeNodeCycle : TreeNode {
-    TreeNodeList* body = nullptr;
+    std::unique_ptr<TreeNodeList> body;
 
     TreeNodeCycle();
 
@@ -131,53 +123,47 @@ struct TreeNodeCycle : TreeNode {
 };
 
 struct TreeNodeIdentifier : TreeNode {
-    std::string variable_name;
+    std::string_view variable_name;
 
-    explicit TreeNodeIdentifier(const std::string& name);
-
-    bool contents_equal(TreeNodeIdentifier* other);
-
-    void print(FILE* file) const;
+    explicit TreeNodeIdentifier();
 
     void accept(ASTVisitor* visitor) override;
 };
 
 struct TreeNodeList : TreeNode {
 
-    std::list<TreeNode*> list;
+    std::list<std::unique_ptr<TreeNode>> list;
 
     TreeNodeList();
-    ~TreeNodeList() override;
 
     void accept(ASTVisitor* visitor) override;
 };
 
 struct TreeNodeNumber : TreeNode {
-    long long integer_value;
-    long double float_value;
+    long long integer_value = 0;
+    long double float_value = 0;
 
-    TreeNodeNumber(long double float_value, long long integer_value);
+    TreeNodeNumber();
 
     void accept(ASTVisitor* visitor) override;
 };
 
 struct TreeNodeOperator : TreeNode {
     OperatorType oper_type = BONK_OPERATOR_INVALID;
-    TreeNode* left = nullptr;
-    TreeNode* right = nullptr;
+    std::unique_ptr<TreeNode> left;
+    std::unique_ptr<TreeNode> right;
 
-    explicit TreeNodeOperator(OperatorType oper);
+    explicit TreeNodeOperator();
 
     void accept(ASTVisitor* visitor) override;
 };
 
 struct TreeNodeVariableDefinition : TreeNode {
     bool is_contextual = false;
-    TreeNodeIdentifier* variable_name = nullptr;
-    TreeNode* variable_value = nullptr;
+    std::unique_ptr<TreeNodeIdentifier> variable_name;
+    std::unique_ptr<TreeNode> variable_value;
 
-    TreeNodeVariableDefinition(bool contextual, TreeNodeIdentifier* identifier);
-    ~TreeNodeVariableDefinition() override;
+    TreeNodeVariableDefinition();
 
     void accept(ASTVisitor* visitor) override;
 };

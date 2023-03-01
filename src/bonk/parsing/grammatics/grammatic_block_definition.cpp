@@ -7,10 +7,10 @@
 
 namespace bonk {
 
-TreeNodeBlockDefinition* Parser::parse_block_definition() {
+std::unique_ptr<TreeNodeBlockDefinition> Parser::parse_block_definition() {
 
     auto old_position = position;
-    Lexeme* next = next_lexeme();
+    auto next = next_lexeme();
     bool is_promised = false;
 
     if (next->type != BONK_LEXEME_KEYWORD)
@@ -38,23 +38,23 @@ TreeNodeBlockDefinition* Parser::parse_block_definition() {
         return nullptr;
     }
 
-    TreeNodeIdentifier* block_identifier = next->identifier_data.identifier;
+    auto block_identifier = std::make_unique<TreeNodeIdentifier>();
+    block_identifier->variable_name = next->identifier_data.identifier;
+    block_identifier->source_position = next->position->clone();
 
     eat_lexeme();
     next = next_lexeme();
 
     if (next->type != BONK_LEXEME_BRACE || next->brace_data.brace_type != BONK_BRACE_L_CB) {
         error("expected '{'");
-        delete block_identifier;
         position = old_position;
         return nullptr;
     }
 
     eat_lexeme();
 
-    auto* block = parse_block();
+    auto block = parse_block();
     if (!block) {
-        delete block_identifier;
         position = old_position;
         return nullptr;
     }
@@ -63,18 +63,16 @@ TreeNodeBlockDefinition* Parser::parse_block_definition() {
 
     if (next->type != BONK_LEXEME_BRACE || next->brace_data.brace_type != BONK_BRACE_R_CB) {
         error("expected '}'");
-        delete block;
-        delete block_identifier;
         position = old_position;
         return nullptr;
     }
 
     eat_lexeme();
 
-    auto* block_definition = new TreeNodeBlockDefinition();
+    auto block_definition = std::make_unique<TreeNodeBlockDefinition>();
 
-    block_definition->body = block;
-    block_definition->block_name = block_identifier;
+    block_definition->body = std::move(block);
+    block_definition->block_name = std::move(block_identifier);
     block_definition->is_promise = is_promised;
 
     return block_definition;

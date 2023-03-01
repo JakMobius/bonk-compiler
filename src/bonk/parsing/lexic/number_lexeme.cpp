@@ -108,11 +108,8 @@ bool LexicalAnalyzer::parse_number_lexeme(Lexeme* target) {
         }
     }
 
-    auto* result = new TreeNodeNumber(float_result, integer_result);
-    result->source_position = target->position->clone();
-
     target->type = BONK_LEXEME_NUMBER;
-    target->number_data.number = result;
+    target->number_data.number = NumberLexeme{integer_result, float_result};
 
     return true;
 }

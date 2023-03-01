@@ -12,7 +12,7 @@ FieldList::FieldList(RegisterDescriptorList* descriptor_list, BackendContextStat
 Variable* FieldList::get_variable(TreeNodeIdentifier* identifier) {
 
     for (auto & variable : variables) {
-        if (variable->identifier->contents_equal(identifier)) {
+        if (variable->identifier->variable_name == identifier->variable_name) {
             return variable;
         }
     }

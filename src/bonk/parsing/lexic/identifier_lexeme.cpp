@@ -38,12 +38,8 @@ bool LexicalAnalyzer::parse_identifier_lexeme(Lexeme* target) {
 
     unsigned long length = position.index - identifier_position.index;
 
-    auto* identifier = new TreeNodeIdentifier(std::string(name_start, length));
-
-    identifier->source_position = identifier_position.clone();
-
     target->type = BONK_LEXEME_IDENTIFIER;
-    target->identifier_data.identifier = identifier;
+    target->identifier_data.identifier = std::string_view(name_start, length);
     return true;
 }
 

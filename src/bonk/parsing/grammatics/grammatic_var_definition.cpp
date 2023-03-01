@@ -7,7 +7,7 @@
 
 namespace bonk {
 
-TreeNodeVariableDefinition* Parser::parse_var_definition() {
+std::unique_ptr<TreeNodeVariableDefinition> Parser::parse_var_definition() {
 
     Lexeme* next = next_lexeme();
     bool is_contextual = false;
@@ -37,8 +37,14 @@ TreeNodeVariableDefinition* Parser::parse_var_definition() {
 
     eat_lexeme();
 
-    auto* definition =
-        new TreeNodeVariableDefinition(is_contextual, next->identifier_data.identifier);
+    auto identifier = std::make_unique<TreeNodeIdentifier>();
+    identifier->variable_name = next->identifier_data.identifier;
+    identifier->source_position = next->position->clone();
+
+    auto definition =
+        std::make_unique<TreeNodeVariableDefinition>();
+    definition->variable_name = std::move(identifier);
+    definition->is_contextual = is_contextual;
 
     definition->source_position = next->position->clone();
 
@@ -49,14 +55,12 @@ TreeNodeVariableDefinition* Parser::parse_var_definition() {
         eat_lexeme();
         if (is_contextual) {
             error("context variable may not be initialized");
-            delete definition;
             return nullptr;
         }
 
         definition->variable_value = parse_expression();
 
         if (definition->variable_value == nullptr) {
-            delete definition;
             if (!linked_compiler->state) {
                 error("expected initial variable value");
             }

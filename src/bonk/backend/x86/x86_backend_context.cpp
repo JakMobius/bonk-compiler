@@ -16,7 +16,7 @@ const int SYSTEM_V_CALLEE_PRESERVED_REGISTERS_COUNT =
     sizeof(SYSTEM_V_CALLEE_PRESERVED_REGISTERS) / sizeof(MachineRegister);
 
 const MachineRegister SYSTEM_V_CALLER_PRESERVED_REGISTERS[] = {rax, rcx, rdx, rsi, rdi,
-                                                                  r8,  r9,  r10, r11};
+                                                               r8,  r9,  r10, r11};
 const int SYSTEM_V_CALLER_PRESERVED_REGISTERS_COUNT =
     sizeof(SYSTEM_V_CALLER_PRESERVED_REGISTERS) / sizeof(MachineRegister);
 
@@ -50,27 +50,26 @@ void BackendContext::compile_program(TreeNodeList* ast) {
 
     if (!linked_compiler->state) {
 
-        std::list<TreeNode*>* list = &ast->list;
-
-        for (auto next_node : ast->list) {
+        for (auto& next_node : ast->list) {
             if (next_node->type == TREE_NODE_TYPE_BLOCK_DEFINITION) {
-                write_block_definition((TreeNodeBlockDefinition*)next_node);
+                write_block_definition((TreeNodeBlockDefinition*)next_node.get());
             } else if (next_node->type == TREE_NODE_TYPE_VAR_DEFINITION) {
-                write_global_var_definition((TreeNodeVariableDefinition*)next_node);
+                write_global_var_definition((TreeNodeVariableDefinition*)next_node.get());
             }
         }
 
         int total_global_variables = 0;
-        for (auto next_node : *list) {
+        for (auto& next_node : ast->list) {
             if (next_node->type == TREE_NODE_TYPE_VAR_DEFINITION) {
-                auto* var_definition = (TreeNodeVariableDefinition*)next_node;
+                auto* var_definition = (TreeNodeVariableDefinition*)next_node.get();
                 if (var_definition->variable_value != nullptr) {
                     linked_compiler->error_positioned(
                         var_definition->variable_value->source_position,
                         "variables may not have initial value in x86 mode");
                 }
-                target->add_internal_symbol(var_definition->variable_name->variable_name,
-                                            macho::SYMBOL_SECTION_DATA, total_global_variables * 8);
+                target->add_internal_symbol(
+                    std::string(var_definition->variable_name->variable_name),
+                    macho::SYMBOL_SECTION_DATA, total_global_variables * 8);
 
                 // TODO: Rewrite add_data to optimize this
                 std::vector<char> storage;
@@ -88,13 +87,13 @@ void BackendContext::compile_program(TreeNodeList* ast) {
                 descriptor->has_symbol_position = true;
                 descriptor->located_in_symbol = true;
                 descriptor->symbol_position =
-                    target->get_symbol_from_name(var->identifier->variable_name);
+                    target->get_symbol_from_name(std::string(var->identifier->variable_name));
             }
         }
 
-        for (auto next_node : ast->list) {
+        for (auto& next_node : ast->list) {
             if (next_node->type == TREE_NODE_TYPE_BLOCK_DEFINITION) {
-                auto* definition = (TreeNodeBlockDefinition*)next_node;
+                auto* definition = (TreeNodeBlockDefinition*)next_node.get();
                 if (definition->is_promise) {
                     write_block_promise(definition);
                 } else {
@@ -111,7 +110,7 @@ void BackendContext::compile_program(TreeNodeList* ast) {
 
 Variable* BackendContext::field_list_declare_variable(TreeNodeVariableDefinition* node) {
 
-    Variable* var = scope_stack->get_variable(node->variable_name, nullptr);
+    Variable* var = scope_stack->get_variable(node->variable_name.get(), nullptr);
 
     if (var == nullptr) {
         var = new VariableNumber(node);
@@ -121,7 +120,7 @@ Variable* BackendContext::field_list_declare_variable(TreeNodeVariableDefinition
         top_scope->add_variable(var);
         return var;
     } else {
-        error_already_defined(node->variable_name);
+        error_already_defined(node->variable_name.get());
     }
 
     return nullptr;
@@ -131,12 +130,10 @@ FieldList* BackendContext::read_scope_variables(TreeNodeList* node) {
     auto* scope = new FieldList(current_descriptors, state);
     scope_stack->push_scope(scope);
 
-    std::list<TreeNode*>* list = &node->list;
-
-    for (auto next_node : *list) {
+    for (auto& next_node : node->list) {
         TreeNodeType node_type = next_node->type;
         if (node_type == TREE_NODE_TYPE_VAR_DEFINITION) {
-            auto definition = (TreeNodeVariableDefinition*)next_node;
+            auto definition = (TreeNodeVariableDefinition*)next_node.get();
             auto new_variable = field_list_declare_variable(definition);
             if (new_variable != nullptr) {
                 if (definition->is_contextual) {
@@ -144,7 +141,7 @@ FieldList* BackendContext::read_scope_variables(TreeNodeList* node) {
                 }
             }
         } else if (node_type == TREE_NODE_TYPE_BLOCK_DEFINITION) {
-            field_list_declare_block((TreeNodeBlockDefinition*)next_node);
+            field_list_declare_block((TreeNodeBlockDefinition*)next_node.get());
         }
 
         if (linked_compiler->state) {
@@ -158,14 +155,12 @@ FieldList* BackendContext::read_scope_variables(TreeNodeList* node) {
 FieldList* BackendContext::field_list_find_block_parameters(TreeNodeBlockDefinition* block) const {
     auto* argument_list = new FieldList(current_descriptors, state);
 
-    std::list<TreeNode*>* list = &block->body->list;
-
-    for (auto next_node : *list) {
+    for (auto& next_node : block->body->list) {
         TreeNodeType node_type = next_node->type;
         if (node_type != TREE_NODE_TYPE_VAR_DEFINITION)
             break;
 
-        auto* var_definition = (TreeNodeVariableDefinition*)next_node;
+        auto* var_definition = (TreeNodeVariableDefinition*)next_node.get();
 
         if (!var_definition->is_contextual)
             break;
@@ -178,7 +173,7 @@ FieldList* BackendContext::field_list_find_block_parameters(TreeNodeBlockDefinit
 }
 
 void BackendContext::field_list_declare_block(TreeNodeBlockDefinition* node) {
-    auto* identifier = node->block_name;
+    auto* identifier = node->block_name.get();
 
     Variable* var = scope_stack->get_variable(identifier, nullptr);
 
@@ -200,10 +195,8 @@ void BackendContext::compile_block(TreeNodeList* block) {
     FieldList* scope = read_scope_variables(block);
 
     if (!linked_compiler->state) {
-        std::list<TreeNode*>* list = &block->list;
-
-        for (auto next_node : *list) {
-            compile_line(next_node);
+        for (auto& next_node : block->list) {
+            compile_line(next_node.get());
         }
     }
 
@@ -241,7 +234,7 @@ void BackendContext::compile_block_definition(TreeNodeBlockDefinition* block) {
 
     push_state();
 
-    compile_block(block->body);
+    compile_block(block->body.get());
 
     pop_state();
 
@@ -269,13 +262,15 @@ void BackendContext::write_block_implementation(TreeNodeBlockDefinition* block) 
 
     FinalOptimizer::optimize(colorized_buffer);
     if (linked_compiler->config->listing_file) {
-        fprintf(linked_compiler->config->listing_file, "; == function ==\n%s:\n",
-                block->block_name->variable_name.c_str());
+        fprintf(linked_compiler->config->listing_file, "; == function ==\n%.*s:\n",
+                (int)block->block_name->variable_name.size(),
+                block->block_name->variable_name.data());
 
         CommandDumper dumper;
         dumper.dump_list(colorized_buffer->root_list, linked_compiler->config->listing_file, 0);
     }
-    colorized_buffer->write_block_to_object_file(block->block_name->variable_name, target);
+    colorized_buffer->write_block_to_object_file(std::string(block->block_name->variable_name),
+                                                 target);
 
     delete colorized_buffer;
     delete procedure_command_buffer;
@@ -284,31 +279,31 @@ void BackendContext::write_block_implementation(TreeNodeBlockDefinition* block) 
 
 void BackendContext::compile_plus(TreeNodeOperator* expression) {
     if (expression->left)
-        compile_expression(expression->left);
+        compile_expression(expression->left.get());
     else
         state->register_stack.push_imm64(0);
-    compile_expression(expression->right);
+    compile_expression(expression->right.get());
     state->register_stack.add();
 }
 
 void BackendContext::compile_minus(TreeNodeOperator* expression) {
     if (expression->left)
-        compile_expression(expression->left);
+        compile_expression(expression->left.get());
     else
         state->register_stack.push_imm64(0);
-    compile_expression(expression->right);
+    compile_expression(expression->right.get());
     state->register_stack.sub();
 }
 
 void BackendContext::compile_multiply(TreeNodeOperator* expression) {
-    compile_expression(expression->left);
-    compile_expression(expression->right);
+    compile_expression(expression->left.get());
+    compile_expression(expression->right.get());
     state->register_stack.mul();
 }
 
 void BackendContext::compile_divide(TreeNodeOperator* expression) {
-    compile_expression(expression->left);
-    compile_expression(expression->right);
+    compile_expression(expression->left.get());
+    compile_expression(expression->right.get());
     state->register_stack.div();
 }
 
@@ -316,7 +311,8 @@ void BackendContext::compile_line(TreeNode* node) {
     if (node->type == TREE_NODE_TYPE_VAR_DEFINITION) {
         auto* var_definition = (TreeNodeVariableDefinition*)node;
         if (var_definition->variable_value)
-            compile_assignment(var_definition->variable_name, var_definition->variable_value);
+            compile_assignment(var_definition->variable_name.get(),
+                               var_definition->variable_value.get());
         else
             return;
     } else if (node->type == TREE_NODE_TYPE_CYCLE) {
@@ -334,7 +330,7 @@ void BackendContext::compile_expression(TreeNode* node) {
 
         switch (oper->oper_type) {
         case BONK_OPERATOR_ASSIGNMENT:
-            compile_assignment((TreeNodeIdentifier*)oper->left, oper->right);
+            compile_assignment((TreeNodeIdentifier*)oper->left.get(), oper->right.get());
             break;
         case BONK_OPERATOR_PLUS:
             compile_plus(oper);
@@ -419,9 +415,9 @@ AbstractRegister BackendContext::get_variable(TreeNodeIdentifier* identifier) {
     }
 
     if (variable->type == VARIABLE_TYPE_FUNCTION) {
-        linked_compiler->error_positioned(identifier->source_position,
-                                          "'%s' is a block name, not variable",
-                                          identifier->variable_name.c_str());
+        linked_compiler->error_positioned(
+            identifier->source_position, "'%.*s' is a block name, not variable",
+            (int)identifier->variable_name.size(), identifier->variable_name.data());
         return -1;
     }
 
@@ -467,7 +463,7 @@ void BackendContext::compile_cycle(TreeNodeCycle* cycle) {
     state->current_command_list->commands.push_back(cycle_head);
 
     push_state();
-    compile_block(cycle->body);
+    compile_block(cycle->body.get());
     state->current_command_list->commands.push_back(new ScopeRepeatCommand());
     pop_state();
 
@@ -482,14 +478,15 @@ void BackendContext::compile_cycle(TreeNodeCycle* cycle) {
 
 void BackendContext::error_already_defined(TreeNodeIdentifier* identifier) {
     ParserPosition* position = identifier->source_position;
-    linked_compiler->error_positioned(position, "variable '%s' is already defined",
-                                      identifier->variable_name.c_str());
+    linked_compiler->error_positioned(position, "variable '%.*s' is already defined",
+                                      (int)identifier->variable_name.size(),
+                                      identifier->variable_name.data());
 }
 
 void BackendContext::error_undefined_reference(TreeNodeIdentifier* node) const {
     ParserPosition* position = node->source_position;
     linked_compiler->error_positioned(position, "undefined reference: '%s'",
-                                      node->variable_name.c_str());
+                                      (int)node->variable_name.size(), node->variable_name.data());
 }
 
 void BackendContext::pop_to_scope(CommandList* scope) const {
@@ -504,12 +501,12 @@ void BackendContext::pop_to_scope(CommandList* scope) const {
 
 void BackendContext::compile_bonk_statement(TreeNodeOperator* oper) {
     if (oper->right) {
-        compile_expression(oper->right);
+        compile_expression(oper->right.get());
         state->register_stack.pop(procedure_return_register);
     } else {
         state->current_command_list->commands.push_back(
             new XorCommand(CommandParameter::create_register_64(procedure_return_register),
-                            CommandParameter::create_register_64(procedure_return_register)));
+                           CommandParameter::create_register_64(procedure_return_register)));
     }
 
     pop_to_scope(procedure_body_container);
@@ -520,8 +517,8 @@ void BackendContext::compile_bonk_statement(TreeNodeOperator* oper) {
 }
 
 bool BackendContext::can_use_fast_logic(TreeNodeOperator* oper) {
-    return can_use_fast_logic_on_operand(oper->left, oper->oper_type) &&
-           can_use_fast_logic_on_operand(oper->right, oper->oper_type);
+    return can_use_fast_logic_on_operand(oper->left.get(), oper->oper_type) &&
+           can_use_fast_logic_on_operand(oper->right.get(), oper->oper_type);
 }
 
 bool BackendContext::can_use_fast_logic_on_operand(TreeNode* operand, OperatorType oper_type) {
@@ -549,24 +546,24 @@ bool BackendContext::compile_logic_recursive(TreeNodeOperator* oper, JmpLabel* c
                                              CommandList* control_label_list,
                                              OperatorType oper_type, bool check_for) {
     if (oper->left->type == TREE_NODE_TYPE_OPERATOR &&
-        ((TreeNodeOperator*)oper->left)->oper_type == oper_type) {
+        ((TreeNodeOperator*)oper->left.get())->oper_type == oper_type) {
         // left-hand operand must be expression
-        bool is_expr = compile_logic_recursive((TreeNodeOperator*)(oper->left), control_label,
+        bool is_expr = compile_logic_recursive((TreeNodeOperator*)(oper->left.get()), control_label,
                                                control_label_list, oper_type, check_for);
         assert(is_expr);
     } else {
         // left-hand operand must be expression
-        bool is_expr = compile_logic_operand_recursive(oper->left, control_label,
+        bool is_expr = compile_logic_operand_recursive(oper->left.get(), control_label,
                                                        control_label_list, oper_type, check_for);
         assert(is_expr);
     }
 
     if (oper->right->type == TREE_NODE_TYPE_OPERATOR &&
-        ((TreeNodeOperator*)oper->right)->oper_type == oper_type) {
-        return compile_logic_recursive((TreeNodeOperator*)(oper->right), control_label,
+        ((TreeNodeOperator*)oper->right.get())->oper_type == oper_type) {
+        return compile_logic_recursive((TreeNodeOperator*)(oper->right.get()), control_label,
                                        control_label_list, oper_type, check_for);
     } else {
-        return compile_logic_operand_recursive(oper->right, control_label, control_label_list,
+        return compile_logic_operand_recursive(oper->right.get(), control_label, control_label_list,
                                                oper_type, check_for);
     }
 }
@@ -608,8 +605,8 @@ void BackendContext::compile_jump_logical(TreeNodeOperator* oper) {
 
 void BackendContext::compile_or(TreeNodeOperator* oper) {
     if (can_use_fast_logic(oper)) {
-        compile_expression(oper->left);
-        compile_expression(oper->right);
+        compile_expression(oper->left.get());
+        compile_expression(oper->right.get());
         state->register_stack.logical_or();
     } else {
         compile_jump_logical(oper);
@@ -618,8 +615,8 @@ void BackendContext::compile_or(TreeNodeOperator* oper) {
 
 void BackendContext::compile_and(TreeNodeOperator* oper) {
     if (can_use_fast_logic(oper)) {
-        compile_expression(oper->left);
-        compile_expression(oper->right);
+        compile_expression(oper->left.get());
+        compile_expression(oper->right.get());
         state->register_stack.logical_and();
     } else {
         compile_jump_logical(oper);
@@ -627,44 +624,44 @@ void BackendContext::compile_and(TreeNodeOperator* oper) {
 }
 
 void BackendContext::compile_equals(TreeNodeOperator* oper) {
-    compile_expression(oper->left);
-    compile_expression(oper->right);
+    compile_expression(oper->left.get());
+    compile_expression(oper->right.get());
     state->register_stack.equals();
 }
 
 void BackendContext::compile_less_than(TreeNodeOperator* oper) {
-    compile_expression(oper->left);
-    compile_expression(oper->right);
+    compile_expression(oper->left.get());
+    compile_expression(oper->right.get());
     state->register_stack.less_than();
 }
 
 void BackendContext::compile_less_or_equal_than(TreeNodeOperator* oper) {
-    compile_expression(oper->left);
-    compile_expression(oper->right);
+    compile_expression(oper->left.get());
+    compile_expression(oper->right.get());
     state->register_stack.less_or_equal_than();
 }
 
 void BackendContext::compile_greater_than(TreeNodeOperator* oper) {
-    compile_expression(oper->left);
-    compile_expression(oper->right);
+    compile_expression(oper->left.get());
+    compile_expression(oper->right.get());
     state->register_stack.greater_than();
 }
 
 void BackendContext::compile_greater_or_equal_than(TreeNodeOperator* oper) {
-    compile_expression(oper->left);
-    compile_expression(oper->right);
+    compile_expression(oper->left.get());
+    compile_expression(oper->right.get());
     state->register_stack.greater_or_equal_than();
 }
 
 void BackendContext::compile_not_equal(TreeNodeOperator* oper) {
-    compile_expression(oper->left);
-    compile_expression(oper->right);
+    compile_expression(oper->left.get());
+    compile_expression(oper->right.get());
     state->register_stack.not_equal();
 }
 
 JumpCommand* BackendContext::append_oper_jmp_command(TreeNodeOperator* oper, bool inversed) {
-    compile_expression(oper->left);
-    compile_expression(oper->right);
+    compile_expression(oper->left.get());
+    compile_expression(oper->right.get());
     state->register_stack.compare();
 
     auto command = COMMAND_JMP;
@@ -739,10 +736,10 @@ JumpCommand* BackendContext::compile_boolean_jump(TreeNode* node, bool check_for
 // I'm proud of how natural this code look like
 void BackendContext::compile_check(TreeNodeCheck* node) {
 
-    auto jmp = compile_boolean_jump(node->condition, false);
+    auto jmp = compile_boolean_jump(node->condition.get(), false);
 
     push_state();
-    compile_block(node->check_body);
+    compile_block(node->check_body.get());
     pop_state();
 
     jmp->set_label(insert_label());
@@ -779,33 +776,33 @@ JmpLabel* BackendContext::insert_label() const {
     return nop;
 }
 
-TreeNode*
-BackendContext::call_argument_list_get_value(
-    TreeNodeList* argument_list, TreeNodeIdentifier* identifier) {
+TreeNode* BackendContext::call_argument_list_get_value(TreeNodeList* argument_list,
+                                                       TreeNodeIdentifier* identifier) {
     if (!argument_list)
         return nullptr;
 
-    std::list<TreeNode*>* list = &argument_list->list;
-
-    for (auto parameter : *list) {
-        auto call_parameter = (TreeNodeCallParameter*)parameter;
-        if (call_parameter->parameter_name->contents_equal(identifier)) {
-            return call_parameter->parameter_value;
+    for (auto& parameter : argument_list->list) {
+        auto call_parameter = (TreeNodeCallParameter*)parameter.get();
+        if (call_parameter->parameter_name->variable_name == identifier->variable_name) {
+            return call_parameter->parameter_value.get();
         }
     }
 
     return nullptr;
 }
 
-TreeNode* BackendContext::compile_nth_argument(VariableFunction* func, TreeNodeList* argument_list, int i) {
+TreeNode* BackendContext::compile_nth_argument(VariableFunction* func, TreeNodeList* argument_list,
+                                               int i) {
     Variable* argument = func->argument_list->variables[i];
 
     TreeNode* value = call_argument_list_get_value(argument_list, argument->identifier);
     if (value == nullptr) {
         ParserPosition* position = func->identifier->source_position;
-        linked_compiler->error_positioned(position, "'%s' requires contextual variable '%s'",
-                                          func->identifier->variable_name.c_str(),
-                                          argument->identifier->variable_name.c_str());
+        linked_compiler->error_positioned(position, "'%.*s' requires contextual variable '%.*s'",
+                                          (int)func->identifier->variable_name.size(),
+                                          func->identifier->variable_name.data(),
+                                          (int)argument->identifier->variable_name.size(),
+                                          argument->identifier->variable_name.data());
         return nullptr;
     }
 
@@ -820,8 +817,8 @@ TreeNode* BackendContext::compile_nth_argument(VariableFunction* func, TreeNodeL
 }
 
 void BackendContext::compile_call(TreeNodeCall* call) {
-    auto* argument_list = call->call_parameters;
-    auto* function_name = (TreeNodeIdentifier*)call->call_function;
+    auto* argument_list = call->call_parameters.get();
+    auto* function_name = (TreeNodeIdentifier*)call->call_function.get();
 
     Variable* var = scope_stack->get_variable(function_name, nullptr);
 
@@ -832,8 +829,9 @@ void BackendContext::compile_call(TreeNodeCall* call) {
 
     if (var->type != VARIABLE_TYPE_FUNCTION) {
         ParserPosition* position = function_name->source_position;
-        linked_compiler->error_positioned(position, "'%s' is not a function",
-                                          function_name->variable_name.c_str());
+        linked_compiler->error_positioned(position, "'%.*s' is not a function",
+                                          (int)function_name->variable_name.size(),
+                                          function_name->variable_name.data());
         return;
     }
 
@@ -848,7 +846,8 @@ void BackendContext::compile_call(TreeNodeCall* call) {
     }
     int stack_arguments = function_arguments->variables.size() - register_arguments;
 
-    state->current_command_list->commands.push_back(AlignStackCommand::create_before(stack_arguments));
+    state->current_command_list->commands.push_back(
+        AlignStackCommand::create_before(stack_arguments));
 
     for (int i = function_arguments->variables.size() - 1; i >= SYSTEM_V_ARGUMENT_REGISTERS_COUNT;
          i--) {
@@ -885,15 +884,18 @@ void BackendContext::compile_call(TreeNodeCall* call) {
         caller_preserved_registers.push_back(reg);
     }
 
-    state->current_command_list->commands.push_back(new RegPreserveCommand(caller_preserved_registers));
+    state->current_command_list->commands.push_back(
+        new RegPreserveCommand(caller_preserved_registers));
 
     // Now it's safe to call the function
 
-    state->current_command_list->commands.push_back(new CallCommand(CommandParameterSymbol(true,
-                                 target->get_symbol_from_name(call->call_function->variable_name)),
+    state->current_command_list->commands.push_back(new CallCommand(
+        CommandParameterSymbol(
+            true, target->get_symbol_from_name(std::string(call->call_function->variable_name))),
         arguments, register_arguments));
 
-    state->current_command_list->commands.push_back(AlignStackCommand::create_after(stack_arguments));
+    state->current_command_list->commands.push_back(
+        AlignStackCommand::create_after(stack_arguments));
     state->register_stack.push_reg64(
         procedure_command_buffer->descriptors.next_constrained_register(
             rax, state->current_command_list));
@@ -901,14 +903,14 @@ void BackendContext::compile_call(TreeNodeCall* call) {
 
 void BackendContext::write_block_definition(TreeNodeBlockDefinition* definition) const {
     if (definition->is_promise) {
-        target->declare_external_symbol(definition->block_name->variable_name);
+        target->declare_external_symbol(std::string(definition->block_name->variable_name));
     } else {
-        target->declare_internal_symbol(definition->block_name->variable_name);
+        target->declare_internal_symbol(std::string(definition->block_name->variable_name));
     }
 }
 
 void BackendContext::write_global_var_definition(TreeNodeVariableDefinition* definition) const {
-    target->declare_internal_symbol(definition->variable_name->variable_name);
+    target->declare_internal_symbol(std::string(definition->variable_name->variable_name));
 }
 
 void BackendContext::locate_procedure_parameter(Variable* parameter) {

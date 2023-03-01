@@ -155,9 +155,7 @@ bool LexicalAnalyzer::next() {
                 }
 
                 unsigned long length = position.index - begin_position - 1;
-                auto* inline_assembly = new TreeNodeIdentifier({begin_pointer, length});
-
-                next_lexeme.identifier_data.identifier = inline_assembly;
+                next_lexeme.identifier_data.identifier = std::string_view(begin_pointer, length);
             }
         }
     } else {
@@ -248,8 +246,8 @@ bool LexicalAnalyzer::add_compiled_file(const std::string& file_path) {
 }
 
 bool LexicalAnalyzer::file_already_compiled(const std::string& file_path) {
-    for (int i = 0; i < compiled_files.size(); i++) {
-        if (compiled_files[i] == file_path)
+    for (const auto & compiled_file : compiled_files) {
+        if (compiled_file == file_path)
             return true;
     }
     return false;

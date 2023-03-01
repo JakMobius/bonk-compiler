@@ -8,7 +8,7 @@ Variable::Variable(TreeNodeIdentifier* the_identifier) {
 }
 
 VariableNumber::VariableNumber(TreeNodeVariableDefinition* definition)
-    : Variable(definition->variable_name) {
+    : Variable(definition->variable_name.get()) {
     this->is_contextual = definition->is_contextual;
     type = VARIABLE_TYPE_NUMBER;
 }

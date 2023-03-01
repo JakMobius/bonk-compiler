@@ -7,8 +7,8 @@
 
 namespace bonk {
 
-TreeNode* Parser::parse_code_line() {
-    TreeNode* expression = parse_expression_leveled(true);
+std::unique_ptr<TreeNode> Parser::parse_code_line() {
+    auto expression = parse_expression_leveled(true);
     if (expression)
         return expression;
     if (linked_compiler->state)
@@ -17,21 +17,19 @@ TreeNode* Parser::parse_code_line() {
     return nullptr;
 }
 
-TreeNodeList* Parser::parse_block() {
+std::unique_ptr<TreeNodeList> Parser::parse_block() {
 
-    auto* list = new TreeNodeList();
-
-    auto* result = list;
+    auto result = std::make_unique<TreeNodeList>();
 
     do {
-        TreeNode* block = parse_code_line();
+        auto block = parse_code_line();
         if (linked_compiler->state)
             return nullptr;
 
         if (!block)
             break;
 
-        list->list.push_back(block);
+        result->list.push_back(std::move(block));
     } while (true);
 
     return result;

@@ -16,8 +16,8 @@ BackendContext::BackendContext(Compiler* compiler, FILE* destination) {
 
 void BackendContext::error_undefined_reference(TreeNodeIdentifier* node) const {
     ParserPosition* position = node->source_position;
-    linked_compiler->error_positioned(position, "undefined reference: '%s'",
-                                      node->variable_name.c_str());
+    linked_compiler->error_positioned(position, "undefined reference: '%.*s'",
+                                      (int)node->variable_name.size(), node->variable_name.data());
 }
 
 void BackendContext::reference_variable(TreeNodeIdentifier* identifier) const {
@@ -30,9 +30,9 @@ void BackendContext::reference_variable(TreeNodeIdentifier* identifier) const {
     }
 
     if (variable->type == VARIABLE_TYPE_FUNCTION) {
-        linked_compiler->error_positioned(identifier->source_position,
-                                          "'%s' is a block name, not variable",
-                                          identifier->variable_name.c_str());
+        linked_compiler->error_positioned(
+            identifier->source_position, "'%.*s' is a block name, not variable",
+            (int)identifier->variable_name.size(), identifier->variable_name.data());
         return;
     }
 
@@ -49,7 +49,8 @@ void BackendContext::reference_variable(TreeNodeIdentifier* identifier) const {
     }
 
     fprintf(target, " ; referencing '");
-    variable->identifier->print(target);
+    fprintf(target, "%.*s", (int)variable->identifier->variable_name.size(),
+            variable->identifier->variable_name.data());
     fprintf(target, "' field");
 }
 
@@ -73,8 +74,8 @@ void BackendContext::compile_term(TreeNode* node) {
         OperatorType operator_type = oper->oper_type;
 
         if (operator_type == BONK_OPERATOR_MULTIPLY || operator_type == BONK_OPERATOR_DIVIDE) {
-            compile_term(oper->left);
-            compile_term(oper->right);
+            compile_term(oper->left.get());
+            compile_term(oper->right.get());
 
             if (operator_type == BONK_OPERATOR_MULTIPLY) {
                 fprintf(target, "mul.d\n");
@@ -97,12 +98,12 @@ void BackendContext::compile_math_expression(TreeNode* node) {
 
         if (operator_type == BONK_OPERATOR_PLUS || operator_type == BONK_OPERATOR_MINUS) {
             if (oper->left) {
-                compile_math_expression(oper->left);
+                compile_math_expression(oper->left.get());
             } else {
                 fprintf(target, "push.d 0\n");
                 processor_stack_usage += 8;
             }
-            compile_math_expression(oper->right);
+            compile_math_expression(oper->right.get());
 
             if (operator_type == BONK_OPERATOR_PLUS) {
                 fprintf(target, "add.d\n");
@@ -164,8 +165,8 @@ void BackendContext::compile_math_comparsion(TreeNode* node) {
         const char* comparing_instruction = get_comparsion_instruction(operator_type);
 
         if (comparing_instruction != nullptr) {
-            compile_math_comparsion(oper->left);
-            compile_math_comparsion(oper->right);
+            compile_math_comparsion(oper->left.get());
+            compile_math_comparsion(oper->right.get());
 
             unsigned long label_id = next_label_id();
 
@@ -185,18 +186,17 @@ void BackendContext::compile_math_comparsion(TreeNode* node) {
     compile_math_expression(node);
 }
 
-TreeNode*
-BackendContext::call_argument_list_get_value(TreeNodeList* argument_list,
-                                             TreeNodeIdentifier* identifier) {
+TreeNode* BackendContext::call_argument_list_get_value(TreeNodeList* argument_list,
+                                                       TreeNodeIdentifier* identifier) {
     if (!argument_list)
         return nullptr;
 
-    std::list<TreeNode*>* list = &argument_list->list;
+    auto& list = argument_list->list;
 
-    for (auto parameter : *list) {
-        auto* call_parameter = (TreeNodeCallParameter*)parameter;
-        if (call_parameter->parameter_name->contents_equal(identifier)) {
-            return call_parameter->parameter_value;
+    for (auto& parameter : list) {
+        auto* call_parameter = (TreeNodeCallParameter*)parameter.get();
+        if (call_parameter->parameter_name->variable_name == identifier->variable_name) {
+            return call_parameter->parameter_value.get();
         }
     }
 
@@ -204,8 +204,8 @@ BackendContext::call_argument_list_get_value(TreeNodeList* argument_list,
 }
 
 void BackendContext::compile_call(TreeNodeCall* call) {
-    auto* argument_list = call->call_parameters;
-    auto* function_name = (TreeNodeIdentifier*)call->call_function;
+    auto* argument_list = call->call_parameters.get();
+    auto* function_name = (TreeNodeIdentifier*)call->call_function.get();
 
     Variable* var = scope_stack.get_variable(function_name, nullptr);
 
@@ -216,8 +216,9 @@ void BackendContext::compile_call(TreeNodeCall* call) {
 
     if (var->type != VARIABLE_TYPE_FUNCTION) {
         ParserPosition* position = function_name->source_position;
-        linked_compiler->error_positioned(position, "'%s' is not a function",
-                                          function_name->variable_name.c_str());
+        linked_compiler->error_positioned(position, "'%.*s' is not a function",
+                                          (int)function_name->variable_name.size(),
+                                          function_name->variable_name.data());
         return;
     }
 
@@ -227,7 +228,8 @@ void BackendContext::compile_call(TreeNodeCall* call) {
 
     unsigned long safe_zone_offset = function_arguments->variables.size() * 8;
 
-    fprintf(target, " ; calling block %s\n", function_name->variable_name.c_str());
+    fprintf(target, " ; calling block %.*s\n", (int)function_name->variable_name.size(),
+            function_name->variable_name.data());
     fprintf(target, " ;  top frame size = %lu\n", top_scope->frame_size);
     fprintf(target, " ;  top frame offset = %lu\n", top_scope->byte_offset);
     fprintf(target, " ;  safe zone = %lu\n", safe_zone_offset);
@@ -250,16 +252,20 @@ void BackendContext::compile_call(TreeNodeCall* call) {
         TreeNode* value = call_argument_list_get_value(argument_list, argument->identifier);
         if (value == nullptr) {
             ParserPosition* position = function_name->source_position;
-            linked_compiler->error_positioned(position, "'%s' requires contextual variable '%s'",
-                                              function_name->variable_name.c_str(),
-                                              argument->identifier->variable_name.c_str());
+            linked_compiler->error_positioned(
+                position, "'%.*s' requires contextual variable '%.*s'",
+                (int)function_name->variable_name.size(), function_name->variable_name.data(),
+                (int)argument->identifier->variable_name.size(),
+                argument->identifier->variable_name.data());
 
             return;
         } else {
             compile_expression(value, 8);
             fprintf(target, "pop.d [rdx - 0x%lx] ; writing to argument '",
                     safe_zone_offset - i * 8);
-            argument->identifier->print(target);
+
+            fprintf(target, "%.*s", (int)argument->identifier->variable_name.size(),
+                    argument->identifier->variable_name.data());
             fprintf(target, "'\n");
             processor_stack_usage -= 8;
         }
@@ -274,7 +280,8 @@ void BackendContext::compile_call(TreeNodeCall* call) {
                 safe_zone_offset);
     }
 
-    fprintf(target, "call _bs_%s\n", function_name->variable_name.c_str());
+    fprintf(target, "call _bs_%.*s\n", (int)function_name->variable_name.size(),
+            function_name->variable_name.data());
 
     if (top_scope->frame_size + top_scope->byte_offset > 0) {
         fprintf(target,
@@ -284,16 +291,14 @@ void BackendContext::compile_call(TreeNodeCall* call) {
     }
 
     processor_stack_usage += 8;
-
-    free((void*)function_name->variable_name.c_str());
 }
 
 void BackendContext::compile_inline_assembly(TreeNodeOperator* node) {
     fprintf(target, "; inline assembly at line %lu:\n", node->source_position->line);
 
-    auto* inline_asm = (TreeNodeIdentifier*)node->left;
+    auto* inline_asm = (TreeNodeIdentifier*)node->left.get();
 
-    TreeNodeIdentifier inline_variable{""};
+    TreeNodeIdentifier inline_variable{};
     inline_variable.source_position = node->source_position;
 
     const char* asm_begin = inline_asm->variable_name.data();
@@ -340,7 +345,7 @@ void BackendContext::compile_inline_assembly(TreeNodeOperator* node) {
                                                   "empty variable reference in inline assembly");
             } else {
                 inline_variable.variable_name =
-                    std::string(variable_name_start, variable_name_length);
+                    std::string_view(variable_name_start, variable_name_length);
                 reference_variable(&inline_variable);
             }
             continue;
@@ -361,7 +366,7 @@ void BackendContext::compile_bonk_statement(TreeNodeOperator* node,
         linked_compiler->error_positioned(node->source_position, "bonk does not return anything");
     }
 
-    compile_expression(node->right, 8);
+    compile_expression(node->right.get(), 8);
     fprintf(target, "pop.d rbx\n"
                     "pop.ul rax\n"
                     "push.d rbx\n"
@@ -421,7 +426,7 @@ void BackendContext::compile_cycle(TreeNodeCycle* node, unsigned long stack_byte
     cycle_label_id = label_id;
 
     fprintf(target, "_cycle_%lu:\n", label_id);
-    compile_block(node->body, false);
+    compile_block(node->body.get(), false);
     fprintf(target,
             "jmp _cycle_%lu\n"
             "_cycle_%lu_end:\n",
@@ -439,7 +444,7 @@ void BackendContext::compile_check(TreeNodeCheck* node, unsigned long stack_byte
 
     const char* comparsion_instruction = nullptr;
 
-    TreeNode* comparsion = node->condition;
+    TreeNode* comparsion = node->condition.get();
 
     if (comparsion->type == TREE_NODE_TYPE_OPERATOR) {
         comparsion_instruction =
@@ -451,23 +456,23 @@ void BackendContext::compile_check(TreeNodeCheck* node, unsigned long stack_byte
         processor_stack_usage -= 8;
         comparsion_instruction = "jz";
     } else {
-        compile_expression(((TreeNodeOperator*)comparsion)->left, 8);
-        compile_expression(((TreeNodeOperator*)comparsion)->right, 8);
+        compile_expression(((TreeNodeOperator*)comparsion)->left.get(), 8);
+        compile_expression(((TreeNodeOperator*)comparsion)->right.get(), 8);
         processor_stack_usage -= 16;
     }
 
     if (node->or_body) {
         fprintf(target, "%s.d _if_%lu_else\n", comparsion_instruction, label_id);
-        compile_block(node->check_body, false);
+        compile_block(node->check_body.get(), false);
         fprintf(target,
                 "jmp _if_%lu_end\n"
                 "_if_%lu_else:\n",
                 label_id, label_id);
-        compile_block(node->or_body, false);
+        compile_block(node->or_body.get(), false);
         fprintf(target, "_if_%lu_end:\n", label_id);
     } else {
         fprintf(target, "%s.d _if_%lu_end\n", comparsion_instruction, label_id);
-        compile_block(node->check_body, false);
+        compile_block(node->check_body.get(), false);
         fprintf(target, "_if_%lu_end:\n", label_id);
     }
 }
@@ -475,7 +480,7 @@ void BackendContext::compile_check(TreeNodeCheck* node, unsigned long stack_byte
 void BackendContext::compile_logic(TreeNodeOperator* oper, unsigned long stack_bytes_expected) {
     unsigned long label_id = next_label_id();
 
-    compile_expression(oper->left, 8);
+    compile_expression(oper->left.get(), 8);
 
     if (stack_bytes_expected > 0) {
         fprintf(target, "pop.d rax\n"
@@ -495,12 +500,12 @@ void BackendContext::compile_logic(TreeNodeOperator* oper, unsigned long stack_b
     }
 
     processor_stack_usage -= 8;
-    compile_expression(oper->right, stack_bytes_expected);
+    compile_expression(oper->right.get(), stack_bytes_expected);
     fprintf(target, "_log_%lu_ok:\n", label_id);
 }
 
 void BackendContext::compile_print(TreeNodeOperator* node) {
-    compile_expression(node->right, 8);
+    compile_expression(node->right.get(), 8);
     fprintf(target, "out.d\n");
 }
 
@@ -528,7 +533,8 @@ void BackendContext::compile_expression(TreeNode* node, unsigned long stack_byte
             compile_rebonk_statement(oper, stack_bytes_expected);
             break;
         case BONK_OPERATOR_ASSIGNMENT:
-            compile_assignment((TreeNodeIdentifier*)oper->left, oper->right, stack_bytes_expected);
+            compile_assignment((TreeNodeIdentifier*)oper->left.get(), oper->right.get(),
+                               stack_bytes_expected);
             break;
         case BONK_OPERATOR_OR:
         case BONK_OPERATOR_AND:
@@ -544,8 +550,8 @@ void BackendContext::compile_expression(TreeNode* node, unsigned long stack_byte
     } else if (node->type == TREE_NODE_TYPE_VAR_DEFINITION) {
         auto* var_definition = (TreeNodeVariableDefinition*)node;
         if (var_definition->variable_value)
-            compile_assignment(var_definition->variable_name, var_definition->variable_value,
-                               stack_bytes_expected);
+            compile_assignment(var_definition->variable_name.get(),
+                               var_definition->variable_value.get(), stack_bytes_expected);
         else
             return;
     } else if (node->type == TREE_NODE_TYPE_CALL) {
@@ -568,40 +574,41 @@ void BackendContext::compile_expression(TreeNode* node, unsigned long stack_byte
 
 void BackendContext::error_already_defined(TreeNodeIdentifier* identifier) const {
     ParserPosition* position = identifier->source_position;
-    linked_compiler->error_positioned(position, "variable '%s' is already defined",
-                                      identifier->variable_name.c_str());
+    linked_compiler->error_positioned(position, "variable '%.*s' is already defined",
+                                      identifier->variable_name.size(),
+                                      identifier->variable_name.data());
 }
 
 void BackendContext::field_list_declare_variable(TreeNodeVariableDefinition* node) const {
 
-    Variable* var = scope_stack.get_variable(node->variable_name, nullptr);
+    Variable* var = scope_stack.get_variable(node->variable_name.get(), nullptr);
 
     if (var == nullptr) {
-        var = new VariableNumber(node->variable_name);
+        var = new VariableNumber(node->variable_name.get());
 
         FieldList* top_scope = scope_stack.top();
         top_scope->add_variable(var);
     } else {
-        error_already_defined(node->variable_name);
+        error_already_defined(node->variable_name.get());
     }
 }
 
 FieldList* BackendContext::field_list_find_block_parameters(TreeNodeBlockDefinition* block) const {
     auto* argument_list = new FieldList();
 
-    auto* list = &block->body->list;
+    auto& list = block->body->list;
 
-    for (auto next_node : *list) {
+    for (auto& next_node : list) {
         TreeNodeType node_type = next_node->type;
         if (node_type != TREE_NODE_TYPE_VAR_DEFINITION)
             break;
 
-        auto* var_definition = (TreeNodeVariableDefinition*)next_node;
+        auto* var_definition = (TreeNodeVariableDefinition*)next_node.get();
 
         if (!var_definition->is_contextual)
             break;
 
-        Variable* number = new VariableNumber(var_definition->variable_name);
+        Variable* number = new VariableNumber(var_definition->variable_name.get());
         argument_list->add_variable(number);
     }
 
@@ -609,16 +616,13 @@ FieldList* BackendContext::field_list_find_block_parameters(TreeNodeBlockDefinit
 }
 
 void BackendContext::field_list_declare_block(TreeNodeBlockDefinition* node) const {
-    auto* identifier = node->block_name;
+    auto* identifier = node->block_name.get();
 
     Variable* var = scope_stack.get_variable(identifier, nullptr);
 
     if (var == nullptr) {
         FieldList* argument_list = field_list_find_block_parameters(node);
-        VariableFunction* func = nullptr;
-
-        if (argument_list)
-            func = new VariableFunction(identifier, argument_list);
+        auto* func = new VariableFunction(identifier, argument_list);
 
         FieldList* top_scope = scope_stack.top();
 
@@ -628,8 +632,7 @@ void BackendContext::field_list_declare_block(TreeNodeBlockDefinition* node) con
     }
 }
 
-FieldList* BackendContext::read_scope_variables(TreeNodeList* node,
-                                                bool reset_frame_offset) {
+FieldList* BackendContext::read_scope_variables(TreeNodeList* node, bool reset_frame_offset) {
 
     auto* scope = new FieldList();
     scope_stack.push_scope(scope);
@@ -637,14 +640,12 @@ FieldList* BackendContext::read_scope_variables(TreeNodeList* node,
     if (reset_frame_offset)
         scope->byte_offset = 0;
 
-    std::list<TreeNode*>* list = &node->list;
-
-    for (auto next_node : *list) {
+    for (auto& next_node : node->list) {
         TreeNodeType node_type = next_node->type;
         if (node_type == TREE_NODE_TYPE_VAR_DEFINITION) {
-            field_list_declare_variable((TreeNodeVariableDefinition*)next_node);
+            field_list_declare_variable((TreeNodeVariableDefinition*)next_node.get());
         } else if (node_type == TREE_NODE_TYPE_BLOCK_DEFINITION) {
-            field_list_declare_block((TreeNodeBlockDefinition*)next_node);
+            field_list_declare_block((TreeNodeBlockDefinition*)next_node.get());
         }
 
         if (linked_compiler->state) {
@@ -659,10 +660,8 @@ void BackendContext::compile_block(TreeNodeList* node, bool reset_frame_offset) 
     FieldList* scope = read_scope_variables(node, reset_frame_offset);
 
     if (!linked_compiler->state) {
-        std::list<TreeNode*>* list = &node->list;
-
-        for (auto next_node : *list) {
-            compile_expression(next_node, 0);
+        for (auto& next_node : node->list) {
+            compile_expression(next_node.get(), 0);
         }
     }
 
@@ -673,14 +672,16 @@ void BackendContext::compile_block(TreeNodeList* node, bool reset_frame_offset) 
 
 void BackendContext::compile_callable_block(TreeNodeBlockDefinition* node) {
     fprintf(target, "; block ");
-    node->block_name->print(target);
+    fprintf(target, "%.*s", (int)node->block_name->variable_name.size(),
+            node->block_name->variable_name.data());
     fprintf(target, "\n");
 
     fprintf(target, "_bs_");
-    node->block_name->print(target);
+    fprintf(target, "%.*s", (int)node->block_name->variable_name.size(),
+            node->block_name->variable_name.data());
     fprintf(target, ":\n");
 
-    compile_block(node->body, true);
+    compile_block(node->body.get(), true);
 
     fprintf(target, "pop.ul rax\n"
                     "push.d 0\n"
@@ -694,14 +695,12 @@ void BackendContext::compile_program(TreeNodeList* node) {
 
     if (!linked_compiler->state) {
 
-        std::list<TreeNode*>* list = &node->list;
-
-        for (auto next_node : *list) {
+        for (auto& next_node : node->list) {
             if (next_node->type == TREE_NODE_TYPE_VAR_DEFINITION) {
-                auto* var_definition = (TreeNodeVariableDefinition*)next_node;
+                auto* var_definition = (TreeNodeVariableDefinition*)next_node.get();
                 if (var_definition->variable_value) {
-                    compile_assignment(var_definition->variable_name,
-                                       var_definition->variable_value, 0);
+                    compile_assignment(var_definition->variable_name.get(),
+                                       var_definition->variable_value.get(), 0);
                 }
             }
         }
@@ -716,9 +715,9 @@ void BackendContext::compile_program(TreeNodeList* node) {
         fprintf(target, "call _bs_main\n");
         fprintf(target, "hlt\n");
 
-        for (auto next_node : node->list) {
+        for (auto& next_node : node->list) {
             if (next_node->type == TREE_NODE_TYPE_BLOCK_DEFINITION) {
-                compile_callable_block((TreeNodeBlockDefinition*)next_node);
+                compile_callable_block((TreeNodeBlockDefinition*)next_node.get());
             }
         }
     }

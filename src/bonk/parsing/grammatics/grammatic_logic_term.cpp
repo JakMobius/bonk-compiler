@@ -3,9 +3,9 @@
 
 namespace bonk {
 
-TreeNode* Parser::parse_logic_term() {
+std::unique_ptr<TreeNode> Parser::parse_logic_term() {
 
-    TreeNode* expression = parse_unary_operator();
+    auto expression = parse_unary_operator();
     if (expression)
         return expression;
     if (linked_compiler->state)

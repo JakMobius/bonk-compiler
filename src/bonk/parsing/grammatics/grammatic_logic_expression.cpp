@@ -3,9 +3,9 @@
 
 namespace bonk {
 
-TreeNode* Parser::parse_logic_expression() {
-    TreeNode* term = parse_logic_term();
-    TreeNode* result = term;
+std::unique_ptr<TreeNode> Parser::parse_logic_expression() {
+
+    auto result = parse_logic_term();
 
     do {
         Lexeme* next = next_lexeme();
@@ -26,7 +26,7 @@ TreeNode* Parser::parse_logic_expression() {
 
         eat_lexeme();
 
-        TreeNode* next_term = parse_expression();
+        auto next_term = parse_expression();
         if (!next_term) {
             if (!linked_compiler->state) {
                 error("expected expression");
@@ -34,11 +34,12 @@ TreeNode* Parser::parse_logic_expression() {
             return nullptr;
         }
 
-        auto* sum = new TreeNodeOperator(oper_type);
+        auto sum = std::make_unique<TreeNodeOperator>();
+        sum->oper_type = oper_type;
 
-        sum->left = result;
-        sum->right = next_term;
-        result = sum;
+        sum->left = std::move(result);
+        sum->right = std::move(next_term);
+        result = std::move(sum);
 
     } while (true);
 

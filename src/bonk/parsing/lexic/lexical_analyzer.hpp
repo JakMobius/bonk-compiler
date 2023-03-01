@@ -61,6 +61,11 @@ namespace bonk {
 extern const char* BONK_OPERATOR_NAMES[];
 extern const char* BONK_KEYWORD_NAMES[];
 
+struct NumberLexeme {
+    long long int integer_value;
+    long double double_value;
+};
+
 struct Lexeme {
     ParserPosition* position;
     LexemeType type;
@@ -73,10 +78,10 @@ struct Lexeme {
             BraceType brace_type;
         } brace_data;
         struct {
-            TreeNodeNumber* number;
+            NumberLexeme number;
         } number_data;
         struct {
-            TreeNodeIdentifier* identifier;
+            std::string_view identifier;
         } identifier_data;
         struct {
             OperatorType operator_type;
