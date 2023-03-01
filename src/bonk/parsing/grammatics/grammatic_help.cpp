@@ -40,12 +40,12 @@ bool Parser::parse_help(TreeNodeList* target) {
                   std::istreambuf_iterator<char>());
 
 
-    if (linked_compiler->lexical_analyzer->file_already_compiled(full_path)) {
+    if (linked_compiler->lexical_analyzer.file_already_compiled(full_path)) {
         return true;
     }
 
     std::vector<Lexeme> lexemes =
-        linked_compiler->lexical_analyzer->parse_file(full_path.c_str(), source.c_str());
+        linked_compiler->lexical_analyzer.parse_file(full_path.c_str(), source.c_str());
 
     if (linked_compiler->state) {
         return true;

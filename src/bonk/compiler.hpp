@@ -4,6 +4,7 @@ namespace bonk {
 
 struct Compiler;
 struct CompilerConfig;
+struct Parser;
 
 enum CompilerState {
     BONK_COMPILER_OK,
@@ -17,7 +18,6 @@ enum CompilerState {
 #include "backend/backend.hpp"
 #include "errors.hpp"
 #include "parsing/lexic/lexical_analyzer.hpp"
-#include "parsing/parser.hpp"
 #include "tree/ast.hpp"
 
 namespace bonk {
@@ -31,8 +31,8 @@ struct CompilerConfig {
 struct Compiler {
     CompilerConfig* config = nullptr;
 
-    Parser* parser = nullptr;
-    LexicalAnalyzer* lexical_analyzer = nullptr;
+    Parser parser;
+    LexicalAnalyzer lexical_analyzer;
 
     CompilerState state = BONK_COMPILER_OK;
 
@@ -58,3 +58,5 @@ struct Compiler {
 };
 
 } // namespace bonk
+
+#include "parsing/parser.hpp"

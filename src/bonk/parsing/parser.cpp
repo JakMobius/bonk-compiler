@@ -1,5 +1,6 @@
 
 #include "parser.hpp"
+#include "../compiler.hpp"
 
 namespace bonk {
 
@@ -7,12 +8,11 @@ Parser::Parser(Compiler* compiler) {
     linked_compiler = compiler;
 }
 
-TreeNodeList* Parser::parse_file(std::vector<Lexeme>* lexemes) {
+std::unique_ptr<TreeNodeList> Parser::parse_file(std::vector<Lexeme>* lexemes) {
     input = lexemes;
-    auto* target = new TreeNodeList();
+    auto target = std::make_unique<TreeNodeList>();
 
-    if (!parse_global(target)) {
-        delete target;
+    if (!parse_global(target.get())) {
         return nullptr;
     }
 

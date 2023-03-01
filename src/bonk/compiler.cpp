@@ -7,21 +7,12 @@ void Compiler::out_of_memory() {
     fatal_error("Compiler ran out of memory");
 }
 
-Compiler::Compiler(CompilerConfig* the_config) {
+Compiler::Compiler(CompilerConfig* the_config): parser(this), lexical_analyzer(this) {
     config = the_config;
-
-    // TODO: better naming
-    lexical_analyzer = new LexicalAnalyzer(this);
-    parser = new Parser(this);
 }
 
 Compiler::~Compiler() {
-    delete parser;
-    delete lexical_analyzer;
-
     config = nullptr;
-    lexical_analyzer = nullptr;
-    parser = nullptr;
 }
 
 bool Compiler::compile_ast(TreeNodeList* ast, FILE* target) {

@@ -6,6 +6,7 @@ namespace bonk {
 struct Lexeme;
 struct LexicalAnalyzer;
 struct ParserPosition;
+struct Compiler;
 
 enum LexemeType {
     BONK_LEXEME_NULL,
@@ -48,10 +49,9 @@ enum BraceType {
 
 } // namespace bonk
 
+#include <vector>
 #include <cctype>
-#include "bonk/compiler.hpp"
 #include "bonk/tree/ast.hpp"
-#include "../parser.hpp"
 #include "../parser_position.hpp"
 #include "identifier_lexeme.hpp"
 #include "number_lexeme.hpp"

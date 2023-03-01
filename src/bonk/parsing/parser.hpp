@@ -8,12 +8,12 @@
 namespace bonk {
 
 struct Parser;
+struct Compiler;
 
 }
 
 #include <vector>
 #include <optional>
-#include "../compiler.hpp"
 #include "./lexic/lexical_analyzer.hpp"
 
 namespace bonk {
@@ -37,7 +37,7 @@ struct Parser {
 
     Parser(Compiler* compiler);
 
-    TreeNodeList* parse_file(std::vector<Lexeme>* lexemes);
+    std::unique_ptr<TreeNodeList> parse_file(std::vector<Lexeme>* lexemes);
 
     bool append_file(std::vector<Lexeme>* lexemes, TreeNodeList* target);
 
@@ -73,3 +73,6 @@ struct Parser {
 };
 
 } // namespace bonk
+
+// TODO: Get rid of trailing includes
+#include "../compiler.hpp"

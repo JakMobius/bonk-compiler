@@ -1,5 +1,6 @@
 
 #include "lexical_analyzer.hpp"
+#include "../../compiler.hpp"
 
 namespace bonk {
 

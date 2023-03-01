@@ -99,8 +99,8 @@ int main(int argc, const char* argv[]) {
 
     source.assign((std::istreambuf_iterator<char>(file_stream)), std::istreambuf_iterator<char>());
 
-    auto lexemes = compiler.lexical_analyzer->parse_file(input.c_str(), source.c_str());
-    auto ast = compiler.parser->parse_file(&lexemes);
+    auto lexemes = compiler.lexical_analyzer.parse_file(input.c_str(), source.c_str());
+    auto ast = compiler.parser.parse_file(&lexemes);
 
     if (ast) {
         if (ast_flag) {
@@ -108,7 +108,7 @@ int main(int argc, const char* argv[]) {
             bonk::JsonDumpAstVisitor visitor{&serializer};
             ast->accept(&visitor);
         } else {
-            compiler.compile_ast(ast, output_file);
+            compiler.compile_ast(ast.get(), output_file);
         }
     }
 
