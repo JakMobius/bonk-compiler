@@ -2,7 +2,6 @@
 #include <fstream>
 #include <sys/stat.h>
 #include "argparse/argparse.hpp"
-#include "bonk/backend/ede/ede_backend.hpp"
 #include "bonk/backend/x86/x86_backend.hpp"
 #include "bonk/compiler.hpp"
 #include "bonk/tree/json_dump_ast_visitor.hpp"
@@ -36,9 +35,9 @@ int main(int argc, const char* argv[]) {
         .nargs(1)
         .help("path to the output file");
     program.add_argument("-t", "--target")
-        .default_value(std::string("ede"))
+        .default_value(std::string("x86"))
         .nargs(1)
-        .help("compile target (ede or x86)");
+        .help("compile target (x86)");
     program.add_argument("-l", "--log-file").nargs(1).help("path to the log file");
 
     try {
@@ -65,8 +64,6 @@ int main(int argc, const char* argv[]) {
 
     if (target_flag == "x86") {
         config.compile_backend = new bonk::x86_backend::Backend();
-    } else if (target_flag == "ede") {
-        config.compile_backend = new bonk::ede_backend::Backend();
     } else {
         init_fatal_error("unknown compile target: %s", target_flag.c_str());
         return 1;
