@@ -133,6 +133,9 @@ struct Lexeme {
     bool is(BraceType brace_type);
     bool is_number();
     bool is_identifier();
+    bool is_identifier(std::string_view exact);
+    bool is_string();
+    bool is_string(std::string_view exact);
 };
 
 enum class OperatorMatch {

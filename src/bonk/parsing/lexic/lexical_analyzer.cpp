@@ -66,7 +66,7 @@ void LexicalAnalyzer::next() {
         return;
     }
 
-    if (isdigit(next_char())) {
+    if (isdigit(next_char()) || next_char() == '.') {
         parse_number_lexeme(&lexemes.back());
         return;
     }
@@ -87,6 +87,19 @@ void LexicalAnalyzer::next() {
             << "unexpected character '" << next_char() << "'\n";
         return;
     }
+
+    // Check if it's a keyword
+    for (int i = 0; BONK_KEYWORD_NAMES[i]; i++) {
+        if (word == BONK_KEYWORD_NAMES[i]) {
+            lexemes.back().type = LexemeType::l_keyword;
+            lexemes.back().data = KeywordLexeme{KeywordType(i)};
+            return;
+        }
+    }
+
+    // Otherwise it's an identifier
+    lexemes.back().type = LexemeType::l_identifier;
+    lexemes.back().data = IdentifierLexeme{word};
 }
 
 bool LexicalAnalyzer::parse_string_lexeme(Lexeme* target) {
@@ -262,6 +275,18 @@ bool Lexeme::is_number() {
 
 bool Lexeme::is_identifier() {
     return type == LexemeType::l_identifier;
+}
+
+bool Lexeme::is_identifier(std::string_view exact) {
+    return type == LexemeType::l_identifier && std::get<IdentifierLexeme>(data).identifier == exact;
+}
+
+bool Lexeme::is_string() {
+    return type == LexemeType::l_string;
+}
+
+bool Lexeme::is_string(std::string_view exact) {
+    return type == LexemeType::l_string && std::get<StringLexeme>(data).string == exact;
 }
 
 } // namespace bonk

@@ -23,9 +23,12 @@ static unsigned char char_to_digit_radix(char c, int radix) {
         return c - '0';
 
     if (radix <= 16) {
+        c = tolower(c);
+        if (c < 'a')
+            return -1;
         if (c > 'a' + (radix - 11))
             return -1;
-        return c - 'a';
+        return c - 'a' + 10;
     }
 
     return -1;
@@ -41,7 +44,8 @@ bool LexicalAnalyzer::parse_number_lexeme(Lexeme* target) {
     int radix = 10;
 
     int mantissa_digits = parse_digits_lexeme(10, &integer_result, &float_result);
-    if (mantissa_digits == 0) {
+    if (mantissa_digits == 0 && next_char() != '.') {
+        linked_compiler->error().at(current_position) << "expected number";
         return false;
     }
 
