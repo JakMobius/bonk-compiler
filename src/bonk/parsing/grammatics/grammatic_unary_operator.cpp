@@ -3,80 +3,42 @@
 
 namespace bonk {
 
-std::unique_ptr<TreeNode> Parser::parse_bams() {
-    Lexeme* lexeme = next_lexeme();
-    if (lexeme->type == BONK_LEXEME_INLINE_BAMS) {
-        eat_lexeme();
-
-        auto identifier = std::make_unique<TreeNodeIdentifier>();
-        identifier->variable_name = lexeme->identifier_data.identifier;
-        identifier->source_position = lexeme->position->clone();
-
-        auto node = std::make_unique<TreeNodeOperator>();
-        node->oper_type = BONK_OPERATOR_BAMS;
-        node->source_position = lexeme->position->clone();
-        node->left = std::move(identifier);
-        return node;
-    }
-
-    error("expected inline assembly body");
-
-    return nullptr;
-}
-
 std::unique_ptr<TreeNode> Parser::parse_unary_operator() {
     Lexeme* lexeme = next_lexeme();
 
-    if (lexeme->type == BONK_LEXEME_KEYWORD) {
+    if (lexeme->type != LexemeType::l_operator) {
+        return nullptr;
+    }
+    auto oper = std::get<OperatorLexeme>(lexeme->data).type;
 
-        auto oper = BONK_OPERATOR_INVALID;
-
-        if (lexeme->keyword_data.keyword_type == BONK_KEYWORD_BREK) {
-            oper = BONK_OPERATOR_BREK;
-        } else if (lexeme->keyword_data.keyword_type == BONK_KEYWORD_REBONK) {
-            oper = BONK_OPERATOR_REBONK;
-        }
-
-        if (oper != BONK_OPERATOR_INVALID) {
-            eat_lexeme();
-
-            auto statement = std::make_unique<TreeNodeOperator>();
-            statement->oper_type = BONK_OPERATOR_BREK;
-            statement->source_position = lexeme->position->clone();
-            return statement;
-        }
-
-        if (lexeme->keyword_data.keyword_type == BONK_KEYWORD_PRINT) {
-            oper = BONK_OPERATOR_PRINT;
-        } else if (lexeme->keyword_data.keyword_type == BONK_KEYWORD_BONK) {
-            oper = BONK_OPERATOR_BONK;
-        } else if (lexeme->keyword_data.keyword_type == BONK_KEYWORD_REBONK) {
-            oper = BONK_OPERATOR_REBONK;
-        } else if (lexeme->keyword_data.keyword_type == BONK_KEYWORD_BAMS) {
-            eat_lexeme();
-            return parse_bams();
-        } else {
-            return nullptr;
-        }
-
+    switch(oper) {
+    case OperatorType::o_brek: {
         eat_lexeme();
-
+        auto no_arg_operator = std::make_unique<TreeNodeOperator>();
+        no_arg_operator->oper_type = OperatorType::o_brek;
+        no_arg_operator->source_position = lexeme->start_position;
+        return no_arg_operator;
+    }
+    case OperatorType::o_bonk:
+    case OperatorType::o_call: {
+        eat_lexeme();
         auto expression = parse_expression();
         if (!expression) {
-            if (linked_compiler->state)
+            if (linked_compiler.state)
                 return nullptr;
-            error("missing operand");
+            linked_compiler.error().at(next_lexeme()->start_position) << "missing operand";
         }
 
-        auto print_call = std::make_unique<TreeNodeOperator>();
-        print_call->oper_type = oper;
-        print_call->source_position = lexeme->position->clone();
-        print_call->right = std::move(expression);
+        auto unary_operator = std::make_unique<TreeNodeOperator>();
+        unary_operator->oper_type = oper;
+        unary_operator->source_position = lexeme->start_position;
+        unary_operator->right = std::move(expression);
 
-        return print_call;
+        return unary_operator;
     }
-
-    return nullptr;
+    default:
+        return nullptr;
+    }
 }
 
 } // namespace bonk

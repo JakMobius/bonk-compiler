@@ -3,21 +3,22 @@
 namespace bonk {
 
 struct Backend;
+struct Compiler;
 
 }
 
-#include "../compiler.hpp"
+#include "utils/streams.hpp"
 #include "../tree/ast.hpp"
 
 namespace bonk {
 
 struct Backend {
-    Backend() = default;
+    Compiler& linked_compiler;
+    Backend(Compiler& linked_compiler): linked_compiler(linked_compiler) {};
 
     virtual ~Backend() = default;
 
-    virtual bool compile_ast(Compiler* linked_compiler, TreeNodeList* ast,
-                             FILE* target);
+    virtual bool compile_ast(TreeNodeList* ast, const OutputStream& target);
 };
 
 } // namespace bonk

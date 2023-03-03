@@ -4,219 +4,164 @@
 
 namespace bonk {
 
-const char* BONK_KEYWORD_NAMES[] = {"var",   "block",  "print", "context", "bonk",
-                                    "check", "cycle",  "brek",  "bams",    "and",
-                                    "or",    "rebonk", "help",  "promise", nullptr};
+const char* BONK_OPERATOR_NAMES[] = {
+    "@",    "+",    "-",    "*",    "/",  "+=",  "-=", "*=",   "/=",
+    "=",    "==",   "<",    ">",    "<=", ">=",  "!=", "blok", "hive",
+    "brek", "bowl", "bonk", "loop", "of", "and", "or", "help", nullptr};
 
-const char* BONK_OPERATOR_NAMES[] = {"+", "-",  "*",  "/",  "=", "==",   "<",
-                                     ">", "<=", ">=", "!=", "",  nullptr};
+const char* BONK_KEYWORD_NAMES[] = {"flot", "nubr", "strg", "many", nullptr};
+
+const char* BONK_BRACE_NAMES[] = {"{", "}", "(", ")", "[", "]", nullptr};
 
 LexicalAnalyzer::LexicalAnalyzer(Compiler* compiler) {
     linked_compiler = compiler;
+
+    int operator_count = 0;
+    while (BONK_OPERATOR_NAMES[operator_count])
+        operator_count++;
+    operator_match.resize(operator_count);
 }
 
-void LexicalAnalyzer::make_operator_lexeme(Lexeme* lexeme, OperatorType type) {
-    lexeme->type = BONK_LEXEME_OPERATOR;
-    lexeme->operator_data.operator_type = type;
-}
-
-void LexicalAnalyzer::make_brace_lexeme(Lexeme* lexeme, BraceType type) {
-    lexeme->type = BONK_LEXEME_BRACE;
-    lexeme->brace_data.brace_type = type;
-}
-
-bool LexicalAnalyzer::next() {
-    char c = next_char();
-
-    if (c == '\0') {
-        return false;
+void LexicalAnalyzer::next() {
+    if (!lexemes.empty()) {
+        lexemes.back().end_position = current_position;
     }
-
-    if (is_line_comment) {
-        if (c == '\n') {
-            is_line_comment = false;
-        }
-        eat_char();
-        return true;
-    }
-
-    if (is_multiline_comment) {
-        if (c == '*') {
-            eat_char();
-            c = next_char();
-            if (c == '/')
-                is_multiline_comment = false;
-            else
-                return true;
-        }
-        eat_char();
-        return true;
-    }
-
-    if (c == ' ' || c == '\n' || c == '\t') {
-        eat_char();
-        return true;
-    }
-
-    ParserPosition saved_position = position;
     Lexeme next_lexeme = {};
-    next_lexeme.position = &saved_position;
-
-    if (c == '@') {
-        next_lexeme.type = BONK_LEXEME_CALL;
-        eat_char();
-    } else if (c == ';') {
-        next_lexeme.type = BONK_LEXEME_SEMICOLON;
-        eat_char();
-    } else if (c == ',') {
-        next_lexeme.type = BONK_LEXEME_COMMA;
-        eat_char();
-    } else if (isalpha(c)) {
-        if (!parse_identifier_lexeme(&next_lexeme))
-            return false;
-    } else if (isdigit(c)) {
-        if (!parse_number_lexeme(&next_lexeme))
-            return false;
-    } else if (c == '/') {
-        eat_char();
-        char next = next_char();
-
-        if (next == '/') {
-            is_line_comment = true;
-            eat_char();
-            return true;
-        } else if (next == '*') {
-            is_multiline_comment = true;
-            eat_char();
-            return true;
-        } else
-            make_operator_lexeme(&next_lexeme, BONK_OPERATOR_DIVIDE);
-    } else if (c == '=' || c == '>' || c == '<') {
-        eat_char();
-        if (next_char() == '=') {
-            switch (c) {
-            case '<':
-                make_operator_lexeme(&next_lexeme, BONK_OPERATOR_LESS_OR_EQUAL_THAN);
-                break;
-            case '>':
-                make_operator_lexeme(&next_lexeme, BONK_OPERATOR_GREATER_OR_EQUAL_THAN);
-                break;
-            default:
-                make_operator_lexeme(&next_lexeme, BONK_OPERATOR_EQUALS);
-                break;
-            }
-            eat_char();
-        } else {
-            switch (c) {
-            case '<':
-                make_operator_lexeme(&next_lexeme, BONK_OPERATOR_LESS_THAN);
-                break;
-            case '>':
-                make_operator_lexeme(&next_lexeme, BONK_OPERATOR_GREATER_THAN);
-                break;
-            default:
-                make_operator_lexeme(&next_lexeme, BONK_OPERATOR_ASSIGNMENT);
-                break;
-            }
-        }
-    } else if (c == '!') {
-        eat_char();
-        if (next_char() == '=') {
-            eat_char();
-            make_operator_lexeme(&next_lexeme, BONK_OPERATOR_NOT_EQUAL);
-        } else {
-            error("use 'not' instead of '!'");
-            return false;
-        }
-    } else if (c == '{') {
-        eat_char();
-        if (lexemes.size() == 0) {
-            make_brace_lexeme(&next_lexeme, BONK_BRACE_L_CB);
-        } else {
-            Lexeme last_lexeme = lexemes[lexemes.size() - 1];
-            if (last_lexeme.type != BONK_LEXEME_KEYWORD ||
-                last_lexeme.keyword_data.keyword_type != BONK_KEYWORD_BAMS) {
-                make_brace_lexeme(&next_lexeme, BONK_BRACE_L_CB);
-            } else {
-                next_lexeme.type = BONK_LEXEME_INLINE_BAMS;
-
-                unsigned long begin_position = position.index;
-                const char* begin_pointer = text + begin_position;
-
-                while (true) {
-                    c = next_char();
-                    if (c == '\0') {
-                        error("Expected inline assembly");
-                        return false;
-                    }
-                    eat_char();
-                    if (c == '}') {
-                        break;
-                    }
-                }
-
-                unsigned long length = position.index - begin_position - 1;
-                next_lexeme.identifier_data.identifier = std::string_view(begin_pointer, length);
-            }
-        }
-    } else {
-        switch (c) {
-        case '+':
-            make_operator_lexeme(&next_lexeme, BONK_OPERATOR_PLUS);
-            break;
-        case '-':
-            make_operator_lexeme(&next_lexeme, BONK_OPERATOR_MINUS);
-            break;
-        case '*':
-            make_operator_lexeme(&next_lexeme, BONK_OPERATOR_MULTIPLY);
-            break;
-        case '}':
-            make_brace_lexeme(&next_lexeme, BONK_BRACE_R_CB);
-            break;
-        case '[':
-            make_brace_lexeme(&next_lexeme, BONK_BRACE_L_SB);
-            break;
-        case ']':
-            make_brace_lexeme(&next_lexeme, BONK_BRACE_R_SB);
-            break;
-        case '(':
-            make_brace_lexeme(&next_lexeme, BONK_BRACE_L_RB);
-            break;
-        case ')':
-            make_brace_lexeme(&next_lexeme, BONK_BRACE_R_RB);
-            break;
-        default:
-            error("Expected lexeme");
-            return false;
-        }
-        eat_char();
-    }
-
-    next_lexeme.position = next_lexeme.position->clone();
-
+    next_lexeme.start_position = current_position;
     lexemes.push_back(next_lexeme);
 
+    while (isspace(next_char())) {
+        eat_char();
+    }
+
+    switch (next_char()) {
+    case ',':
+        lexemes.back().type = LexemeType::l_comma;
+        eat_char();
+        return;
+    case ':':
+        lexemes.back().type = LexemeType::l_colon;
+        eat_char();
+        return;
+    case ';':
+        lexemes.back().type = LexemeType::l_semicolon;
+        eat_char();
+        return;
+    case '\0':
+        lexemes.back().type = LexemeType::l_eof;
+        return;
+    case '{':
+    case '}':
+    case '(':
+    case ')':
+    case '[':
+    case ']':
+        lexemes.back().type = LexemeType::l_brace;
+        lexemes.back().data = BraceLexeme{BraceType(next_char())};
+        eat_char();
+        return;
+    case '"':
+    case '\'':
+        parse_string_lexeme(&lexemes.back());
+        return;
+    }
+
+    if (isdigit(next_char())) {
+        parse_number_lexeme(&lexemes.back());
+        return;
+    }
+
+    // Try to read an operator
+    int operator_index = next_operator();
+
+    if (operator_index != -1) {
+        lexemes.back().type = LexemeType::l_operator;
+        lexemes.back().data = OperatorLexeme{OperatorType(operator_index)};
+        return;
+    }
+
+    // Read next word
+    std::string_view word = next_word();
+    if (word.empty()) {
+        linked_compiler->error().at(current_position)
+            << "unexpected character '" << next_char() << "'\n";
+        return;
+    }
+}
+
+bool LexicalAnalyzer::parse_string_lexeme(Lexeme* target) {
+    auto quote_type = QuoteType(next_char());
+    target->type = LexemeType::l_string;
+
+    std::stringstream stream;
+
+    eat_char();
+
+    while (next_char() != (char)quote_type) {
+        if (next_char() == '\0') {
+            linked_compiler->error().at(current_position)
+                << "unexpected end of file while parsing string\n";
+            return false;
+        }
+
+        if (next_char() == '\\') {
+            eat_char();
+            switch (next_char()) {
+            case 'n':
+                stream << '\n';
+                break;
+            case 't':
+                stream << '\t';
+                break;
+            case 'r':
+                stream << '\r';
+                break;
+            case '0':
+                stream << '\0';
+                break;
+            case '\\':
+                stream << '\\';
+                break;
+            case '"':
+                stream << '"';
+                break;
+            case '\'':
+                stream << '\'';
+                break;
+            default:
+                linked_compiler->error().at(current_position)
+                    << "unexpected escape sequence '\\" << next_char() << "'\n";
+                return false;
+            }
+            eat_char();
+            continue;
+        }
+
+        stream << next_char();
+        eat_char();
+    }
+
+    eat_char();
+
+    target->data = StringLexeme{quote_type, stream.str()};
     return true;
 }
 
-std::vector<Lexeme> LexicalAnalyzer::parse_file(const char* filename, const char* filetext) {
+std::vector<Lexeme> LexicalAnalyzer::parse_file(const char* filename, std::string_view source) {
 
     filename = strdup(filename);
 
-    add_compiled_file(filename);
-
-    position.filename = filename;
-    position.index = 0;
-    position.ch = 1;
-    position.line = 1;
-    text = filetext;
+    current_position.filename = filename;
+    current_position.index = 0;
+    current_position.ch = 1;
+    current_position.line = 1;
+    text = source;
 
     while (!linked_compiler->state) {
-        if (!next())
+        next();
+        if (lexemes.back().type == LexemeType::l_eof)
             break;
     }
-
-    lexemes.push_back({});
 
     std::vector<Lexeme> result = std::move(lexemes);
     lexemes = {};
@@ -225,7 +170,7 @@ std::vector<Lexeme> LexicalAnalyzer::parse_file(const char* filename, const char
 }
 
 char LexicalAnalyzer::next_char() const {
-    return text[position.index];
+    return text[current_position.index];
 }
 
 void LexicalAnalyzer::eat_char() {
@@ -233,25 +178,90 @@ void LexicalAnalyzer::eat_char() {
 
     assert(c != '\0');
 
-    position.ch++;
-    position.index++;
+    current_position.ch++;
+    current_position.index++;
     if (c == '\n') {
-        position.line++;
-        position.ch = 1;
+        current_position.line++;
+        current_position.ch = 1;
     }
 }
 
-bool LexicalAnalyzer::add_compiled_file(const std::string& file_path) {
-    compiled_files.push_back(file_path);
-    return true;
+std::string_view LexicalAnalyzer::next_word() {
+    int position = current_position.index;
+
+    while (isalnum(next_char()) || next_char() == '_' || isdigit(next_char())) {
+        eat_char();
+    }
+
+    return text.substr(position, current_position.index - position);
 }
 
-bool LexicalAnalyzer::file_already_compiled(const std::string& file_path) {
-    for (const auto & compiled_file : compiled_files) {
-        if (compiled_file == file_path)
-            return true;
+int LexicalAnalyzer::next_operator() {
+    // Try to match any operator listed in BONK_OPERATOR_NAMES
+
+    int position = current_position.index;
+    int operators_left = operator_match.size();
+
+    for (auto& i : operator_match)
+        i = OperatorMatch::maybe_matched;
+
+    while (char c = text[position]) {
+        int lexeme_position = position - current_position.index;
+
+        for (int i = 0; i < operator_match.size(); i++) {
+            if (operator_match[i] != OperatorMatch::maybe_matched)
+                continue;
+
+            if (BONK_OPERATOR_NAMES[i][lexeme_position] == '\0') {
+                operators_left--;
+                operator_match[i] = OperatorMatch::matched;
+                continue;
+            }
+
+            if (BONK_OPERATOR_NAMES[i][lexeme_position] != c) {
+                operators_left--;
+                operator_match[i] = OperatorMatch::not_matched;
+                continue;
+            }
+        }
+
+        if (operators_left == 0)
+            break;
+
+        position++;
     }
-    return false;
+
+    for (int i = 0; i < operator_match.size(); i++) {
+        if (operator_match[i] == OperatorMatch::matched) {
+            int length = strlen(BONK_OPERATOR_NAMES[i]);
+            // Invariant: operators do not contain newlines
+            current_position.index += length;
+            current_position.ch += length;
+            return i;
+        }
+    }
+
+    return -1;
+}
+
+bool Lexeme::is(KeywordType keyword) {
+    return type == LexemeType::l_keyword && std::get<KeywordLexeme>(data).type == keyword;
+}
+
+bool Lexeme::is(OperatorType operator_type) {
+    return type == LexemeType::l_operator && std::get<OperatorLexeme>(data).type == operator_type;
+}
+
+bool Lexeme::is(BraceType brace_type) {
+    return type == LexemeType::l_brace && std::get<BraceLexeme>(data).type == brace_type;
+}
+
+bool Lexeme::is_number() {
+    return type == LexemeType::l_number;
+}
+
+bool Lexeme::is_identifier() {
+    return type == LexemeType::l_identifier;
 }
 
 } // namespace bonk

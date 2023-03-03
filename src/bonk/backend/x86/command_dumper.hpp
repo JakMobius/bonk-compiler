@@ -15,18 +15,18 @@ class CommandDumper {
 
     virtual ~CommandDumper() = default;
 
-    void dump(AsmCommand* command, FILE* file, int depth);
+    void dump(AsmCommand* command, const OutputStream& output, int depth);
 
-    void dump_list(struct CommandList* list, FILE* file, int depth);
+    void dump_list(struct CommandList* list, const OutputStream& output, int depth);
 
   private:
-    void dump_scope_command(AsmCommand* command, FILE* file, int depth);
+    void dump_scope_command(AsmCommand* command, const OutputStream& output, int depth);
 
-    void depth_padding(FILE* file, int depth, bool is_label);
+    void depth_padding(const OutputStream& output, int depth, bool is_label);
 
-    void dump_register(AsmCommand* command, FILE* file, AbstractRegister reg) const;
+    void dump_register(const OutputStream& output, AbstractRegister reg) const;
 
-    void dump_param_register(AsmCommand* command, FILE* file, CommandParameter param) const;
+    void dump_param_register(AsmCommand* command, const OutputStream& output, CommandParameter param) const;
 };
 
 } // namespace bonk::x86_backend

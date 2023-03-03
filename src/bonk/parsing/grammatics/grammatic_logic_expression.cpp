@@ -9,27 +9,16 @@ std::unique_ptr<TreeNode> Parser::parse_logic_expression() {
 
     do {
         Lexeme* next = next_lexeme();
-        if (next->type != BONK_LEXEME_KEYWORD)
+        if (next->type != LexemeType::l_operator)
             break;
-        auto oper_type = BONK_OPERATOR_INVALID;
-
-        switch (next->keyword_data.keyword_type) {
-        case BONK_KEYWORD_AND:
-            oper_type = BONK_OPERATOR_AND;
-            break;
-        case BONK_KEYWORD_OR:
-            oper_type = BONK_OPERATOR_OR;
-            break;
-        default:
-            return result;
-        }
+        auto oper_type = std::get<OperatorLexeme>(next->data).type;
 
         eat_lexeme();
 
         auto next_term = parse_expression();
         if (!next_term) {
-            if (!linked_compiler->state) {
-                error("expected expression");
+            if (!linked_compiler.state) {
+                linked_compiler.error().at(next_lexeme()->start_position) << "expected expression";
             }
             return nullptr;
         }

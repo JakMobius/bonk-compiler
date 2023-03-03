@@ -4,11 +4,10 @@
 
 namespace bonk::x86_backend {
 
-bool Backend::compile_ast(Compiler* linked_compiler, TreeNodeList* ast,
-                          FILE* target) {
+bool Backend::compile_ast(TreeNodeList* ast, const OutputStream& output) {
 
-    auto* file = new macho::MachoFile();
-    BackendContext context{linked_compiler, file};
+    macho::MachoFile file;
+    BackendContext context{&linked_compiler, &file};
 
     context.compile_program(ast);
 
@@ -18,13 +17,12 @@ bool Backend::compile_ast(Compiler* linked_compiler, TreeNodeList* ast,
      * compilation
      */
 
-    if (linked_compiler->state) {
-        linked_compiler->state = BONK_COMPILER_OK;
+    if (linked_compiler.state) {
+        linked_compiler.state = BONK_COMPILER_OK;
         return false;
     }
 
-    file->flush(target);
-    delete file;
+    file.flush(output);
 
     return true;
 }

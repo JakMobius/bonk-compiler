@@ -12,60 +12,44 @@ std::unique_ptr<TreeNodeVariableDefinition> Parser::parse_var_definition() {
     Lexeme* next = next_lexeme();
     bool is_contextual = false;
 
-    if (next->type != BONK_LEXEME_KEYWORD)
-        return nullptr;
-
-    if (next->keyword_data.keyword_type == BONK_KEYWORD_CONTEXT) {
-        is_contextual = true;
-
-        eat_lexeme();
-        next = next_lexeme();
-        if (next->type != BONK_LEXEME_KEYWORD)
-            return nullptr;
-    }
-
-    if (next->keyword_data.keyword_type != BONK_KEYWORD_VAR)
+    if (!next->is(OperatorType::o_bowl))
         return nullptr;
 
     eat_lexeme();
     next = next_lexeme();
 
-    if (next->type != BONK_LEXEME_IDENTIFIER) {
-        error("expected variable name");
+    if (next->is_identifier()) {
+        linked_compiler.error().at(next->start_position) << "expected variable name";
         return nullptr;
     }
 
     eat_lexeme();
 
     auto identifier = std::make_unique<TreeNodeIdentifier>();
-    identifier->variable_name = next->identifier_data.identifier;
-    identifier->source_position = next->position->clone();
 
-    auto definition =
-        std::make_unique<TreeNodeVariableDefinition>();
+    identifier->variable_name = std::get<IdentifierLexeme>(next->data).identifier;
+    identifier->source_position = next->start_position;
+
+    auto definition = std::make_unique<TreeNodeVariableDefinition>();
     definition->variable_name = std::move(identifier);
     definition->is_contextual = is_contextual;
 
-    definition->source_position = next->position->clone();
+    definition->source_position = next->start_position;
 
     next = next_lexeme();
 
-    if (next->type == BONK_LEXEME_OPERATOR &&
-        next->operator_data.operator_type == BONK_OPERATOR_ASSIGNMENT) {
-        eat_lexeme();
-        if (is_contextual) {
-            error("context variable may not be initialized");
-            return nullptr;
-        }
+    if (!next->is(OperatorType::o_assign))
+        return definition;
+    eat_lexeme();
 
-        definition->variable_value = parse_expression();
+    definition->variable_value = parse_expression();
 
-        if (definition->variable_value == nullptr) {
-            if (!linked_compiler->state) {
-                error("expected initial variable value");
-            }
-            return nullptr;
+    if (definition->variable_value == nullptr) {
+        if (!linked_compiler.state) {
+            linked_compiler.error().at(next_lexeme()->start_position)
+                << "expected initial variable value";
         }
+        return nullptr;
     }
 
     return definition;

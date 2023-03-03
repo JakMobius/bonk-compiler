@@ -14,12 +14,12 @@ std::unique_ptr<TreeNode> Parser::parse_expression() {
 std::unique_ptr<TreeNode> Parser::parse_expression_leveled(bool top_level) {
 
     auto expression = parse_logic_expression();
-    if (linked_compiler->state)
+    if (linked_compiler.state)
         return nullptr;
 
     if (!expression) {
         expression = parse_unary_operator();
-        if (linked_compiler->state)
+        if (linked_compiler.state)
             return nullptr;
     }
 
@@ -27,17 +27,17 @@ std::unique_ptr<TreeNode> Parser::parse_expression_leveled(bool top_level) {
 
         if (!expression) {
             expression = parse_var_definition();
-            if (linked_compiler->state)
+            if (linked_compiler.state)
                 return nullptr;
         }
 
         Lexeme* next = next_lexeme();
-        if (next->type != BONK_LEXEME_SEMICOLON) {
+        if (next->type != LexemeType::l_semicolon) {
             if (expression) {
-                error("expected semicolon");
+                linked_compiler.error().at(next_lexeme()->start_position) << "expected semicolon";
             }
         } else {
-            while (next->type == BONK_LEXEME_SEMICOLON) {
+            while (next->type == LexemeType::l_semicolon) {
                 eat_lexeme();
                 next = next_lexeme();
             }
@@ -49,7 +49,7 @@ std::unique_ptr<TreeNode> Parser::parse_expression_leveled(bool top_level) {
 
     if (!expression) {
         expression = parse_sub_block();
-        if (linked_compiler->state)
+        if (linked_compiler.state)
             return nullptr;
     }
 

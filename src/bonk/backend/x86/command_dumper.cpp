@@ -5,160 +5,157 @@
 
 namespace bonk::x86_backend {
 
-void CommandDumper::depth_padding(FILE* file, int depth, bool is_label) {
+void CommandDumper::depth_padding(const OutputStream& file, int depth, bool is_label) {
     if (!is_label)
-        fprintf(file, "   ");
+        file.get_stream() << "   ";
     for (int i = 0; i < depth; i++) {
-        fprintf(file, "  ");
+        file.get_stream() << "  ";
     }
 }
 
-void CommandDumper::dump_register(AsmCommand* command, FILE* file, AbstractRegister reg) const {
+void CommandDumper::dump_register(const OutputStream& file, AbstractRegister reg) const {
 
     if (command_list) {
         AbstractRegisterDescriptor* descriptor =
             command_list->parent_buffer->descriptors.get_descriptor(reg);
         if (descriptor->has_register_constraint) {
-            fprintf(file, "%s", ASM_REGISTERS_64[descriptor->last_register_location]);
+            file.get_stream() << ASM_REGISTERS_64[descriptor->last_register_location];
             return;
         }
     }
 
-    fprintf(file, "_r%llu", reg);
+    file.get_stream() << "_r" << reg;
 }
 
-void CommandDumper::dump_param_register(AsmCommand* command, FILE* file, CommandParameter param) const {
+void CommandDumper::dump_param_register(AsmCommand* command, const OutputStream& output, CommandParameter param) const {
 
     if (command_list) {
         AbstractRegisterDescriptor* descriptor =
             command_list->parent_buffer->descriptors.get_descriptor(param.reg);
         if (descriptor->has_register_constraint) {
             if (param.type == PARAMETER_TYPE_REG_64) {
-                fprintf(file, "%s", ASM_REGISTERS_64[descriptor->last_register_location]);
-                return;
+                output.get_stream() << ASM_REGISTERS_64[descriptor->last_register_location];
             } else {
-                fprintf(file, "%s", ASM_REGISTERS_8[descriptor->last_register_location]);
-                return;
+                output.get_stream() << ASM_REGISTERS_8[descriptor->last_register_location];
             }
+            return;
         }
     }
 
-    fprintf(file, "_r%llu", param.reg);
+    output.get_stream() << "_r" << param.reg;
 }
 
-void CommandDumper::dump_scope_command(AsmCommand* command, FILE* file, int depth) {
+void CommandDumper::dump_scope_command(AsmCommand* command, const OutputStream& file, int depth) {
     depth_padding(file, depth, false);
-    fprintf(file, "colorizer::scope {\n");
+    file.get_stream() << "colorizer::scope {\n";
 
-    if (command->read_registers.size()) {
+    if (!command->read_registers.empty()) {
         depth_padding(file, depth + 1, false);
-        fprintf(file, "; %d read registers (", command->read_registers.size());
+        file.get_stream() << "; " << command->read_registers.size() << " read registers (";
 
         for (int i = 0, j = 0; i < command->read_registers.size(); i++) {
             if (j > 0)
-                fprintf(file, ", ");
-            dump_register(command, file, command->read_registers[i]);
+                file.get_stream() << ", ";
+            dump_register(file, command->read_registers[i]);
             j++;
         }
-        fprintf(file, ")\n");
+        file.get_stream() << ")\n";
     }
-    if (command->write_registers.size()) {
+    if (!command->write_registers.empty()) {
         depth_padding(file, depth + 1, false);
-        fprintf(file, "; %d write registers (", command->write_registers.size());
+        file.get_stream() << "; " << command->write_registers.size() << " write registers (";
         for (int i = 0, j = 0; i < command->write_registers.size(); i++) {
             if (j > 0)
-                fprintf(file, ", ");
-            dump_register(command, file, command->write_registers[i]);
+                file.get_stream() << ", ";
+            dump_register(file, command->write_registers[i]);
             j++;
         }
-        fprintf(file, ")\n");
+        file.get_stream() << ")\n";
     }
 
     dump_list(((ScopeCommand*)command)->commands, file, depth + 1);
     depth_padding(file, depth, false);
-    printf("}");
+    file.get_stream() << "}\n";
 }
 
-void CommandDumper::dump(AsmCommand* command, FILE* file, int depth) {
+void CommandDumper::dump(AsmCommand* command, const OutputStream& file, int depth) {
     if (command->type == COMMAND_COLORIZER_SCOPE) {
         dump_scope_command(command, file, depth);
         return;
     }
     if (command->type == COMMAND_JMP_LABEL) {
         depth_padding(file, depth, true);
-        fprintf(file, "L%lu:", ((JmpLabel*)command)->get_index());
+        file.get_stream() << "L" << ((JmpLabel*)command)->get_index() << ":\n";
         return;
     }
     depth_padding(file, depth, false);
-    fprintf(file, "%s", ASM_MNEMONICS[command->type]);
+    file.get_stream() << ASM_MNEMONICS[command->type];
     for (int i = 0; i < command->parameters.size(); i++) {
         if (i != 0)
-            fputc(',', file);
+                file.get_stream() << ",";
         CommandParameter parameter = command->parameters[i];
         if (parameter.type == PARAMETER_TYPE_LABEL) {
             if (parameter.label) {
-                fprintf(file, " L%lu", parameter.label->get_index());
+                file.get_stream() << " L" << parameter.label->get_index();
             } else {
-                fprintf(file, " LNULL");
+                file.get_stream() << " L<unknown>";
             }
         } else if (parameter.type == PARAMETER_TYPE_IMM32) {
-            fprintf(file, " %lld", parameter.imm);
+            file.get_stream() << " " << parameter.imm;
         } else if (parameter.type == PARAMETER_TYPE_REG_64) {
-            fputc(' ', file);
+            file.get_stream() << " ";
             dump_param_register(command, file, parameter);
         } else if (parameter.type == PARAMETER_TYPE_REG_8) {
-            fputc(' ', file);
+            file.get_stream() << " ";
             dump_param_register(command, file, parameter);
         } else if (parameter.type == PARAMETER_TYPE_MEMORY) {
             CommandParameterMemory mem = parameter.memory;
 
-            fprintf(file, " [");
+            file.get_stream() << " [";
 
             bool pad = false;
 
             if (mem.reg_a != AbstractRegister(-1)) {
-                fprintf(file, "%s", ASM_REGISTERS_64[mem.reg_a]);
+                file.get_stream() << ASM_REGISTERS_64[mem.reg_a];
                 if (mem.reg_a_constant != 1)
-                    fprintf(file, "*%d", mem.reg_a_constant);
+                    file.get_stream() << "*" << mem.reg_a_constant;
                 pad = true;
             }
 
             if (mem.reg_b != AbstractRegister(-1)) {
                 if (pad)
-                    fputc(' ', file);
-                fprintf(file, "%s", ASM_REGISTERS_64[mem.reg_b]);
+                    file.get_stream() << " ";
+                file.get_stream() << ASM_REGISTERS_64[mem.reg_b];
                 pad = true;
             }
 
             if (mem.displacement != 0) {
                 if (pad)
-                    fputc(' ', file);
+                    file.get_stream() << " ";
                 if (mem.displacement > 0) {
-                    fprintf(file, "+ %d", mem.displacement);
+                    file.get_stream() << "+ " << mem.displacement;
                 } else {
-                    fprintf(file, "- %d", -mem.displacement);
+                    file.get_stream() << "- " << -mem.displacement;
                 }
             }
 
-            fprintf(file, "]");
+            file.get_stream() << "]";
         } else if (parameter.type == PARAMETER_TYPE_SYMBOL) {
             if (command_list) {
-                fprintf(file, " %s",
-                        command_list->parent_buffer->file->get_symbol_name(parameter.symbol.symbol)
-                            .data());
+                file.get_stream() << " " << command_list->parent_buffer->file->get_symbol_name(parameter.symbol.symbol);
             } else {
-                fprintf(file, "<symbol %d>", parameter.symbol.symbol);
+                file.get_stream() << " <symbol " << parameter.symbol.symbol << ">";
             }
         }
     }
 }
 
-void CommandDumper::dump_list(struct CommandList* list, FILE* file, int depth) {
+void CommandDumper::dump_list(struct CommandList* list, const OutputStream& output, int depth) {
     auto old_list = command_list;
     command_list = list;
-    for (auto i = list->commands.begin(); i != list->commands.end(); ++i) {
-        dump(*i, file, depth);
-        fputc('\n', file);
+    for (auto & command : list->commands) {
+        dump(command, output, depth);
+        output.get_stream() << '\n';
     }
     command_list = old_list;
 }

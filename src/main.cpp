@@ -48,76 +48,80 @@ int main(int argc, const char* argv[]) {
         return 1;
     }
 
-    const auto input = program.get<std::string>("input");
+    const auto input_file_path = program.get<std::string>("input");
     const auto help_flag = program.get<bool>("--help");
     const auto ast_flag = program.get<bool>("--ast");
     const auto output_file_path = program.get<std::string>("--output-file");
     const auto target_flag = program.get<std::string>("--target");
 
-    if (help_flag || input.empty()) {
+    if (help_flag || input_file_path.empty()) {
         std::cout << program;
         return 0;
     }
 
-    bonk::CompilerConfig config = {};
-    config.error_file = stderr;
+    std::unique_ptr<bonk::OutputStream> error_file = std::make_unique<bonk::StdOutputStream>(std::cerr);
+    std::unique_ptr<bonk::OutputStream> output_file = std::make_unique<bonk::FileOutputStream>(output_file_path);
+    std::unique_ptr<bonk::OutputStream> listing_file = std::make_unique<bonk::NullOutputStream>();
+    std::unique_ptr<bonk::InputStream> input_file;
+
+    error_file = std::make_unique<bonk::StdOutputStream>(std::cerr);
+    output_file = std::make_unique<bonk::FileOutputStream>(output_file_path);
+    if (!output_file->get_stream()) {
+        init_fatal_error("failed to open input file\n");
+        return 1;
+    }
+
+    input_file = std::make_unique<bonk::FileInputStream>(input_file_path);
+    if (!output_file->get_stream()) {
+        init_fatal_error("failed to open input file\n");
+        return 1;
+    }
+
+    if (auto log_file = program.present("--log-file")) {
+        listing_file = std::make_unique<bonk::FileOutputStream>(log_file.value());
+        if (!listing_file->get_stream()) {
+            warning("failed to open log file\n");
+            listing_file = std::make_unique<bonk::NullOutputStream>();
+        }
+    }
+
+    bonk::CompilerConfig config = {
+        .error_file = *error_file,
+        .listing_file = *listing_file,
+    };
+
+    bonk::Compiler compiler(config);
+    std::unique_ptr<bonk::Backend> backend;
 
     if (target_flag == "x86") {
-        config.compile_backend = new bonk::x86_backend::Backend();
+        backend = std::make_unique<bonk::x86_backend::Backend>(compiler);
     } else {
         init_fatal_error("unknown compile target: %s", target_flag.c_str());
         return 1;
     }
 
-    FILE* output_file = fopen(output_file_path.c_str(), "wb");
-    if (!output_file) {
-        init_fatal_error("failed to open input file\n");
-        delete config.compile_backend;
-        return 1;
-    }
-
-    if (auto log_file = program.present("--log-file")) {
-        config.listing_file = fopen(log_file->c_str(), "w");
-        if (!config.listing_file) {
-            warning("failed to open log file\n");
-            config.listing_file = nullptr;
-        }
-    }
-
-    bonk::Compiler compiler(&config);
-
     std::string source;
-    std::ifstream file_stream(input);
-    if (!file_stream.is_open()) {
-        init_fatal_error("failed to open input file\n");
-        delete config.compile_backend;
-        return 1;
-    }
+    source.assign((std::istreambuf_iterator<char>(input_file->get_stream())),
+                  std::istreambuf_iterator<char>());
 
-    source.assign((std::istreambuf_iterator<char>(file_stream)), std::istreambuf_iterator<char>());
-
-    auto lexemes = compiler.lexical_analyzer.parse_file(input.c_str(), source.c_str());
+    auto lexemes = compiler.lexical_analyzer.parse_file(input_file_path.c_str(), source.c_str());
     auto ast = compiler.parser.parse_file(&lexemes);
 
     if (ast) {
         if (ast_flag) {
-            JsonSerializer serializer{output_file};
-            bonk::JsonDumpAstVisitor visitor{&serializer};
+            bonk::JsonSerializer serializer{*output_file};
+            bonk::JsonDumpAstVisitor visitor{serializer};
             ast->accept(&visitor);
         } else {
-            compiler.compile_ast(ast.get(), output_file);
+            backend->compile_ast(ast.get(), *output_file);
         }
     }
-
-    fclose(output_file);
 
     if (!ast_flag) {
         if (chmod(output_file_path.c_str(), 511) < 0) {
             warning("failed to add execution permissions to file\n");
         }
     }
-
-    delete config.compile_backend;
 
     if (compiler.state) {
         return 1;

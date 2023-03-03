@@ -14,12 +14,10 @@ namespace bonk::x86_backend {
 
 struct Backend : bonk::Backend {
 
-    Backend()= default;;
+    Backend(Compiler& linked_compiler): bonk::Backend(linked_compiler) {}
+    ~Backend() override = default;
 
-    ~Backend() override= default;
-
-    bool compile_ast(Compiler* linked_compiler, TreeNodeList* ast,
-                     FILE* target) override;
+    bool compile_ast(TreeNodeList* ast, const OutputStream& target) override;
 };
 
 } // namespace bonk::x86_backend

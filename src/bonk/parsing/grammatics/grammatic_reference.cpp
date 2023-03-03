@@ -17,43 +17,43 @@ std::unique_ptr<TreeNode> Parser::parse_reference() {
 
     bool is_call = false;
 
-    if (next->type == BONK_LEXEME_CALL) {
+    if (next->is(OperatorType::o_call)) {
         is_call = true;
 
         eat_lexeme();
         next = next_lexeme();
     }
 
-    if (next->type == BONK_LEXEME_BRACE && next->brace_data.brace_type == BONK_BRACE_L_RB) {
+    if (next->is(BraceType('('))) {
         eat_lexeme();
 
         if (is_call) {
-            error("cannot call an expression");
+            linked_compiler.error().at(next_lexeme()->start_position) << "cannot call an expression";
             return nullptr;
         }
 
         variable = parse_expression();
         next = next_lexeme();
 
-        if (next->type != BONK_LEXEME_BRACE || next->brace_data.brace_type != BONK_BRACE_R_RB) {
-            if (!linked_compiler->state) {
-                error("expected ')'");
+        if (next->is(BraceType(')'))) {
+            if (!linked_compiler.state) {
+                linked_compiler.error().at(next_lexeme()->start_position) << "expected ')'";
             }
             return nullptr;
         }
         if (variable == nullptr) {
-            if (!linked_compiler->state) {
-                error("empty parenthesis in expression context");
+            if (!linked_compiler.state) {
+                linked_compiler.error().at(next_lexeme()->start_position) << "empty parenthesis in expression context";
             }
 
             eat_lexeme();
             return nullptr;
         }
         eat_lexeme();
-    } else if (next->type == BONK_LEXEME_IDENTIFIER) {
+    } else if (next->is_identifier()) {
         auto identifier = std::make_unique<TreeNodeIdentifier>();
-        identifier->variable_name = next->identifier_data.identifier;
-        identifier->source_position = next->position;
+        identifier->variable_name = std::get<IdentifierLexeme>(next->data).identifier;
+        identifier->source_position = next->start_position;
         eat_lexeme();
 
         if (is_call) {
@@ -72,7 +72,7 @@ std::unique_ptr<TreeNode> Parser::parse_reference() {
 
     if (variable == nullptr) {
         if (is_call) {
-            error("expected block name to call");
+            linked_compiler.error().at(next_lexeme()->start_position) << "expected block name to call";
         }
         return nullptr;
     }
@@ -83,7 +83,7 @@ std::unique_ptr<TreeNode> Parser::parse_reference() {
 std::unique_ptr<TreeNodeList> Parser::parse_arguments() {
 
     Lexeme* next = next_lexeme();
-    if (next->type != BONK_LEXEME_BRACE || next->brace_data.brace_type != BONK_BRACE_L_SB) {
+    if (next->is(BraceType('['))) {
         return nullptr;
     }
 
@@ -95,21 +95,20 @@ std::unique_ptr<TreeNodeList> Parser::parse_arguments() {
 
     while (true) {
 
-        if (next->type != BONK_LEXEME_IDENTIFIER) {
-            error("expected parameter name");
+        if (!next->is_identifier()) {
+            linked_compiler.error().at(next_lexeme()->start_position) << "expected parameter name";
             return nullptr;
         }
 
         auto parameter_name = std::make_unique<TreeNodeIdentifier>();
-        parameter_name->variable_name = next->identifier_data.identifier;
-        parameter_name->source_position = next->position;
+        parameter_name->variable_name = std::get<IdentifierLexeme>(next->data).identifier;
+        parameter_name->source_position = next->start_position;
 
         eat_lexeme();
         next = next_lexeme();
 
-        if (next->type != BONK_LEXEME_OPERATOR ||
-            next->operator_data.operator_type != BONK_OPERATOR_ASSIGNMENT) {
-            error("expected parameter value");
+        if (!next->is(OperatorType::o_assign)) {
+            linked_compiler.error().at(next_lexeme()->start_position) << "expected parameter value";
             return nullptr;
         }
 
@@ -117,8 +116,8 @@ std::unique_ptr<TreeNodeList> Parser::parse_arguments() {
 
         auto parameter_value = parse_expression();
         if (!parameter_value) {
-            if (!linked_compiler->state) {
-                error("expected parameter value");
+            if (!linked_compiler.state) {
+                linked_compiler.error().at(next_lexeme()->start_position) << "expected parameter value";
             }
             return nullptr;
         }
@@ -130,7 +129,7 @@ std::unique_ptr<TreeNodeList> Parser::parse_arguments() {
         argument_list->list.push_back(std::move(argument));
 
         next = next_lexeme();
-        if (next->type != BONK_LEXEME_COMMA) {
+        if (next->type != LexemeType::l_comma) {
             break;
         }
 
@@ -138,8 +137,8 @@ std::unique_ptr<TreeNodeList> Parser::parse_arguments() {
         next = next_lexeme();
     }
 
-    if (next->type != BONK_LEXEME_BRACE || next->brace_data.brace_type != BONK_BRACE_R_SB) {
-        error("expected ']'");
+    if (!next->is(BraceType(']'))) {
+        linked_compiler.error().at(next_lexeme()->start_position) << "expected ']'";
         return nullptr;
     }
 

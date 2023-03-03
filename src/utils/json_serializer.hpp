@@ -1,34 +1,46 @@
 #pragma once
 
 #include <cstdio>
+#include <sstream>
 #include <vector>
+#include "streams.hpp"
+
+namespace bonk {
+
+class JSONStringEscaperStream;
 
 struct JsonSerializerState {
     bool is_array;
     bool is_first;
+    bool field_name_set;
 };
 
 struct JsonSerializer {
-    FILE* target;
+    const OutputStream& output_stream;
+    mutable std::stringstream ss;
     int depth;
     JsonSerializerState state{};
     std::vector<JsonSerializerState> states;
 
-    explicit JsonSerializer(FILE* file);
+    explicit JsonSerializer(const OutputStream& output_stream);
 
     ~JsonSerializer();
 
-    void block_string_field(const char* name, const char* value);
+    JSONStringEscaperStream block_string_field();
 
-    void block_number_field(const char* name, long double value);
+    void block_number_field(long double value);
 
-    void block_start_block(const char* name);
+    void block_start_block();
 
-    void block_start_array(const char* name);
+    void block_start_array();
+
+    void block_add_null();
 
     void close_block();
 
-    void array_add_string(const char* name);
+    JSONStringEscaperStream array_add_string();
+
+    void array_add_null();
 
     void array_add_number(long double name);
 
@@ -40,7 +52,27 @@ struct JsonSerializer {
 
     void padding() const;
 
-    void escape_string(const char* string) const;
-
     void prepare_next_field();
+
+    JsonSerializer& field(std::string_view name);
 };
+
+class JSONStringEscaperStream {
+  public:
+    JsonSerializer& serializer;
+
+    explicit JSONStringEscaperStream(JsonSerializer& serializer);;
+
+    ~JSONStringEscaperStream();
+
+    void flush() const;
+};
+
+template <typename T>
+const JSONStringEscaperStream& operator<<(const JSONStringEscaperStream& escaper, T&& value) {
+    escaper.serializer.ss << value;
+    escaper.flush();
+    return escaper;
+}
+
+} // namespace bonk

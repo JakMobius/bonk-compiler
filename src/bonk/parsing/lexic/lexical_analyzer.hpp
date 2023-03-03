@@ -8,123 +8,163 @@ struct LexicalAnalyzer;
 struct ParserPosition;
 struct Compiler;
 
-enum LexemeType {
-    BONK_LEXEME_NULL,
-    BONK_LEXEME_KEYWORD,
-    BONK_LEXEME_IDENTIFIER,
-    BONK_LEXEME_NUMBER,
-    BONK_LEXEME_SEMICOLON,
-    BONK_LEXEME_OPERATOR,
-    BONK_LEXEME_BRACE,
-    BONK_LEXEME_COMMA,
-    BONK_LEXEME_CALL,
-    BONK_LEXEME_INLINE_BAMS
+enum class LexemeType {
+    l_keyword,
+    l_identifier,
+    l_number,
+    l_semicolon,
+    l_colon,
+    l_string,
+    l_operator,
+    l_brace,
+    l_comma,
+    l_eof
 };
 
-enum KeywordType {
-    BONK_KEYWORD_VAR,
-    BONK_KEYWORD_BLOCK,
-    BONK_KEYWORD_PRINT,
-    BONK_KEYWORD_CONTEXT,
-    BONK_KEYWORD_BONK,
-    BONK_KEYWORD_CHECK,
-    BONK_KEYWORD_CYCLE,
-    BONK_KEYWORD_BREK,
-    BONK_KEYWORD_BAMS,
-    BONK_KEYWORD_AND,
-    BONK_KEYWORD_OR,
-    BONK_KEYWORD_REBONK,
-    BONK_KEYWORD_HELP,
-    BONK_KEYWORD_PROMISE
+enum class KeywordType {
+    k_flot,
+    k_nubr,
+    k_strg,
+    k_many
 };
 
-enum BraceType {
-    BONK_BRACE_L_CB,
-    BONK_BRACE_R_CB,
-    BONK_BRACE_L_RB,
-    BONK_BRACE_R_RB,
-    BONK_BRACE_L_SB,
-    BONK_BRACE_R_SB
+enum class OperatorType {
+    o_call,
+    o_plus,
+    o_minus,
+    o_multiply,
+    o_divide,
+    o_plus_assign,
+    o_minus_assign,
+    o_multiply_assign,
+    o_divide_assign,
+    o_assign,
+    o_equal,
+    o_less,
+    o_greater,
+    o_less_equal,
+    o_greater_equal,
+    o_not_equal,
+    o_blok,
+    o_hive,
+    o_brek,
+    o_bowl,
+    o_bonk,
+    o_loop,
+    o_of,
+    o_and,
+    o_or,
+    o_help,
+    o_invalid
 };
+
+enum class BraceType {
+    l_cb = '{',
+    r_cb = '}',
+    l_rb = '(',
+    r_rb = ')',
+    l_sb = '[',
+    r_sb = ']'
+};
+
+enum class QuoteType {
+    q_single = '\'',
+    q_double = '"'
+};
+
+extern const char* BONK_OPERATOR_NAMES[];
+extern const char* BONK_KEYWORD_NAMES[];
+extern const char* BONK_BRACE_NAMES[];
 
 } // namespace bonk
 
-#include <vector>
 #include <cctype>
-#include "bonk/tree/ast.hpp"
+#include <variant>
+#include <vector>
 #include "../parser_position.hpp"
+#include "bonk/tree/ast.hpp"
 #include "identifier_lexeme.hpp"
 #include "number_lexeme.hpp"
 
 namespace bonk {
-
-extern const char* BONK_OPERATOR_NAMES[];
-extern const char* BONK_KEYWORD_NAMES[];
 
 struct NumberLexeme {
     long long int integer_value;
     long double double_value;
 };
 
+struct KeywordLexeme {
+    KeywordType type;
+};
+
+struct OperatorLexeme {
+    OperatorType type;
+};
+
+struct BraceLexeme {
+    BraceType type;
+};
+
+struct IdentifierLexeme {
+    std::string_view identifier;
+};
+
+struct StringLexeme {
+    QuoteType type;
+    std::string string;
+};
+
 struct Lexeme {
-    ParserPosition* position;
+    ParserPosition start_position;
+    ParserPosition end_position;
     LexemeType type;
 
-    union {
-        struct {
-            KeywordType keyword_type;
-        } keyword_data;
-        struct {
-            BraceType brace_type;
-        } brace_data;
-        struct {
-            NumberLexeme number;
-        } number_data;
-        struct {
-            std::string_view identifier;
-        } identifier_data;
-        struct {
-            OperatorType operator_type;
-        } operator_data;
-    };
+    std::variant<
+        KeywordLexeme,
+        IdentifierLexeme,
+        NumberLexeme,
+        OperatorLexeme,
+        BraceLexeme,
+        StringLexeme
+    > data;
+
+    bool is(KeywordType keyword);
+    bool is(OperatorType operator_type);
+    bool is(BraceType brace_type);
+    bool is_number();
+    bool is_identifier();
+};
+
+enum class OperatorMatch {
+    not_matched,
+    maybe_matched,
+    matched
 };
 
 struct LexicalAnalyzer {
-    const char* text{};
-    ParserPosition position{};
+    std::string_view text{};
     Compiler* linked_compiler;
+    ParserPosition current_position{};
     std::vector<Lexeme> lexemes{};
-    std::vector<std::string> compiled_files{};
-    bool is_line_comment{};
-    bool is_multiline_comment{};
-
-    void error(const char* format, ...);
+    std::vector<OperatorMatch> operator_match{};
 
     LexicalAnalyzer(Compiler* compiler);
 
-    std::vector<bonk::Lexeme> parse_file(const char* filename, const char* text);
+    std::vector<bonk::Lexeme> parse_file(const char* filename, std::string_view text);
 
+    void next();
     char next_char() const;
-
     void eat_char();
-
-    bool parse_number_lexeme(Lexeme* target);
+    int next_operator();
+    std::string_view next_word();
 
     int parse_digits_lexeme(int radix, long long int* integer_value, double* float_value);
 
     bool parse_identifier_lexeme(Lexeme* target);
-
-    void make_operator_lexeme(Lexeme* lexeme, OperatorType type);
-
-    void make_brace_lexeme(Lexeme* lexeme, BraceType type);
+    bool parse_number_lexeme(Lexeme* target);
+    bool parse_string_lexeme(Lexeme* target);
 
     KeywordType keyword_from_string(std::string_view string);
-
-    bool add_compiled_file(const std::string& file_path);
-
-    bool file_already_compiled(const std::string& file_path);
-
-    bool next();
 };
 
 } // namespace bonk

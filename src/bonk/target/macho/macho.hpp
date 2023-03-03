@@ -11,6 +11,7 @@
 #include <mach-o/reloc.h>
 #include <mach/mach.h>
 #include <mach/machine.h>
+#include "utils/streams.hpp"
 
 namespace bonk::macho {
 
@@ -40,7 +41,7 @@ struct MachoFile {
 
     MachoFile();
 
-    void flush(FILE* file);
+    void flush(const OutputStream& file);
 
     bool add_relocation(uint32_t symbol, int32_t address, bool pc_rel, uint8_t data_length);
 

@@ -3,10 +3,9 @@
 
 namespace bonk {
 
-bool Backend::compile_ast(Compiler* linked_compiler, TreeNodeList* ast,
-                          FILE* target) {
+bool Backend::compile_ast(TreeNodeList* ast, const OutputStream& target) {
     printf("abstract method compile_ast was not implemented");
     abort();
 }
 
-}
+} // namespace bonk

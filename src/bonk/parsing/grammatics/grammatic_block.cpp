@@ -11,7 +11,7 @@ std::unique_ptr<TreeNode> Parser::parse_code_line() {
     auto expression = parse_expression_leveled(true);
     if (expression)
         return expression;
-    if (linked_compiler->state)
+    if (linked_compiler.state)
         return nullptr;
 
     return nullptr;
@@ -23,7 +23,7 @@ std::unique_ptr<TreeNodeList> Parser::parse_block() {
 
     do {
         auto block = parse_code_line();
-        if (linked_compiler->state)
+        if (linked_compiler.state)
             return nullptr;
 
         if (!block)

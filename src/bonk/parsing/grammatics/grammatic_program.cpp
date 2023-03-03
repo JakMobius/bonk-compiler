@@ -11,18 +11,18 @@ std::unique_ptr<TreeNode> Parser::parse_global_definition() {
     auto expression = parse_block_definition();
     if (expression)
         return expression;
-    if (linked_compiler->state)
+    if (linked_compiler.state)
         return nullptr;
 
     auto variable_definition = parse_var_definition();
     if (variable_definition) {
         if (variable_definition->is_contextual) {
-            error("global variables may not be contextual");
+            linked_compiler.error().at(variable_definition->source_position) << "global variables may not be contextual";
             return nullptr;
         }
         Lexeme* next = next_lexeme();
-        if (next->type != BONK_LEXEME_SEMICOLON) {
-            error("expected semicolon");
+        if (next->type != LexemeType::l_semicolon) {
+            linked_compiler.error().at(next_lexeme()->start_position) << "expected semicolon";
             return nullptr;
         }
         eat_lexeme();

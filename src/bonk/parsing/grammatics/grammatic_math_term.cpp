@@ -12,18 +12,18 @@ std::unique_ptr<TreeNode> Parser::parse_math_term() {
 
     do {
         Lexeme* next = next_lexeme();
-        if (next->type != BONK_LEXEME_OPERATOR)
+        if (next->type != LexemeType::l_operator)
             break;
-        OperatorType operator_type = next->operator_data.operator_type;
-        if (operator_type != BONK_OPERATOR_MULTIPLY && operator_type != BONK_OPERATOR_DIVIDE)
+        OperatorType operator_type = std::get<OperatorLexeme>(next->data).type;
+        if (operator_type != OperatorType::o_multiply && operator_type != OperatorType::o_divide)
             break;
 
         eat_lexeme();
 
         auto next_term = parse_math_factor();
         if (!next_term) {
-            if (!linked_compiler->state) {
-                error("expected expression");
+            if (!linked_compiler.state) {
+                linked_compiler.error().at(next_lexeme()->start_position) << "expected expression";
             }
             return nullptr;
         }

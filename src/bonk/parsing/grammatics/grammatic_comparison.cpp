@@ -17,9 +17,9 @@ std::unique_ptr<TreeNode> Parser::parse_comparison() {
 
     do {
         Lexeme* next = next_lexeme();
-        if (next->type != BONK_LEXEME_OPERATOR)
+        if (next->type != LexemeType::l_operator)
             break;
-        OperatorType operator_type = next->operator_data.operator_type;
+        OperatorType operator_type = std::get<OperatorLexeme>(next->data).type;
         if (!is_comparison_operator(operator_type))
             break;
 
@@ -27,8 +27,8 @@ std::unique_ptr<TreeNode> Parser::parse_comparison() {
 
         auto next_term = parse_math_term();
         if (!next_term) {
-            if (!linked_compiler->state) {
-                error("expected expression");
+            if (!linked_compiler.state) {
+                linked_compiler.error().at(next_lexeme()->start_position) << "expected expression";
             }
             return nullptr;
         }
@@ -46,12 +46,12 @@ std::unique_ptr<TreeNode> Parser::parse_comparison() {
 
 bool Parser::is_comparison_operator(OperatorType oper) {
     switch (oper) {
-    case BONK_OPERATOR_EQUALS:
-    case BONK_OPERATOR_LESS_THAN:
-    case BONK_OPERATOR_GREATER_THAN:
-    case BONK_OPERATOR_LESS_OR_EQUAL_THAN:
-    case BONK_OPERATOR_GREATER_OR_EQUAL_THAN:
-    case BONK_OPERATOR_NOT_EQUAL:
+    case OperatorType::o_equal:
+    case OperatorType::o_less:
+    case OperatorType::o_greater:
+    case OperatorType::o_less_equal:
+    case OperatorType::o_greater_equal:
+    case OperatorType::o_not_equal:
         return true;
     default:
         return false;

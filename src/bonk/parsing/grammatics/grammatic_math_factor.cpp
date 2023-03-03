@@ -12,13 +12,14 @@ std::unique_ptr<TreeNode> Parser::parse_math_factor() {
     if (result)
         return result;
 
-    if (next_lexeme()->type != BONK_LEXEME_NUMBER) {
+    if (next_lexeme()->type != LexemeType::l_number) {
         return nullptr;
     }
 
     auto result_number = std::make_unique<TreeNodeNumber>();
-    result_number->float_value = next_lexeme()->number_data.number.double_value;
-    result_number->integer_value = next_lexeme()->number_data.number.integer_value;
+    auto lexeme = std::get<NumberLexeme>(next_lexeme()->data);
+    result_number->float_value = lexeme.double_value;
+    result_number->integer_value = lexeme.integer_value;
     eat_lexeme();
     return result_number;
 }

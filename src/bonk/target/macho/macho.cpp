@@ -1,5 +1,6 @@
 
 #include "macho.hpp"
+#include "utils/streams.hpp"
 
 namespace bonk::macho {
 
@@ -132,7 +133,7 @@ void MachoFile::add_external_symbol(const std::string& symbol) {
 }
 
 void MachoFile::add_internal_symbol(const std::string& symbol, SymbolSection section,
-                                     uint32_t offset) {
+                                    uint32_t offset) {
     uint8_t section_index = 0;
 
     switch (section) {
@@ -177,8 +178,7 @@ std::string MachoFile::get_symbol_name(uint32_t symbol) {
     }
 }
 
-bool MachoFile::add_relocation(uint32_t symbol, int32_t address, bool pc_rel,
-                                uint8_t data_length) {
+bool MachoFile::add_relocation(uint32_t symbol, int32_t address, bool pc_rel, uint8_t data_length) {
 
     relocation_info relocation = {};
 
@@ -211,7 +211,7 @@ bool MachoFile::add_relocation(uint32_t symbol, int32_t address, bool pc_rel,
     return true;
 }
 
-void MachoFile::flush(FILE* file) {
+void MachoFile::flush(const OutputStream& file) {
 
     segment.filesize = section_text.size + section_data.size;
     segment.vmsize = segment.filesize;
@@ -223,60 +223,76 @@ void MachoFile::flush(FILE* file) {
     symtab.stroff = symtab.symoff + symtab.nsyms * sizeof(nlist_64);
 
     // Write header
-    fwrite(&header, 1, sizeof(mach_header_64), file);
+    // fwrite(&header, 1, sizeof(mach_header_64), file);
+    file.get_stream().write(reinterpret_cast<char*>(&header), sizeof(mach_header_64));
 
     // Write segment
-    fwrite(&segment, 1, sizeof(segment_command_64), file);
+    // fwrite(&segment, 1, sizeof(segment_command_64), file);
+    file.get_stream().write(reinterpret_cast<char*>(&segment), sizeof(segment_command_64));
 
     // Write section text
-    fwrite(&section_text, 1, sizeof(section_64), file);
+    // fwrite(&section_text, 1, sizeof(section_64), file);
+    file.get_stream().write(reinterpret_cast<char*>(&section_text), sizeof(section_64));
 
     // Write section data
-    fwrite(&section_data, 1, sizeof(section_64), file);
+    // fwrite(&section_data, 1, sizeof(section_64), file);
+    file.get_stream().write(reinterpret_cast<char*>(&section_data), sizeof(section_64));
 
     // Write symtab
-    fwrite(&symtab, 1, sizeof(symtab_command), file);
+    // fwrite(&symtab, 1, sizeof(symtab_command), file);
+    file.get_stream().write(reinterpret_cast<char*>(&symtab), sizeof(symtab_command));
 
     // Write dysymtab
-    fwrite(&dysymtab, 1, sizeof(dysymtab_command), file);
+    // fwrite(&dysymtab, 1, sizeof(dysymtab_command), file);
+    file.get_stream().write(reinterpret_cast<char*>(&dysymtab), sizeof(dysymtab_command));
 
     // Write code
-    for (auto & fragment : text_fragments) {
-        fwrite(fragment.data(), 1, fragment.size(), file);
+    for (auto& fragment : text_fragments) {
+        // fwrite(fragment.data(), 1, fragment.size(), file);
+        file.get_stream().write(fragment.data(), fragment.size());
     }
 
     // Write data
-    for (auto & fragment : data_fragments) {
-        fwrite(fragment.data(), 1, fragment.size(), file);
+    for (auto& fragment : data_fragments) {
+        // fwrite(fragment.data(), 1, fragment.size(), file);
+        file.get_stream().write(fragment.data(), fragment.size());
     }
 
     // Write relocations
-    for (auto & relocation : relocations) {
-        fwrite(&relocation, 1, sizeof(relocation), file);
+    for (auto& relocation : relocations) {
+        // fwrite(&relocation, 1, sizeof(relocation), file);
+        file.get_stream().write(reinterpret_cast<char*>(&relocation), sizeof(relocation_info));
     }
 
     // Write local symbol table
-    for (auto & symbol : local_symbols) {
+    for (auto& symbol : local_symbols) {
         if (symbol.n_sect == 2)
             symbol.n_value += section_text.size;
-        fwrite(&symbol, 1, sizeof(symbol), file);
+
+        // fwrite(&symbol, 1, sizeof(symbol), file);
+        file.get_stream().write(reinterpret_cast<char*>(&symbol), sizeof(nlist_64));
+
         if (symbol.n_sect == 2)
             symbol.n_value -= section_text.size;
     }
 
     // Write external symbol table
-    for (auto symbol : external_symbols) {
+    for (auto& symbol : external_symbols) {
         if (symbol.n_sect == 2)
             symbol.n_value += section_text.size;
-        fwrite(&symbol, 1, sizeof(symbol), file);
+
+        // fwrite(&symbol, 1, sizeof(symbol), file);
+        file.get_stream().write(reinterpret_cast<char*>(&symbol), sizeof(nlist_64));
+
         if (symbol.n_sect == 2)
             symbol.n_value -= section_text.size;
     }
 
     // Write string table
-    for (auto str : string_table) {
-        fprintf(file, "%s", str.data());
-        fputc(0, file);
+    for (auto& string : string_table) {
+        // fprintf(file, "%s", str.data());
+        // fputc(0, file);
+        file.get_stream() << string << '\0';
     }
 }
 

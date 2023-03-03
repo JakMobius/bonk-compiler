@@ -2,45 +2,19 @@
 
 namespace bonk {
 
-enum TreeNodeType {
-    TREE_NODE_TYPE_NUMBER,
-    TREE_NODE_TYPE_IDENTIFIER,
-    TREE_NODE_TYPE_OPERATOR,
-    TREE_NODE_TYPE_LIST,
-    TREE_NODE_TYPE_BLOCK_DEFINITION,
-    TREE_NODE_TYPE_VAR_DEFINITION,
-    TREE_NODE_TYPE_CALL,
-    TREE_NODE_TYPE_CALL_PARAMETER,
-    TREE_NODE_TYPE_CHECK,
-    TREE_NODE_TYPE_CYCLE,
-    TREE_NODE_TYPE_INVALID
+enum class TreeNodeType {
+    n_number,
+    n_identifier,
+    n_operator,
+    n_list,
+    n_block_definition,
+    n_var_definition,
+    n_call,
+    n_call_parameter,
+    n_check,
+    n_cycle,
+    n_unset
 };
-
-enum OperatorType {
-    BONK_OPERATOR_PLUS,
-    BONK_OPERATOR_MINUS,
-    BONK_OPERATOR_MULTIPLY,
-    BONK_OPERATOR_DIVIDE,
-    BONK_OPERATOR_ASSIGNMENT,
-    BONK_OPERATOR_EQUALS,
-    BONK_OPERATOR_NOT_EQUAL,
-    BONK_OPERATOR_LESS_THAN,
-    BONK_OPERATOR_GREATER_THAN,
-    BONK_OPERATOR_LESS_OR_EQUAL_THAN,
-    BONK_OPERATOR_GREATER_OR_EQUAL_THAN,
-    BONK_OPERATOR_CYCLE,
-    BONK_OPERATOR_CHECK,
-    BONK_OPERATOR_PRINT,
-    BONK_OPERATOR_BONK,
-    BONK_OPERATOR_BREK,
-    BONK_OPERATOR_BAMS,
-    BONK_OPERATOR_AND,
-    BONK_OPERATOR_OR,
-    BONK_OPERATOR_REBONK,
-    BONK_OPERATOR_INVALID
-};
-
-extern const char* OPERATOR_TYPE_NAMES[];
 
 struct TreeNodeBlockDefinition;
 struct TreeNodeCall;
@@ -58,13 +32,14 @@ struct ASTVisitor;
 
 #include <list>
 #include <string>
+#include "bonk/parsing/lexic/lexical_analyzer.hpp"
 #include "bonk/parsing/parser_position.hpp"
 
 namespace bonk {
 
 struct TreeNode {
-    TreeNodeType type = TREE_NODE_TYPE_INVALID;
-    ParserPosition* source_position = nullptr;
+    TreeNodeType type = TreeNodeType::n_unset;
+    ParserPosition source_position {};
 
     TreeNode() = default;
     virtual ~TreeNode() = default;
@@ -76,7 +51,6 @@ struct TreeNodeBlockDefinition : TreeNode {
 
     std::unique_ptr<TreeNodeIdentifier> block_name;
     std::unique_ptr<TreeNodeList> body;
-    bool is_promise = false;
 
     TreeNodeBlockDefinition();
 
@@ -149,7 +123,7 @@ struct TreeNodeNumber : TreeNode {
 };
 
 struct TreeNodeOperator : TreeNode {
-    OperatorType oper_type = BONK_OPERATOR_INVALID;
+    OperatorType oper_type = OperatorType::o_invalid;
     std::unique_ptr<TreeNode> left;
     std::unique_ptr<TreeNode> right;
 

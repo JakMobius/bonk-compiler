@@ -20,16 +20,16 @@ bool Parser::parse_global(TreeNodeList* target) {
     }
 
     if (!parse_program(target)) {
-        if (!linked_compiler->state)
-            error("empty program");
+        if (!linked_compiler.state)
+            linked_compiler.error() << "empty program";
         return false;
     }
 
     Lexeme* next = next_lexeme();
 
-    if (next->type != BONK_LEXEME_NULL) {
-        if (!linked_compiler->state)
-            error("expected end of file");
+    if (next->type != LexemeType::l_eof) {
+        if (!linked_compiler.state)
+            linked_compiler.error().at(next_lexeme()->start_position) << "expected end of file";
         return false;
     }
 

@@ -1,31 +1,33 @@
 
 #include "json_serializer.hpp"
 
-JsonSerializer::JsonSerializer(FILE* file) {
-    target = file;
+namespace bonk {
+
+JsonSerializer::JsonSerializer(const OutputStream& output_stream) : output_stream(output_stream) {
     state.is_first = true;
     state.is_array = false;
-    fprintf(target, "{");
+    state.field_name_set = false;
+    output_stream.get_stream() << "{";
     depth = 1;
 }
 
-void JsonSerializer::block_string_field(const char* name, const char* value) {
-    prepare_next_field();
-    escape_string(name);
-    fprintf(target, ": ");
-    escape_string(value);
+JSONStringEscaperStream JsonSerializer::block_string_field() {
+    assert(state.field_name_set);
+    state.field_name_set = false;
+    output_stream.get_stream() << ": ";
+    return JSONStringEscaperStream(*this);
 }
 
-void JsonSerializer::block_number_field(const char* name, long double value) {
-    prepare_next_field();
-    escape_string(name);
-    fprintf(target, ": %.17Lg", value);
+void JsonSerializer::block_number_field(long double value) {
+    assert(state.field_name_set);
+    state.field_name_set = false;
+    output_stream.get_stream() << ": " << value;
 }
 
-void JsonSerializer::block_start_block(const char* name) {
-    prepare_next_field();
-    escape_string(name);
-    fprintf(target, ": {");
+void JsonSerializer::block_start_block() {
+    assert(state.field_name_set);
+    state.field_name_set = false;
+    output_stream.get_stream() << ": {";
 
     states.push_back(state);
     state.is_first = true;
@@ -33,46 +35,62 @@ void JsonSerializer::block_start_block(const char* name) {
     depth++;
 }
 
+void JsonSerializer::block_add_null() {
+    assert(state.field_name_set);
+    state.field_name_set = false;
+    output_stream.get_stream() << ": null";
+}
+
 void JsonSerializer::close_block() {
+    assert(!state.field_name_set);
     depth--;
 
     if (!state.is_first) {
-        fputc('\n', target);
+        output_stream.get_stream() << '\n';
         padding();
     }
 
     state = states[states.size() - 1];
     states.pop_back();
 
-    fputc('}', target);
+    output_stream.get_stream() << '}';
 }
 
-void JsonSerializer::block_start_array(const char* name) {
-    prepare_next_field();
-    escape_string(name);
-    fprintf(target, ": [");
+void JsonSerializer::block_start_array() {
+    assert(state.field_name_set);
+    state.field_name_set = false;
+    output_stream.get_stream() << ": [";
 
     states.push_back(state);
     state.is_first = true;
     state.is_array = true;
+    state.field_name_set = false;
     depth++;
 }
 
-void JsonSerializer::array_add_string(const char* name) {
+JSONStringEscaperStream JsonSerializer::array_add_string() {
+    assert(state.is_array);
+    return JSONStringEscaperStream(*this);
+}
+
+void JsonSerializer::array_add_null() {
+    assert(state.is_array);
     prepare_next_field();
     padding();
-    escape_string(name);
+    output_stream.get_stream() << "null";
 }
 
 void JsonSerializer::array_add_number(long double value) {
+    assert(state.is_array);
     prepare_next_field();
     padding();
-    fprintf(target, "%.17Lg", value);
+    output_stream.get_stream() << value;
 }
 
 void JsonSerializer::array_add_block() {
+    assert(state.is_array);
     prepare_next_field();
-    fprintf(target, "{");
+    output_stream.get_stream() << '{';
 
     states.push_back(state);
     state.is_first = true;
@@ -81,8 +99,9 @@ void JsonSerializer::array_add_block() {
 }
 
 void JsonSerializer::array_add_array() {
+    assert(state.is_array);
     prepare_next_field();
-    fprintf(target, "[");
+    output_stream.get_stream() << '[';
 
     states.push_back(state);
     state.is_first = true;
@@ -91,53 +110,69 @@ void JsonSerializer::array_add_array() {
 }
 
 void JsonSerializer::close_array() {
+    assert(state.is_array);
     depth--;
 
     if (!state.is_first) {
-        fputc('\n', target);
+        output_stream.get_stream() << '\n';
         padding();
     }
 
     state = states[states.size() - 1];
     states.pop_back();
 
-    fputc(']', target);
+    output_stream.get_stream() << ']';
 }
 
 void JsonSerializer::prepare_next_field() {
+    assert(!state.field_name_set && !state.is_array);
     if (!state.is_first)
-        fputc(',', target);
-    fputc('\n', target);
+        output_stream.get_stream() << ",\n";
+    else
+        output_stream.get_stream() << '\n';
+
     padding();
     state.is_first = false;
 }
 
 void JsonSerializer::padding() const {
     for (int i = 0; i < depth; i++) {
-        fputc(' ', target);
-        fputc(' ', target);
-    }
-}
-
-void JsonSerializer::escape_string(const char* string) const {
-    if (!string)
-        fprintf(target, "null");
-    else {
-        fputc('"', target);
-        char c = '\0';
-        while ((c = *(string++))) {
-            if (c == '\n')
-                fputs("\\n", target);
-            else if (c == '"')
-                fputs("\\", target);
-            else
-                fputc(c, target);
-        }
-        fputc('"', target);
+        output_stream.get_stream() << "  ";
     }
 }
 
 JsonSerializer::~JsonSerializer() {
-    fprintf(target, "}");
-    target = nullptr;
+    output_stream.get_stream() << '\n';
 }
+
+JsonSerializer& JsonSerializer::field(std::string_view name) {
+    prepare_next_field();
+    JSONStringEscaperStream(*this) << name;
+    return *this;
+}
+
+void JSONStringEscaperStream::flush() const {
+    while (true) {
+        int c = serializer.ss.get();
+        if (c == EOF)
+            break;
+        if (c == '\n')
+            serializer.output_stream.get_stream() << "\\n";
+        else if (c == '"')
+            serializer.output_stream.get_stream() << "\\\"";
+        else
+            serializer.output_stream.get_stream() << c;
+    }
+}
+
+JSONStringEscaperStream::JSONStringEscaperStream(JsonSerializer& serializer)
+    : serializer(serializer) {
+    serializer.output_stream.get_stream() << '"';
+}
+
+JSONStringEscaperStream::~JSONStringEscaperStream() {
+    flush();
+    serializer.output_stream.get_stream() << '"';
+}
+
+} // namespace bonk

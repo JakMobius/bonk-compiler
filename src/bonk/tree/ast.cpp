@@ -4,30 +4,8 @@
 
 namespace bonk {
 
-const char* OPERATOR_TYPE_NAMES[] = {"PLUS",
-                                     "MINUS",
-                                     "MULTIPLY",
-                                     "DIVIDE",
-                                     "ASSIGNMENT",
-                                     "EQUALS",
-                                     "NOT_EQUAL",
-                                     "LESS_THAN",
-                                     "GREATER_THAN",
-                                     "LESS_OR_EQUAL_THAN",
-                                     "GREATER_OR_EQUAL_THAN",
-                                     "CYCLE",
-                                     "CHECK",
-                                     "PRINT",
-                                     "BONK",
-                                     "BREK",
-                                     "BAMS",
-                                     "AND",
-                                     "OR",
-                                     "REBONK",
-                                     "INVALID"};
-
 TreeNodeBlockDefinition::TreeNodeBlockDefinition() : TreeNode() {
-    type = TREE_NODE_TYPE_BLOCK_DEFINITION;
+    type = TreeNodeType::n_block_definition;
 }
 
 void TreeNodeBlockDefinition::accept(ASTVisitor* visitor) {
@@ -35,7 +13,7 @@ void TreeNodeBlockDefinition::accept(ASTVisitor* visitor) {
 }
 
 TreeNodeCall::TreeNodeCall() : TreeNode() {
-    type = TREE_NODE_TYPE_CALL;
+    type = TreeNodeType::n_call;
 }
 
 void TreeNodeCall::accept(ASTVisitor* visitor) {
@@ -44,7 +22,7 @@ void TreeNodeCall::accept(ASTVisitor* visitor) {
 
 TreeNodeCallParameter::TreeNodeCallParameter()
     : TreeNode() {
-    type = TREE_NODE_TYPE_CALL_PARAMETER;
+    type = TreeNodeType::n_call_parameter;
 }
 
 void TreeNodeCallParameter::accept(ASTVisitor* visitor) {
@@ -52,7 +30,7 @@ void TreeNodeCallParameter::accept(ASTVisitor* visitor) {
 }
 
 TreeNodeCheck::TreeNodeCheck() : TreeNode() {
-    type = TREE_NODE_TYPE_CHECK;
+    type = TreeNodeType::n_check;
 }
 
 void TreeNodeCheck::accept(ASTVisitor* visitor) {
@@ -60,7 +38,7 @@ void TreeNodeCheck::accept(ASTVisitor* visitor) {
 }
 
 TreeNodeCycle::TreeNodeCycle() : TreeNode() {
-    type = TREE_NODE_TYPE_CYCLE;
+    type = TreeNodeType::n_cycle;
 }
 
 void TreeNodeCycle::accept(ASTVisitor* visitor) {
@@ -68,7 +46,7 @@ void TreeNodeCycle::accept(ASTVisitor* visitor) {
 }
 
 TreeNodeIdentifier::TreeNodeIdentifier() : TreeNode() {
-    type = TREE_NODE_TYPE_IDENTIFIER;
+    type = TreeNodeType::n_identifier;
 }
 
 void TreeNodeIdentifier::accept(ASTVisitor* visitor) {
@@ -76,7 +54,7 @@ void TreeNodeIdentifier::accept(ASTVisitor* visitor) {
 }
 
 TreeNodeList::TreeNodeList() {
-    type = TREE_NODE_TYPE_LIST;
+    type = TreeNodeType::n_list;
 }
 
 void TreeNodeList::accept(ASTVisitor* visitor) {
@@ -85,7 +63,7 @@ void TreeNodeList::accept(ASTVisitor* visitor) {
 
 TreeNodeNumber::TreeNodeNumber()
     : TreeNode() {
-    type = TREE_NODE_TYPE_NUMBER;
+    type = TreeNodeType::n_number;
 }
 
 void TreeNodeNumber::accept(ASTVisitor* visitor) {
@@ -93,7 +71,7 @@ void TreeNodeNumber::accept(ASTVisitor* visitor) {
 }
 
 TreeNodeOperator::TreeNodeOperator() {
-    type = TREE_NODE_TYPE_OPERATOR;
+    type = TreeNodeType::n_operator;
 }
 
 void TreeNodeOperator::accept(ASTVisitor* visitor) {
@@ -101,7 +79,7 @@ void TreeNodeOperator::accept(ASTVisitor* visitor) {
 }
 
 TreeNodeVariableDefinition::TreeNodeVariableDefinition() {
-    type = TREE_NODE_TYPE_VAR_DEFINITION;
+    type = TreeNodeType::n_var_definition;
 }
 
 void TreeNodeVariableDefinition::accept(ASTVisitor* visitor) {

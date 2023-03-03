@@ -15,46 +15,36 @@ enum CompilerState {
 } // namespace bonk
 
 #include <cstdio>
+#include <ostream>
 #include "backend/backend.hpp"
 #include "errors.hpp"
+#include "parsing/parser.hpp"
 #include "parsing/lexic/lexical_analyzer.hpp"
 #include "tree/ast.hpp"
+#include "utils/streams.hpp"
 
 namespace bonk {
 
 struct CompilerConfig {
-    FILE* error_file;
-    FILE* listing_file;
-    Backend* compile_backend;
+    const OutputStream& error_file = NullOutputStream::instance;
+    const OutputStream& listing_file = NullOutputStream::instance;
 };
 
 struct Compiler {
-    CompilerConfig* config = nullptr;
+    const CompilerConfig& config;
 
     Parser parser;
     LexicalAnalyzer lexical_analyzer;
 
     CompilerState state = BONK_COMPILER_OK;
 
-    void out_of_memory();
+    Compiler(const CompilerConfig& config);
 
-    Compiler(CompilerConfig* config);
+    ~Compiler() = default;
 
-    ~Compiler();
-
-    void fatal_error_positioned(ParserPosition* pPosition, const char* string, ...);
-
-    void error_positioned(ParserPosition* pPosition, const char* string, ...);
-
-    void error(const char* format, ...);
-
-    void warning_positioned(ParserPosition* pos, const char* format, ...) const;
-
-    void warning(const char* format, ...) const;
-
-    void fatal_error(const char* format, ...);
-
-    bool compile_ast(TreeNodeList* ast, FILE* target);
+    MessageStreamProxy error();
+    MessageStreamProxy warning() const;
+    MessageStreamProxy fatal_error();
 };
 
 } // namespace bonk

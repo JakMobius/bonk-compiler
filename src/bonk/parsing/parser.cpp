@@ -4,8 +4,8 @@
 
 namespace bonk {
 
-Parser::Parser(Compiler* compiler) {
-    linked_compiler = compiler;
+Parser::Parser(Compiler& compiler): linked_compiler(compiler) {
+
 }
 
 std::unique_ptr<TreeNodeList> Parser::parse_file(std::vector<Lexeme>* lexemes) {
@@ -35,7 +35,7 @@ Lexeme* Parser::next_lexeme() {
 
 void Parser::eat_lexeme() {
     Lexeme* c = next_lexeme();
-    assert(c->type);
+    assert(c->type != LexemeType::l_eof);
     position++;
 }
 
