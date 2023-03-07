@@ -1,6 +1,7 @@
 
 #include "x86_scope_stack.hpp"
 
+#if 0
 namespace bonk::x86_backend {
 
 ScopeStack::ScopeStack() = default;
@@ -34,3 +35,4 @@ Variable* ScopeStack::get_variable(TreeNodeIdentifier* identifier, FieldList** s
 }
 
 } // namespace bonk::x86_backend
+#endif

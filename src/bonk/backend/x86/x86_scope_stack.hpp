@@ -1,6 +1,8 @@
 
 #pragma once
 
+#if 0
+
 namespace bonk::x86_backend {
 
 struct ScopeStack;
@@ -28,3 +30,5 @@ struct ScopeStack {
 };
 
 } // namespace bonk::x86_backend
+
+#endif

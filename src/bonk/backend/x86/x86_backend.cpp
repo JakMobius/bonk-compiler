@@ -4,12 +4,12 @@
 
 namespace bonk::x86_backend {
 
-bool Backend::compile_ast(TreeNodeList* ast, const OutputStream& output) {
+bool Backend::compile_ast(std::unique_ptr<TreeNode> ast, const OutputStream& output) {
 
     macho::MachoFile file;
     BackendContext context{&linked_compiler, &file};
 
-    context.compile_program(ast);
+//    context.compile_program(ast);
 
     /*
      * TODO: get rid of global compiler state in

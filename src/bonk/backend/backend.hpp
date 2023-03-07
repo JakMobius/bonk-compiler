@@ -18,7 +18,7 @@ struct Backend {
 
     virtual ~Backend() = default;
 
-    virtual bool compile_ast(TreeNodeList* ast, const OutputStream& target);
+    virtual bool compile_ast(std::unique_ptr<TreeNode> ast, const OutputStream& target);
 };
 
 } // namespace bonk

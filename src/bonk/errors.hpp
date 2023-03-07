@@ -62,7 +62,7 @@ struct MessageStreamProxy {
             break;
         }
 
-        ostream << proxy.message.str();
+        ostream << proxy.message.str() << std::endl;
         return ostream;
     }
 };

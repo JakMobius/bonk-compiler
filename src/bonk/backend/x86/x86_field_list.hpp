@@ -12,6 +12,8 @@ struct FieldList;
 #include "x86_backend_context.hpp"
 #include "x86_variable.hpp"
 
+#if 0
+
 namespace bonk::x86_backend {
 
 struct FieldList {
@@ -30,3 +32,5 @@ struct FieldList {
 };
 
 } // namespace bonk::x86_backend
+
+#endif

@@ -54,6 +54,7 @@ enum class OperatorType {
     o_of,
     o_and,
     o_or,
+    o_not,
     o_help,
     o_invalid
 };
@@ -128,14 +129,12 @@ struct Lexeme {
         StringLexeme
     > data;
 
-    bool is(KeywordType keyword);
-    bool is(OperatorType operator_type);
-    bool is(BraceType brace_type);
-    bool is_number();
-    bool is_identifier();
-    bool is_identifier(std::string_view exact);
-    bool is_string();
-    bool is_string(std::string_view exact);
+    bool is(KeywordType keyword) const;
+    bool is(OperatorType operator_type) const;
+    bool is(BraceType brace_type) const;
+    bool is(LexemeType lexeme_type) const;
+    bool is_identifier(std::string_view exact) const;
+    bool is_string(std::string_view exact) const;
 };
 
 enum class OperatorMatch {

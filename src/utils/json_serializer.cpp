@@ -125,7 +125,7 @@ void JsonSerializer::close_array() {
 }
 
 void JsonSerializer::prepare_next_field() {
-    assert(!state.field_name_set && !state.is_array);
+    assert(!state.field_name_set);
     if (!state.is_first)
         output_stream.get_stream() << ",\n";
     else
@@ -147,6 +147,7 @@ JsonSerializer::~JsonSerializer() {
 
 JsonSerializer& JsonSerializer::field(std::string_view name) {
     prepare_next_field();
+    state.field_name_set = true;
     JSONStringEscaperStream(*this) << name;
     return *this;
 }
@@ -161,8 +162,9 @@ void JSONStringEscaperStream::flush() const {
         else if (c == '"')
             serializer.output_stream.get_stream() << "\\\"";
         else
-            serializer.output_stream.get_stream() << c;
+            serializer.output_stream.get_stream() << (char)c;
     }
+    serializer.ss.clear();
 }
 
 JSONStringEscaperStream::JSONStringEscaperStream(JsonSerializer& serializer)

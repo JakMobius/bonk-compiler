@@ -47,6 +47,14 @@ extern const int SYSTEM_V_CALLER_PRESERVED_REGISTERS_COUNT;
 
 struct BackendContext {
 
+    Compiler* linked_compiler = nullptr;
+
+    BackendContext(Compiler* compiler, macho::MachoFile* target);
+
+    ~BackendContext();
+
+#if 0
+
     int procedure_parameters = 0;
     AbstractRegister procedure_return_register = 0;
     CommandBuffer* procedure_command_buffer = nullptr;
@@ -63,17 +71,11 @@ struct BackendContext {
     JmpLabel* cycle_head = nullptr;
     JmpLabel* cycle_tail = nullptr;
 
-    Compiler* linked_compiler = nullptr;
-
-    BackendContext(Compiler* compiler, macho::MachoFile* target);
-
-    ~BackendContext();
-
     void push_state();
 
     void pop_state();
 
-    void compile_program(TreeNodeList* ast);
+    void compile_program(TreeNode* ast);
 
     FieldList* read_scope_variables(TreeNodeList* scope);
 
@@ -182,6 +184,7 @@ struct BackendContext {
                                     int i);
 
     void write_global_var_definition(TreeNodeVariableDefinition* definition) const;
+#endif
 };
 
 } // namespace bonk::x86_backend

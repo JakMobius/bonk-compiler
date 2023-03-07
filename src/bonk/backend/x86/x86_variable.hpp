@@ -1,5 +1,7 @@
 #pragma once
 
+#if 0
+
 namespace bonk::x86_backend {
 
 struct Variable;
@@ -35,3 +37,5 @@ struct VariableFunction : Variable {
 };
 
 } // namespace bonk::x86_backend
+
+#endif

@@ -1,6 +1,7 @@
 
 #include "x86_variable.hpp"
 
+#if 0
 namespace bonk::x86_backend {
 
 Variable::Variable(TreeNodeIdentifier* the_identifier) {
@@ -20,3 +21,4 @@ VariableFunction::VariableFunction(TreeNodeIdentifier* identifier, FieldList* th
 }
 
 } // namespace bonk::x86_backend
+#endif

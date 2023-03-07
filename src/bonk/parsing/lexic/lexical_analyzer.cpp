@@ -7,7 +7,7 @@ namespace bonk {
 const char* BONK_OPERATOR_NAMES[] = {
     "@",    "+",    "-",    "*",    "/",  "+=",  "-=", "*=",   "/=",
     "=",    "==",   "<",    ">",    "<=", ">=",  "!=", "blok", "hive",
-    "brek", "bowl", "bonk", "loop", "of", "and", "or", "help", nullptr};
+    "brek", "bowl", "bonk", "loop", "of", "and", "or", "not", "help", nullptr};
 
 const char* BONK_KEYWORD_NAMES[] = {"flot", "nubr", "strg", "many", nullptr};
 
@@ -257,35 +257,27 @@ int LexicalAnalyzer::next_operator() {
     return -1;
 }
 
-bool Lexeme::is(KeywordType keyword) {
+bool Lexeme::is(KeywordType keyword) const {
     return type == LexemeType::l_keyword && std::get<KeywordLexeme>(data).type == keyword;
 }
 
-bool Lexeme::is(OperatorType operator_type) {
+bool Lexeme::is(OperatorType operator_type) const {
     return type == LexemeType::l_operator && std::get<OperatorLexeme>(data).type == operator_type;
 }
 
-bool Lexeme::is(BraceType brace_type) {
+bool Lexeme::is(BraceType brace_type) const {
     return type == LexemeType::l_brace && std::get<BraceLexeme>(data).type == brace_type;
 }
 
-bool Lexeme::is_number() {
-    return type == LexemeType::l_number;
+bool Lexeme::is(LexemeType other_type) const {
+    return type == other_type;
 }
 
-bool Lexeme::is_identifier() {
-    return type == LexemeType::l_identifier;
-}
-
-bool Lexeme::is_identifier(std::string_view exact) {
+bool Lexeme::is_identifier(std::string_view exact) const {
     return type == LexemeType::l_identifier && std::get<IdentifierLexeme>(data).identifier == exact;
 }
 
-bool Lexeme::is_string() {
-    return type == LexemeType::l_string;
-}
-
-bool Lexeme::is_string(std::string_view exact) {
+bool Lexeme::is_string(std::string_view exact) const {
     return type == LexemeType::l_string && std::get<StringLexeme>(data).string == exact;
 }
 

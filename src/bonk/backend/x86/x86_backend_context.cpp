@@ -23,6 +23,7 @@ const int SYSTEM_V_CALLER_PRESERVED_REGISTERS_COUNT =
 
 BackendContext::BackendContext(Compiler* compiler, macho::MachoFile* destination) {
     linked_compiler = compiler;
+#if 0
     target = destination;
 
     // TODO: better naming
@@ -33,9 +34,11 @@ BackendContext::BackendContext(Compiler* compiler, macho::MachoFile* destination
     procedure_return_register = -1;
     procedure_body_container = nullptr;
     procedure_parameters = 0;
+#endif
 }
 
 BackendContext::~BackendContext() {
+#if 0
     delete scope_stack;
     delete global_descriptors;
 
@@ -43,9 +46,12 @@ BackendContext::~BackendContext() {
     global_descriptors = nullptr;
 
     current_descriptors = nullptr;
+#endif
 }
 
-void BackendContext::compile_program(TreeNodeList* ast) {
+#if 0
+
+void BackendContext::compile_program(TreeNode* ast) {
 
     FieldList* scope = read_scope_variables(ast);
 
@@ -905,5 +911,7 @@ void BackendContext::locate_procedure_parameter(Variable* parameter) {
 
     procedure_parameters++;
 }
+
+#endif
 
 } // namespace bonk::x86_backend

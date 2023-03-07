@@ -17,7 +17,7 @@ struct Backend : bonk::Backend {
     Backend(Compiler& linked_compiler): bonk::Backend(linked_compiler) {}
     ~Backend() override = default;
 
-    bool compile_ast(TreeNodeList* ast, const OutputStream& target) override;
+    bool compile_ast(std::unique_ptr<TreeNode> ast, const OutputStream& target) override;
 };
 
 } // namespace bonk::x86_backend

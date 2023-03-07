@@ -1,6 +1,7 @@
 
 #include "x86_field_list.hpp"
 
+#if 0
 namespace bonk::x86_backend {
 
 FieldList::FieldList(RegisterDescriptorList* descriptor_list, BackendContextState* state) {
@@ -45,3 +46,5 @@ FieldList::~FieldList() {
 }
 
 } // namespace bonk::x86_backend
+
+#endif
