@@ -43,7 +43,6 @@ struct Parser {
     std::unique_ptr<TreeNode> parse_statement();
     std::unique_ptr<TreeNodeBonkStatement> parse_bonk_statement();
     std::unique_ptr<TreeNodeArrayConstant> parse_array_constant();
-    std::unique_ptr<TreeNodeHiveAccess> parse_hive_access();
     std::unique_ptr<TreeNodeParameterList> parse_parameter_list();
     std::unique_ptr<TreeNodeParameterListItem> parse_parameter_list_item();
     std::unique_ptr<TreeNodeLoopStatement> parse_loop_statement();

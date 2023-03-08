@@ -215,25 +215,27 @@ int LexicalAnalyzer::next_operator() {
     int position = current_position.index;
     int operators_left = operator_match.size();
 
-    for (auto& i : operator_match)
-        i = OperatorMatch::maybe_matched;
+    for (auto&& i : operator_match) i = true;
+
+    int matched_operator = -1;
 
     while (char c = text[position]) {
         int lexeme_position = position - current_position.index;
 
         for (int i = 0; i < operator_match.size(); i++) {
-            if (operator_match[i] != OperatorMatch::maybe_matched)
+            if (!operator_match[i])
                 continue;
 
             if (BONK_OPERATOR_NAMES[i][lexeme_position] == '\0') {
                 operators_left--;
-                operator_match[i] = OperatorMatch::matched;
+                matched_operator = i;
+                operator_match[i] = false;
                 continue;
             }
 
             if (BONK_OPERATOR_NAMES[i][lexeme_position] != c) {
                 operators_left--;
-                operator_match[i] = OperatorMatch::not_matched;
+                operator_match[i] = false;
                 continue;
             }
         }
@@ -244,14 +246,12 @@ int LexicalAnalyzer::next_operator() {
         position++;
     }
 
-    for (int i = 0; i < operator_match.size(); i++) {
-        if (operator_match[i] == OperatorMatch::matched) {
-            int length = strlen(BONK_OPERATOR_NAMES[i]);
-            // Invariant: operators do not contain newlines
-            current_position.index += length;
-            current_position.ch += length;
-            return i;
-        }
+    if (matched_operator != -1) {
+        int length = strlen(BONK_OPERATOR_NAMES[matched_operator]);
+        // Invariant: operators do not contain newlines
+        current_position.index += length;
+        current_position.ch += length;
+        return matched_operator;
     }
 
     return -1;

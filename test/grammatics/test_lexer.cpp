@@ -99,7 +99,7 @@ TEST(Lexer, TestNumbers) {
 
     ASSERT_TRUE(compiler.state == bonk::BONK_COMPILER_OK);
     ASSERT_EQ(lexemes.size(), 15);
-    for(int i = 0; i < 14; i++) {
+    for (int i = 0; i < 14; i++) {
         ASSERT_EQ(lexemes[i].type, bonk::LexemeType::l_number);
     }
     EXPECT_EQ(lexemes[14].type, bonk::LexemeType::l_eof);
@@ -156,4 +156,29 @@ TEST(Lexer, TestGlobal) {
 
     ASSERT_FALSE(lexemes.empty());
     ASSERT_TRUE(compiler.state == bonk::BONK_COMPILER_OK);
+}
+
+TEST(Lexer, TestOperators) {
+    auto error_stream = bonk::StdOutputStream(std::cerr);
+    bonk::CompilerConfig config{.error_file = error_stream};
+    bonk::Compiler compiler(config);
+
+    std::stringstream source_stream;
+
+    for (int i = 0; bonk::BONK_OPERATOR_NAMES[i]; i++) {
+        source_stream << bonk::BONK_OPERATOR_NAMES[i] << " ";
+    }
+
+    std::string source = source_stream.str();
+
+    auto lexemes = compiler.lexical_analyzer.parse_file("test", source);
+
+    ASSERT_FALSE(lexemes.empty());
+    ASSERT_TRUE(compiler.state == bonk::BONK_COMPILER_OK);
+
+    for (int i = 0; i < lexemes.size() - 1; i++) {
+        ASSERT_EQ(lexemes[i].type, bonk::LexemeType::l_operator);
+        EXPECT_EQ(std::get<bonk::OperatorLexeme>(lexemes[i].data).type, (bonk::OperatorType)i)
+            << "Operator " << bonk::BONK_OPERATOR_NAMES[i] << " is not parsed correctly";
+    }
 }

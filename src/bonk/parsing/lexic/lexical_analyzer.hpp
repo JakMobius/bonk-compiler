@@ -137,18 +137,12 @@ struct Lexeme {
     bool is_string(std::string_view exact) const;
 };
 
-enum class OperatorMatch {
-    not_matched,
-    maybe_matched,
-    matched
-};
-
 struct LexicalAnalyzer {
     std::string_view text{};
     Compiler* linked_compiler;
     ParserPosition current_position{};
     std::vector<Lexeme> lexemes{};
-    std::vector<OperatorMatch> operator_match{};
+    std::vector<bool> operator_match{};
 
     LexicalAnalyzer(Compiler* compiler);
 

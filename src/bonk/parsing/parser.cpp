@@ -267,41 +267,6 @@ std::unique_ptr<TreeNodeArrayConstant> Parser::parse_array_constant() {
     return array_constant;
 }
 
-std::unique_ptr<TreeNodeHiveAccess> Parser::parse_hive_access() {
-    // HiveAccess: Identifier of Expression
-
-    auto start_position = next_lexeme()->start_position;
-
-    if (!next_lexeme()->is(LexemeType::l_identifier)) {
-        linked_compiler.error().at(next_lexeme()->start_position)
-            << "Expected identifier for hive access";
-        return nullptr;
-    }
-
-    std::unique_ptr<TreeNodeIdentifier> identifier = std::make_unique<TreeNodeIdentifier>();
-
-    identifier->source_position = next_lexeme()->start_position;
-    identifier->identifier_text = std::get<IdentifierLexeme>(next_lexeme()->data).identifier;
-
-    eat_lexeme();
-
-    if (!next_lexeme()->is(OperatorType::o_of)) {
-        linked_compiler.error().at(next_lexeme()->start_position)
-            << "Expected 'of' after identifier for hive access";
-        return nullptr;
-    }
-
-    eat_lexeme();
-
-    std::unique_ptr<TreeNodeHiveAccess> hive_access = std::make_unique<TreeNodeHiveAccess>();
-
-    hive_access->source_position = start_position;
-    hive_access->field = std::move(identifier);
-    hive_access->hive = parse_expression();
-
-    return hive_access;
-}
-
 std::unique_ptr<TreeNodeParameterList> Parser::parse_parameter_list() {
     // ParameterList: [(ParameterListItem (, ParameterListItem)*)?]
 
@@ -583,7 +548,7 @@ std::unique_ptr<TreeNode> Parser::parse_expression_unary() {
 }
 
 std::unique_ptr<TreeNode> Parser::parse_expression_primary() {
-    // ExpressionPrimary: Identifier | NumberConstant | StringConstant | ArrayConstant |
+    // ExpressionPrimary: HiveAccess | Identifier | NumberConstant | StringConstant | ArrayConstant |
     // (Expression)
 
     auto start_position = next_lexeme()->start_position;
@@ -593,6 +558,15 @@ std::unique_ptr<TreeNode> Parser::parse_expression_primary() {
         identifier->source_position = start_position;
         identifier->identifier_text = std::get<IdentifierLexeme>(next_lexeme()->data).identifier;
         eat_lexeme();
+        if (next_lexeme()->is(OperatorType::o_of)) {
+            eat_lexeme();
+            std::unique_ptr<TreeNodeHiveAccess> hive_access =
+                    std::make_unique<TreeNodeHiveAccess>();
+            hive_access->source_position = start_position;
+            hive_access->field = std::move(identifier);
+            hive_access->hive = parse_expression_primary();
+            return hive_access;
+        }
         return identifier;
     }
 
