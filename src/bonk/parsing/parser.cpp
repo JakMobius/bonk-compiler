@@ -34,12 +34,14 @@ std::unique_ptr<TreeNode> Parser::parse_program() {
 
     while (next_lexeme()->is(OperatorType::o_help)) {
         program->help_statements.push_back(parse_help_statement());
-        if(linked_compiler.state) return nullptr;
+        if (linked_compiler.state)
+            return nullptr;
     }
 
     while (next_lexeme()->type != LexemeType::l_eof) {
         program->body.push_back(parse_definition());
-        if(linked_compiler.state) return nullptr;
+        if (linked_compiler.state)
+            return nullptr;
     }
 
     return program;
@@ -204,7 +206,8 @@ std::unique_ptr<TreeNodeCodeBlock> Parser::parse_code_block() {
 }
 
 std::unique_ptr<TreeNode> Parser::parse_statement() {
-    // Statement: { CodeBlock | Expression | LoopStatement | BonkStatement | VariableDefinition }
+    // Statement: { CodeBlock | Expression | LoopStatement | BonkStatement | BrekStatement |
+    // VariableDefinition }
 
     if (next_lexeme()->is(BraceType('{'))) {
         return parse_code_block();
@@ -214,6 +217,8 @@ std::unique_ptr<TreeNode> Parser::parse_statement() {
         return parse_loop_statement();
     } else if (next_lexeme()->is(OperatorType::o_bonk)) {
         return parse_bonk_statement();
+    } else if (next_lexeme()->is(OperatorType::o_brek)) {
+        return parse_brek_statement();
     } else {
         return parse_expression();
     }
@@ -235,6 +240,18 @@ std::unique_ptr<TreeNodeBonkStatement> Parser::parse_bonk_statement() {
     bonk_statement->expression = parse_expression();
 
     return bonk_statement;
+}
+
+std::unique_ptr<TreeNodeBrekStatement> Parser::parse_brek_statement() {
+    // BrekStatement: brek
+
+    auto start_position = next_lexeme()->start_position;
+    eat_lexeme();
+    std::unique_ptr<TreeNodeBrekStatement> brek_statement =
+        std::make_unique<TreeNodeBrekStatement>();
+    brek_statement->source_position = start_position;
+
+    return brek_statement;
 }
 
 std::unique_ptr<TreeNodeArrayConstant> Parser::parse_array_constant() {
@@ -420,9 +437,9 @@ std::unique_ptr<TreeNodeHiveDefinition> Parser::parse_hive_definition() {
     hive_definition->source_position = start_position;
 
     if (!next_lexeme()->is(LexemeType::l_identifier)) {
-            linked_compiler.error().at(next_lexeme()->start_position)
+        linked_compiler.error().at(next_lexeme()->start_position)
             << "Expected identifier for hive definition";
-            return nullptr;
+        return nullptr;
     }
 
     hive_definition->hive_name = std::make_unique<TreeNodeIdentifier>();
@@ -548,8 +565,8 @@ std::unique_ptr<TreeNode> Parser::parse_expression_unary() {
 }
 
 std::unique_ptr<TreeNode> Parser::parse_expression_primary() {
-    // ExpressionPrimary: HiveAccess | Identifier | NumberConstant | StringConstant | ArrayConstant |
-    // (Expression)
+    // ExpressionPrimary: HiveAccess | Identifier | NumberConstant | StringConstant | ArrayConstant
+    // | (Expression)
 
     auto start_position = next_lexeme()->start_position;
 
@@ -561,7 +578,7 @@ std::unique_ptr<TreeNode> Parser::parse_expression_primary() {
         if (next_lexeme()->is(OperatorType::o_of)) {
             eat_lexeme();
             std::unique_ptr<TreeNodeHiveAccess> hive_access =
-                    std::make_unique<TreeNodeHiveAccess>();
+                std::make_unique<TreeNodeHiveAccess>();
             hive_access->source_position = start_position;
             hive_access->field = std::move(identifier);
             hive_access->hive = parse_expression_primary();

@@ -85,6 +85,7 @@ void ASTVisitor::visit(TreeNodeHiveAccess* node) {
 void ASTVisitor::visit(TreeNodeBonkStatement* node) {
     if(node->expression) node->expression->accept(this);
 }
+void ASTVisitor::visit(TreeNodeBrekStatement* node) {}
 void ASTVisitor::visit(TreeNodeLoopStatement* node) {
     if(node->loop_parameters) node->loop_parameters->accept(this);
     if(node->body) node->body->accept(this);

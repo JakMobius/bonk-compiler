@@ -17,6 +17,7 @@ enum class TreeNodeType {
     n_number_constant,
     n_string_constant,
     n_bonk_statement,
+    n_brek_statement,
     n_hive_access,
     n_loop_statement,
     n_primitive_type,
@@ -47,9 +48,10 @@ struct TreeNodePrimitiveType;
 struct TreeNodeManyType;
 struct TreeNodeHiveAccess;
 struct TreeNodeBonkStatement;
+struct TreeNodeBrekStatement;
 struct TreeNodeLoopStatement;
 
-enum PrimitiveType { t_unset, t_nubr, t_flot, t_strg };
+enum class PrimitiveType { t_unset, t_nubr, t_flot, t_strg };
 extern const char* BONK_PRIMITIVE_TYPE_NAMES[];
 
 } // namespace bonk
@@ -62,7 +64,7 @@ extern const char* BONK_PRIMITIVE_TYPE_NAMES[];
 namespace bonk {
 
 struct TreeNode {
-    TreeNodeType type {};
+    TreeNodeType type{};
     ParserPosition source_position{};
 
     TreeNode() = default;
@@ -72,8 +74,8 @@ struct TreeNode {
 };
 
 struct TreeNodeProgram : TreeNode {
-    std::list<std::unique_ptr<TreeNodeHelp>> help_statements {};
-    std::list<std::unique_ptr<TreeNode>> body {};
+    std::list<std::unique_ptr<TreeNodeHelp>> help_statements{};
+    std::list<std::unique_ptr<TreeNode>> body{};
 
     TreeNodeProgram() {
         type = TreeNodeType::n_program;
@@ -83,7 +85,7 @@ struct TreeNodeProgram : TreeNode {
 };
 
 struct TreeNodeHelp : TreeNode {
-    std::unique_ptr<TreeNodeIdentifier> identifier {};
+    std::unique_ptr<TreeNodeIdentifier> identifier{};
 
     TreeNodeHelp() {
         type = TreeNodeType::n_help_statement;
@@ -93,7 +95,7 @@ struct TreeNodeHelp : TreeNode {
 };
 
 struct TreeNodeIdentifier : TreeNode {
-    std::string_view identifier_text {};
+    std::string_view identifier_text{};
 
     TreeNodeIdentifier() {
         type = TreeNodeType::n_identifier;
@@ -103,9 +105,9 @@ struct TreeNodeIdentifier : TreeNode {
 };
 
 struct TreeNodeBlockDefinition : TreeNode {
-    std::unique_ptr<TreeNodeIdentifier> block_name {};
-    std::unique_ptr<TreeNodeParameterListDefinition> block_parameters {};
-    std::unique_ptr<TreeNodeCodeBlock> body {};
+    std::unique_ptr<TreeNodeIdentifier> block_name{};
+    std::unique_ptr<TreeNodeParameterListDefinition> block_parameters{};
+    std::unique_ptr<TreeNodeCodeBlock> body{};
 
     TreeNodeBlockDefinition() {
         type = TreeNodeType::n_block_definition;
@@ -115,8 +117,8 @@ struct TreeNodeBlockDefinition : TreeNode {
 };
 
 struct TreeNodeHiveDefinition : TreeNode {
-    std::unique_ptr<TreeNodeIdentifier> hive_name {};
-    std::list<std::unique_ptr<TreeNode>> body {};
+    std::unique_ptr<TreeNodeIdentifier> hive_name{};
+    std::list<std::unique_ptr<TreeNode>> body{};
 
     TreeNodeHiveDefinition() {
         type = TreeNodeType::n_hive_definition;
@@ -126,9 +128,9 @@ struct TreeNodeHiveDefinition : TreeNode {
 };
 
 struct TreeNodeVariableDefinition : TreeNode {
-    std::unique_ptr<TreeNodeIdentifier> variable_name {};
-    std::unique_ptr<TreeNode> variable_value {};
-    std::unique_ptr<TreeNode> variable_type {};
+    std::unique_ptr<TreeNodeIdentifier> variable_name{};
+    std::unique_ptr<TreeNode> variable_value{};
+    std::unique_ptr<TreeNode> variable_type{};
 
     TreeNodeVariableDefinition() {
         type = TreeNodeType::n_variable_definition;
@@ -138,7 +140,7 @@ struct TreeNodeVariableDefinition : TreeNode {
 };
 
 struct TreeNodeParameterListDefinition : TreeNode {
-    std::list<std::unique_ptr<TreeNodeVariableDefinition>> parameters {};
+    std::list<std::unique_ptr<TreeNodeVariableDefinition>> parameters{};
 
     TreeNodeParameterListDefinition() {
         type = TreeNodeType::n_parameter_list_definition;
@@ -148,7 +150,7 @@ struct TreeNodeParameterListDefinition : TreeNode {
 };
 
 struct TreeNodeParameterList : TreeNode {
-    std::list<std::unique_ptr<TreeNodeParameterListItem>> parameters {};
+    std::list<std::unique_ptr<TreeNodeParameterListItem>> parameters{};
 
     TreeNodeParameterList() {
         type = TreeNodeType::n_parameter_list_definition;
@@ -158,8 +160,8 @@ struct TreeNodeParameterList : TreeNode {
 };
 
 struct TreeNodeParameterListItem : TreeNode {
-    std::unique_ptr<TreeNodeIdentifier> parameter_name {};
-    std::unique_ptr<TreeNode> parameter_value {};
+    std::unique_ptr<TreeNodeIdentifier> parameter_name{};
+    std::unique_ptr<TreeNode> parameter_value{};
 
     TreeNodeParameterListItem() {
         type = TreeNodeType::n_parameter_list_item;
@@ -169,7 +171,7 @@ struct TreeNodeParameterListItem : TreeNode {
 };
 
 struct TreeNodeCodeBlock : TreeNode {
-    std::list<std::unique_ptr<TreeNode>> body {};
+    std::list<std::unique_ptr<TreeNode>> body{};
 
     TreeNodeCodeBlock() {
         type = TreeNodeType::n_code_block;
@@ -179,7 +181,7 @@ struct TreeNodeCodeBlock : TreeNode {
 };
 
 struct TreeNodeBonkStatement : TreeNode {
-    std::unique_ptr<TreeNode> expression {};
+    std::unique_ptr<TreeNode> expression{};
 
     TreeNodeBonkStatement() {
         type = TreeNodeType::n_bonk_statement;
@@ -188,8 +190,16 @@ struct TreeNodeBonkStatement : TreeNode {
     void accept(ASTVisitor* visitor) override;
 };
 
+struct TreeNodeBrekStatement : TreeNode {
+    TreeNodeBrekStatement() {
+        type = TreeNodeType::n_brek_statement;
+    }
+
+    void accept(ASTVisitor* visitor) override;
+};
+
 struct TreeNodeArrayConstant : TreeNode {
-    std::list<std::unique_ptr<TreeNode>> elements {};
+    std::list<std::unique_ptr<TreeNode>> elements{};
 
     TreeNodeArrayConstant() {
         type = TreeNodeType::n_array_constant;
@@ -210,7 +220,7 @@ struct TreeNodeNumberConstant : TreeNode {
 };
 
 struct TreeNodeStringConstant : TreeNode {
-    std::string_view string_value {};
+    std::string_view string_value{};
 
     TreeNodeStringConstant() {
         type = TreeNodeType::n_string_constant;
@@ -220,8 +230,8 @@ struct TreeNodeStringConstant : TreeNode {
 };
 
 struct TreeNodeHiveAccess : TreeNode {
-    std::unique_ptr<TreeNode> hive {};
-    std::unique_ptr<TreeNodeIdentifier> field {};
+    std::unique_ptr<TreeNode> hive{};
+    std::unique_ptr<TreeNodeIdentifier> field{};
 
     TreeNodeHiveAccess() {
         type = TreeNodeType::n_hive_access;
@@ -252,7 +262,7 @@ struct TreeNodeManyType : TreeNode {
 };
 
 struct TreeNodePrimitiveType : TreeNode {
-    PrimitiveType primitive_type {};
+    PrimitiveType primitive_type{};
 
     TreeNodePrimitiveType() {
         type = TreeNodeType::n_primitive_type;
@@ -262,9 +272,9 @@ struct TreeNodePrimitiveType : TreeNode {
 };
 
 struct TreeNodeBinaryOperation : TreeNode {
-    std::unique_ptr<TreeNode> left {};
-    std::unique_ptr<TreeNode> right {};
-    OperatorType operator_type {};
+    std::unique_ptr<TreeNode> left{};
+    std::unique_ptr<TreeNode> right{};
+    OperatorType operator_type{};
 
     TreeNodeBinaryOperation() {
         type = TreeNodeType::n_binary_operation;
@@ -274,8 +284,8 @@ struct TreeNodeBinaryOperation : TreeNode {
 };
 
 struct TreeNodeUnaryOperation : TreeNode {
-    std::unique_ptr<TreeNode> operand {};
-    OperatorType operator_type {};
+    std::unique_ptr<TreeNode> operand{};
+    OperatorType operator_type{};
 
     TreeNodeUnaryOperation() {
         type = TreeNodeType::n_unary_operation;
@@ -285,8 +295,8 @@ struct TreeNodeUnaryOperation : TreeNode {
 };
 
 struct TreeNodeCall : TreeNode {
-    std::unique_ptr<TreeNode> callee {};
-    std::unique_ptr<TreeNodeParameterList> arguments {};
+    std::unique_ptr<TreeNode> callee{};
+    std::unique_ptr<TreeNodeParameterList> arguments{};
 
     TreeNodeCall() {
         type = TreeNodeType::n_call;

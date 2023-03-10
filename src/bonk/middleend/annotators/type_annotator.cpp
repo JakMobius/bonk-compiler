@@ -1,205 +1,96 @@
 
-#include "type_annotating_visitor.hpp"
-#include "../compiler.hpp"
+#include "../../compiler.hpp"
+#include "type_annotator.hpp"
 #include "type_inferring.hpp"
+#include "../middleend.hpp"
 
-bonk::ScopedNameResolver::ScopedNameResolver() {
-    scopes.emplace_back();
+bonk::TypeAnnotator::TypeAnnotator(bonk::MiddleEnd& middle_end)
+    : middle_end(middle_end) {
 }
 
-void bonk::ScopedNameResolver::push_scope() {
-    //    padding();
-    //    std::cout << "Pushing scope\n";
-    scopes.emplace_back();
-}
-
-void bonk::ScopedNameResolver::pop_scope() {
-    //    padding();
-    //    std::cout << "Popping scope\n";
-    scopes.pop_back();
-}
-
-bonk::TreeNode* bonk::ScopedNameResolver::get_name_definition(std::string_view name) {
-    for (int i = scopes.size() - 1; i >= 0; i--) {
-        auto it = scopes[i].variables.find(name);
-        if (it != scopes[i].variables.end()) {
-            //            padding();
-            //            std::cout << "Identifier " << name << " is defined as " << it->second <<
-            //            std::endl;
-            return name_definitions[it->second];
-        }
-    }
-    return nullptr;
-}
-
-void bonk::ScopedNameResolver::padding() {
-    for (int i = 0; i < scopes.size(); i++) {
-        std::cout << "  ";
-    }
-}
-
-void bonk::ScopedNameResolver::define_variable(bonk::TreeNode* definition) {
-    std::string_view name;
-
-    //    padding();
-
-    switch (definition->type) {
-    case TreeNodeType::n_variable_definition: {
-        name = ((TreeNodeVariableDefinition*)definition)->variable_name->identifier_text;
-        //        std::cout << "Defining variable " << name << " as " << total_names << std::endl;
-        break;
-    }
-    case TreeNodeType::n_block_definition: {
-        name = ((TreeNodeBlockDefinition*)definition)->block_name->identifier_text;
-        //        std::cout << "Defining block " << name << " as " << total_names << std::endl;
-        break;
-    }
-    case TreeNodeType::n_hive_definition: {
-        name = ((TreeNodeHiveDefinition*)definition)->hive_name->identifier_text;
-        //        std::cout << "Defining hive " << name << " as " << total_names << std::endl;
-        break;
-    }
-    default: {
-        assert(!"Invalid definition type");
-    }
-    }
-
-    scopes.back().variables[name] = total_names;
-    identifier_definitions[definition] = definition;
-    name_definitions[total_names] = definition;
-
-    total_names++;
-}
-
-bonk::TreeNode* bonk::ScopedNameResolver::get_definition(int name_id) {
-    auto it = name_definitions.find(name_id);
-    if (it == name_definitions.end())
-        return nullptr;
-    return it->second;
-}
-
-bonk::TypeAnnotatingVisitor::TypeAnnotatingVisitor(bonk::Compiler& linked_compiler)
-    : linked_compiler(linked_compiler), active_name_resolver(&scoped_name_resolver) {
-}
-
-bonk::Type* bonk::TypeAnnotatingVisitor::infer_type(bonk::TreeNode* node) {
-    TypeInferringVisitor visitor{*this};
+bonk::Type* bonk::TypeAnnotator::infer_type(bonk::TreeNode* node) {
+    TypeInferringVisitor visitor{middle_end};
     return visitor.infer_type(node);
 }
 
-void bonk::TypeAnnotatingVisitor::visit(bonk::TreeNodeCodeBlock* node) {
-    scoped_name_resolver.push_scope();
-    ASTVisitor::visit(node);
-    scoped_name_resolver.pop_scope();
-}
-
-void bonk::TypeAnnotatingVisitor::visit(bonk::TreeNodeHiveDefinition* node) {
+void bonk::TypeAnnotator::visit(bonk::TreeNodeHiveDefinition* node) {
     infer_type(node);
-
-    scoped_name_resolver.define_variable(node);
-    scoped_name_resolver.push_scope();
     ASTVisitor::visit(node);
-    scoped_name_resolver.pop_scope();
 }
 
-void bonk::TypeAnnotatingVisitor::visit(bonk::TreeNodeVariableDefinition* node) {
+void bonk::TypeAnnotator::visit(bonk::TreeNodeVariableDefinition* node) {
     infer_type(node);
-
-    scoped_name_resolver.define_variable(node);
-}
-
-void bonk::TypeAnnotatingVisitor::visit(bonk::TreeNodeBlockDefinition* node) {
-    infer_type(node);
-
-    scoped_name_resolver.define_variable(node);
-    scoped_name_resolver.push_scope();
-
-    if (node->block_parameters) {
-        for (auto& parameter : node->block_parameters->parameters) {
-            scoped_name_resolver.define_variable(parameter.get());
-        }
-    }
-
     ASTVisitor::visit(node);
-    scoped_name_resolver.pop_scope();
 }
 
-void bonk::TypeAnnotatingVisitor::visit(bonk::TreeNodeLoopStatement* node) {
-    scoped_name_resolver.push_scope();
-    ASTVisitor::visit(node);
-
-    if (node->loop_parameters) {
-        for (auto& parameter : node->loop_parameters->parameters) {
-            scoped_name_resolver.define_variable(parameter.get());
-        }
-    }
-    scoped_name_resolver.pop_scope();
-}
-
-void bonk::TypeAnnotatingVisitor::visit(bonk::TreeNodeHiveAccess* node) {
+void bonk::TypeAnnotator::visit(bonk::TreeNodeBlockDefinition* node) {
     infer_type(node);
-    if (node->hive) node->hive->accept(this);
-    if (node->field) node->field->accept(this);
+    ASTVisitor::visit(node);
 }
 
-void bonk::TypeAnnotatingVisitor::visit(bonk::TreeNodeCall* node) {
+void bonk::TypeAnnotator::visit(bonk::TreeNodeHiveAccess* node) {
+    infer_type(node);
+    ASTVisitor::visit(node);
+}
+
+void bonk::TypeAnnotator::visit(bonk::TreeNodeCall* node) {
     infer_type(node);
     Type* type = infer_type(node->callee.get());
 
     if(!type || type->kind == TypeKind::error) return;
-
-    if (node->callee)
-        node->callee->accept(this);
-    if (node->arguments)
-        node->arguments->accept(this);
+    ASTVisitor::visit(node);
 }
 
-void bonk::TypeAnnotatingVisitor::visit(bonk::TreeNodeParameterListItem* node) {
+void bonk::TypeAnnotator::visit(bonk::TreeNodeParameterListItem* node) {
     if (node->parameter_value)
         node->parameter_value->accept(this);
-    if (node->parameter_name) {
-        node->parameter_name->accept(this);
-    }
+
+    // Don't accept 'parameter_name', because TypeInferringVisitor will not be able
+    // to infer type of parameter name.
 }
 
-void bonk::TypeAnnotatingVisitor::visit(TreeNodeArrayConstant* node) {
+void bonk::TypeAnnotator::visit(TreeNodeArrayConstant* node) {
     ASTVisitor::visit(node);
     infer_type(node);
 }
 
-void bonk::TypeAnnotatingVisitor::visit(TreeNodeNumberConstant* node) {
+void bonk::TypeAnnotator::visit(TreeNodeNumberConstant* node) {
     ASTVisitor::visit(node);
     infer_type(node);
 }
 
-void bonk::TypeAnnotatingVisitor::visit(TreeNodeStringConstant* node) {
+void bonk::TypeAnnotator::visit(TreeNodeStringConstant* node) {
     ASTVisitor::visit(node);
     infer_type(node);
 }
 
-void bonk::TypeAnnotatingVisitor::visit(TreeNodeBinaryOperation* node) {
+void bonk::TypeAnnotator::visit(TreeNodeBinaryOperation* node) {
     ASTVisitor::visit(node);
     infer_type(node);
 }
 
-void bonk::TypeAnnotatingVisitor::visit(TreeNodeUnaryOperation* node) {
+void bonk::TypeAnnotator::visit(TreeNodeUnaryOperation* node) {
     ASTVisitor::visit(node);
     infer_type(node);
 }
 
-void bonk::TypeAnnotatingVisitor::visit(TreeNodePrimitiveType* node) {
+void bonk::TypeAnnotator::visit(TreeNodePrimitiveType* node) {
     ASTVisitor::visit(node);
     infer_type(node);
 }
 
-void bonk::TypeAnnotatingVisitor::visit(TreeNodeManyType* node) {
+void bonk::TypeAnnotator::visit(TreeNodeManyType* node) {
     ASTVisitor::visit(node);
     infer_type(node);
 }
 
-void bonk::TypeAnnotatingVisitor::visit(TreeNodeBonkStatement* node) {
+void bonk::TypeAnnotator::visit(TreeNodeBonkStatement* node) {
     ASTVisitor::visit(node);
     infer_type(node);
+}
+
+void bonk::TypeAnnotator::annotate_ast(bonk::TreeNode* ast) {
+    ast->accept(this);
 }
 
 bool bonk::Type::operator==(const bonk::Type& other) const {
@@ -306,10 +197,10 @@ bool bonk::TrivialType::allows_binary_operation(bonk::OperatorType operator_type
                                                 Type* other_type) const {
     switch (primitive_type) {
 
-    case t_unset:
+    case PrimitiveType::t_unset:
         return false;
-    case t_nubr:
-    case t_flot:
+    case PrimitiveType::t_nubr:
+    case PrimitiveType::t_flot:
         return *other_type == *this &&
                (operator_type == OperatorType::o_plus || operator_type == OperatorType::o_minus ||
                 operator_type == OperatorType::o_multiply ||
@@ -326,7 +217,7 @@ bool bonk::TrivialType::allows_binary_operation(bonk::OperatorType operator_type
                 operator_type == OperatorType::o_greater ||
                 operator_type == OperatorType::o_greater_equal ||
                 operator_type == OperatorType::o_and || operator_type == OperatorType::o_or);
-    case t_strg:
+    case PrimitiveType::t_strg:
         return *other_type == *this &&
                (operator_type == OperatorType::o_plus || operator_type == OperatorType::o_assign ||
                 operator_type == OperatorType::o_plus_assign ||
@@ -336,17 +227,17 @@ bool bonk::TrivialType::allows_binary_operation(bonk::OperatorType operator_type
 }
 
 void bonk::TrivialType::print(std::ostream& stream) const {
-    stream << BONK_PRIMITIVE_TYPE_NAMES[primitive_type];
+    stream << BONK_PRIMITIVE_TYPE_NAMES[(int)primitive_type];
 }
 
 bool bonk::TrivialType::allows_unary_operation(bonk::OperatorType operator_type) const {
     switch (primitive_type) {
-    case t_unset:
+    case PrimitiveType::t_unset:
         return false;
-    case t_nubr:
-    case t_flot:
+    case PrimitiveType::t_nubr:
+    case PrimitiveType::t_flot:
         return operator_type == OperatorType::o_plus || operator_type == OperatorType::o_minus;
-    case t_strg:
+    case PrimitiveType::t_strg:
         return false;
     }
 }

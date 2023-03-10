@@ -2,7 +2,8 @@
 
 namespace bonk {
 
-class TypeAnnotatingVisitor;
+class TypeAnnotator;
+class MiddleEnd;
 
 }
 
@@ -93,71 +94,25 @@ class ErrorType : public Type {
     std::unique_ptr<Type> shallow_copy() const override;
 };
 
-class Scope {
-  public:
-    std::unordered_map<std::string_view, int> variables;
-};
+/* This class performs type-checking and annotates the AST tree with types.
+ * It requires `symbol_table` to be filled in by basic_symbol_annotator.
+ * In turn, it populates the `symbol_table` with hive field symbols and
+ * function arguments, as it's impossible to recognize them without
+ * type information. */
 
-class NameResolver {
-  public:
-    virtual TreeNode* get_name_definition(std::string_view name) = 0;
-};
-
-class ScopedNameResolver : public NameResolver {
-    std::unordered_map<TreeNode*, Type> inferred_types;
-    std::unordered_map<int, TreeNode*> name_definitions;
-    std::unordered_map<TreeNode*, TreeNode*> identifier_definitions;
-    std::vector<Scope> scopes;
-    int total_names = 0;
+class TypeAnnotator : ASTVisitor {
 
   public:
-    ScopedNameResolver();
+    MiddleEnd& middle_end;
 
-    void padding();
-    void push_scope();
-    void pop_scope();
-    TreeNode* get_name_definition(std::string_view name) override;
-    void define_variable(TreeNode* definition);
-    TreeNode* get_definition(int name_id);
-};
-
-class HiveFieldNameResolver : public NameResolver {
-    TreeNodeHiveDefinition* hive_definition = nullptr;
-
-  public:
-    explicit HiveFieldNameResolver(TreeNodeHiveDefinition* hive_definition);
-    TreeNode* get_name_definition(std::string_view name) override;
-};
-
-class FunctionParameterNameResolver : public NameResolver {
-    BlokType* called_function = nullptr;
-
-  public:
-    explicit FunctionParameterNameResolver(BlokType* called_function);
-    TreeNode* get_name_definition(std::string_view name) override;
-};
-
-class TypeAnnotatingVisitor : public ASTVisitor {
-    Type* callee_type = nullptr;
-    NameResolver* active_name_resolver;
-
-  public:
-    Compiler& linked_compiler;
-    ScopedNameResolver scoped_name_resolver;
-    std::unordered_map<TreeNode*, Type*> type_cache {};
-    std::unordered_set<std::unique_ptr<Type>> type_storage {};
-
-
-    explicit TypeAnnotatingVisitor(Compiler& linked_compiler);
-    ~TypeAnnotatingVisitor() = default;
+    explicit TypeAnnotator(MiddleEnd& middle_end);
+    ~TypeAnnotator() = default;
 
     Type* infer_type(TreeNode* node);
 
-    void visit(TreeNodeCodeBlock* node) override;
     void visit(TreeNodeHiveDefinition* node) override;
     void visit(TreeNodeVariableDefinition* node) override;
     void visit(TreeNodeBlockDefinition* node) override;
-    void visit(TreeNodeLoopStatement* node) override;
     void visit(TreeNodeHiveAccess* node) override;
     void visit(TreeNodeCall* node) override;
     void visit(TreeNodeParameterListItem* node) override;
@@ -170,6 +125,7 @@ class TypeAnnotatingVisitor : public ASTVisitor {
     void visit(TreeNodePrimitiveType* node) override;
     void visit(TreeNodeManyType* node) override;
     void visit(TreeNodeBonkStatement* node) override;
+    void annotate_ast(TreeNode* ast);
 };
 
 } // namespace bonk

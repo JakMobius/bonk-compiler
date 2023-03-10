@@ -24,6 +24,7 @@ class ASTVisitor {
     virtual void visit(TreeNodeManyType* node);
     virtual void visit(TreeNodeHiveAccess* node);
     virtual void visit(TreeNodeBonkStatement* node);
+    virtual void visit(TreeNodeBrekStatement* node);
     virtual void visit(TreeNodeLoopStatement* node);
     virtual void visit(TreeNodeHiveDefinition* node);
     virtual void visit(TreeNodeCall* node);

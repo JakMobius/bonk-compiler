@@ -47,12 +47,6 @@ bool LinearAllocator::create_page(unsigned long long min_capacity) {
     return true;
 }
 
-char* LinearAllocator::strdup(const char* str) {
-    char* duplicate = (char*)allocate(strlen(str) + 1);
-    strcpy(duplicate, str);
-    return duplicate;
-}
-
 void LinearAllocator::set_page_capacity(unsigned long long the_page_capacity) {
     page_capacity = the_page_capacity;
 }

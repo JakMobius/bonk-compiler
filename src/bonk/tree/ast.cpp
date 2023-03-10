@@ -44,6 +44,9 @@ void TreeNodeCodeBlock::accept(ASTVisitor* visitor) {
 void TreeNodeBonkStatement::accept(ASTVisitor* visitor) {
     visitor->visit(this);
 }
+void TreeNodeBrekStatement::accept(ASTVisitor* visitor) {
+    visitor->visit(this);
+}
 void TreeNodeArrayConstant::accept(ASTVisitor* visitor) {
     visitor->visit(this);
 }

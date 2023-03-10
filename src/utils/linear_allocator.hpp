@@ -21,6 +21,4 @@ struct LinearAllocator {
     void clear();
 
     bool create_page(unsigned long long min_capacity);
-
-    char* strdup(const char* str);
 };

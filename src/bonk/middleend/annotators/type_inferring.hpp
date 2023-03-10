@@ -1,36 +1,37 @@
 #pragma once
 
+#include "basic_symbol_annotator.hpp"
 #include "bonk/tree/ast_visitor.hpp"
-#include "type_annotating_visitor.hpp"
+#include "type_annotator.hpp"
+
 namespace bonk {
 
+class HiveFieldNameResolver : public NameResolver {
+    TreeNodeHiveDefinition* hive_definition = nullptr;
+
+  public:
+    explicit HiveFieldNameResolver(TreeNodeHiveDefinition* hive_definition);
+    TreeNode* get_name_definition(std::string_view name) override;
+};
+
+class FunctionParameterNameResolver : public NameResolver {
+    BlokType* called_function = nullptr;
+
+  public:
+    explicit FunctionParameterNameResolver(BlokType* called_function);
+    TreeNode* get_name_definition(std::string_view name) override;
+};
+
+
 class TypeInferringVisitor : public ASTVisitor {
-    TypeAnnotatingVisitor& visitor;
+    MiddleEnd& middle_end;
     std::vector<Type*> type_stack;
     std::vector<TreeNodeBlockDefinition*> block_stack;
 
   public:
-    TypeInferringVisitor(TypeAnnotatingVisitor& visitor) : visitor(visitor) {
+    TypeInferringVisitor(MiddleEnd& middle_end) : middle_end(middle_end) {
 
     }
-
-    template<typename T>
-    T* annotate(TreeNode* node) {
-        auto type = std::make_unique<T>();
-        T* pure_type = type.get();
-        save_type(std::move(type));
-        write_to_cache(node, pure_type);
-        return pure_type;
-    }
-
-    Type* annotate(TreeNode* node, Type* type) {
-        if(!type) return type;
-        write_to_cache(node, type);
-        return type;
-    }
-
-    void write_to_cache(TreeNode* node, Type* type);
-    void save_type(std::unique_ptr<Type> type);
 
     Type* infer_type(TreeNode* node);
 
