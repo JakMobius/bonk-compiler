@@ -13,7 +13,7 @@ The project does not have the goal of achieving high performance. It's a simple 
 To build the Bonk Compiler, run the following commands:
 
 ```bash
-git shallow_copy https://github.com/jakmobius/bonk-compiler
+git clone https://github.com/jakmobius/bonk-compiler
 mkdir build
 cd build
 cmake ..
