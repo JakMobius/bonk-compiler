@@ -1,11 +1,10 @@
 
-#include "../../compiler.hpp"
 #include "type_annotator.hpp"
-#include "type_inferring.hpp"
+#include "../../compiler.hpp"
 #include "../middleend.hpp"
+#include "type_inferring.hpp"
 
-bonk::TypeAnnotator::TypeAnnotator(bonk::MiddleEnd& middle_end)
-    : middle_end(middle_end) {
+bonk::TypeAnnotator::TypeAnnotator(bonk::MiddleEnd& middle_end) : middle_end(middle_end) {
 }
 
 bonk::Type* bonk::TypeAnnotator::infer_type(bonk::TreeNode* node) {
@@ -37,7 +36,8 @@ void bonk::TypeAnnotator::visit(bonk::TreeNodeCall* node) {
     infer_type(node);
     Type* type = infer_type(node->callee.get());
 
-    if(!type || type->kind == TypeKind::error) return;
+    if (!type || type->kind == TypeKind::error)
+        return;
     ASTVisitor::visit(node);
 }
 
@@ -201,22 +201,29 @@ bool bonk::TrivialType::allows_binary_operation(bonk::OperatorType operator_type
         return false;
     case PrimitiveType::t_nubr:
     case PrimitiveType::t_flot:
-        return *other_type == *this &&
-               (operator_type == OperatorType::o_plus || operator_type == OperatorType::o_minus ||
-                operator_type == OperatorType::o_multiply ||
-                operator_type == OperatorType::o_divide ||
-                operator_type == OperatorType::o_assign ||
-                operator_type == OperatorType::o_plus_assign ||
-                operator_type == OperatorType::o_minus_assign ||
-                operator_type == OperatorType::o_multiply_assign ||
-                operator_type == OperatorType::o_divide_assign ||
-                operator_type == OperatorType::o_equal ||
-                operator_type == OperatorType::o_not_equal ||
-                operator_type == OperatorType::o_less ||
-                operator_type == OperatorType::o_less_equal ||
-                operator_type == OperatorType::o_greater ||
-                operator_type == OperatorType::o_greater_equal ||
-                operator_type == OperatorType::o_and || operator_type == OperatorType::o_or);
+        if (*other_type == *this) {
+            return (operator_type == OperatorType::o_plus ||
+                    operator_type == OperatorType::o_minus ||
+                    operator_type == OperatorType::o_multiply ||
+                    operator_type == OperatorType::o_divide ||
+                    operator_type == OperatorType::o_assign ||
+                    operator_type == OperatorType::o_plus_assign ||
+                    operator_type == OperatorType::o_minus_assign ||
+                    operator_type == OperatorType::o_multiply_assign ||
+                    operator_type == OperatorType::o_divide_assign ||
+                    operator_type == OperatorType::o_equal ||
+                    operator_type == OperatorType::o_not_equal ||
+                    operator_type == OperatorType::o_less ||
+                    operator_type == OperatorType::o_less_equal ||
+                    operator_type == OperatorType::o_greater ||
+                    operator_type == OperatorType::o_greater_equal ||
+                    operator_type == OperatorType::o_and || operator_type == OperatorType::o_or);
+        } else if(other_type->kind == TypeKind::nothing) {
+            // As 'and' and 'or' operations are used to express the if statement,
+            // we allow them to be used with nothing type, because code block
+            // has nothing type
+            return operator_type == OperatorType::o_and || operator_type == OperatorType::o_or;
+        }
     case PrimitiveType::t_strg:
         return *other_type == *this &&
                (operator_type == OperatorType::o_plus || operator_type == OperatorType::o_assign ||

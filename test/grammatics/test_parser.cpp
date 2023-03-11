@@ -336,3 +336,45 @@ TEST(Parser, TestOperatorPrecedence) {
     ASSERT_EQ(binary_op->left->type, bonk::TreeNodeType::n_number_constant);
     ASSERT_EQ(binary_op->right->type, bonk::TreeNodeType::n_number_constant);
 }
+
+TEST(Parser, TestAndOrWithCodeBlock) {
+    auto error_stream = bonk::StdOutputStream(std::cout);
+
+    bonk::CompilerConfig config{.error_file = error_stream};
+    bonk::Compiler compiler(config);
+
+    const char* source = R"(
+            blok test {
+                1 == 2 and {
+                    bonk "this should never happen";
+                } or {
+                    bonk "this should happen";
+                };
+            }
+        )";
+
+    auto lexemes = bonk::LexicalAnalyzer(compiler).parse_file("test", source);
+    auto ast = bonk::Parser(compiler).parse_file(&lexemes);
+
+    ASSERT_TRUE(compiler.state == bonk::BONK_COMPILER_OK);
+    ASSERT_NE(ast, nullptr);
+
+    auto program = (bonk::TreeNodeProgram*)ast.get();
+    ASSERT_EQ(program->body.size(), 1);
+
+    ASSERT_EQ(program->body.front()->type, bonk::TreeNodeType::n_block_definition);
+    auto blok_definition = (bonk::TreeNodeBlockDefinition*)program->body.front().get();
+    ASSERT_EQ(blok_definition->body->body.size(), 1);
+
+    auto statement = blok_definition->body->body.front().get();
+    ASSERT_EQ(statement->type, bonk::TreeNodeType::n_binary_operation);
+    auto binary_op = (bonk::TreeNodeBinaryOperation*)statement;
+
+    ASSERT_EQ(binary_op->operator_type, bonk::OperatorType::o_or);
+    ASSERT_EQ(binary_op->left->type, bonk::TreeNodeType::n_binary_operation);
+
+    binary_op = (bonk::TreeNodeBinaryOperation*)binary_op->left.get();
+    ASSERT_EQ(binary_op->operator_type, bonk::OperatorType::o_and);
+    ASSERT_EQ(binary_op->left->type, bonk::TreeNodeType::n_binary_operation);
+    ASSERT_EQ(binary_op->right->type, bonk::TreeNodeType::n_code_block);
+}

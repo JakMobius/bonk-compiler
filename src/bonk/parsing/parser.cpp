@@ -568,7 +568,7 @@ std::unique_ptr<TreeNode> Parser::parse_expression_unary() {
 
 std::unique_ptr<TreeNode> Parser::parse_expression_primary() {
     // ExpressionPrimary: HiveAccess | Identifier | NumberConstant | StringConstant | ArrayConstant
-    // | (Expression)
+    // | (Expression) | CodeBlock
 
     auto start_position = next_lexeme()->start_position;
 
@@ -623,6 +623,10 @@ std::unique_ptr<TreeNode> Parser::parse_expression_primary() {
         }
         eat_lexeme();
         return expression;
+    }
+
+    if (next_lexeme()->is(BraceType('{'))) {
+        return parse_code_block();
     }
 
     linked_compiler.error().at(next_lexeme()->start_position) << "Expected expression";

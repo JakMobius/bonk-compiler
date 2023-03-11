@@ -118,7 +118,7 @@ void bonk::TypeInferringVisitor::visit(TreeNodeParameterListItem* node) {
 }
 
 void bonk::TypeInferringVisitor::visit(TreeNodeCodeBlock* node) {
-    assert(!"Cannot infer type of code block");
+    middle_end.type_table.annotate<NothingType>(node);
 }
 
 void bonk::TypeInferringVisitor::visit(TreeNodeArrayConstant* node) {
