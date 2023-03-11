@@ -170,7 +170,32 @@ void bonk::TypeInferringVisitor::visit(TreeNodeBinaryOperation* node) {
         return;
     }
 
-    middle_end.type_table.annotate(node, left_type);
+    switch(node->operator_type) {
+
+    case OperatorType::o_plus:
+    case OperatorType::o_minus:
+    case OperatorType::o_multiply:
+    case OperatorType::o_divide:
+    case OperatorType::o_plus_assign:
+    case OperatorType::o_minus_assign:
+    case OperatorType::o_multiply_assign:
+    case OperatorType::o_divide_assign:
+    case OperatorType::o_assign:
+    case OperatorType::o_and:
+    case OperatorType::o_or:
+        middle_end.type_table.annotate(node, left_type);
+        break;
+    case OperatorType::o_equal:
+    case OperatorType::o_less:
+    case OperatorType::o_greater:
+    case OperatorType::o_less_equal:
+    case OperatorType::o_greater_equal:
+    case OperatorType::o_not_equal:
+        middle_end.type_table.annotate<TrivialType>(node)->primitive_type = bonk::PrimitiveType::t_nubr;
+        return;
+    default:
+        assert(!"Unsupported binary operator");
+    }
 }
 
 void bonk::TypeInferringVisitor::visit(TreeNodeUnaryOperation* node) {

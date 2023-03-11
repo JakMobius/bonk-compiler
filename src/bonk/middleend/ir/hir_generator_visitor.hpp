@@ -55,6 +55,8 @@ class HIRGeneratorVisitor : ASTVisitor {
     void visit(TreeNodeHiveDefinition* node) override;
     void visit(TreeNodeCall* node) override;
     void visit(TreeNodeBrekStatement* node) override;
+    void compile_lazy_logic(TreeNodeBinaryOperation* node);
+    bool is_comparison_operation(HIROperationType type);
 };
 
 } // namespace bonk

@@ -185,8 +185,9 @@ void bonk::HIRPrinter::print(bonk::HIRDataType type) const {
     case HIRDataType::float64:
         stream.get_stream() << "float64";
         break;
-    default:
-        assert(false);
+    case HIRDataType::unset:
+        stream.get_stream() << "unset";
+        break;
     }
 }
 

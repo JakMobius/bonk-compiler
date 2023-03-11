@@ -115,54 +115,152 @@ void bonk::HIRGeneratorVisitor::visit(bonk::TreeNodeStringConstant* node) {
 }
 
 void bonk::HIRGeneratorVisitor::visit(bonk::TreeNodeBinaryOperation* node) {
-    ASTVisitor::visit(node);
+
+    if (node->operator_type == OperatorType::o_and || node->operator_type == OperatorType::o_or) {
+        compile_lazy_logic(node);
+        return;
+    }
 
     Type* left_type = middle_end.type_table.get_type(node->left.get());
     Type* right_type = middle_end.type_table.get_type(node->right.get());
+
+    // AST should have all complex operations already resolved, so only primitive
+    // types should be left here.
+
+    assert(left_type->kind == TypeKind::primitive);
+    assert(right_type->kind == TypeKind::primitive);
+
+    auto left_primitive = (TrivialType*)left_type;
+    auto right_primitive = (TrivialType*)right_type;
+
+    ASTVisitor::visit(node);
 
     int right = register_stack.back();
     register_stack.pop_back();
     int left = register_stack.back();
     register_stack.pop_back();
 
-
-    // Assume that the operation is done on the numbers, just for now
-
-    if (left_type->kind == TypeKind::primitive && right_type->kind == TypeKind::primitive) {
-
-        auto left_primitive = (TrivialType*)left_type;
-        auto right_primitive = (TrivialType*)right_type;
-
-        if (left_primitive->primitive_type == right_primitive->primitive_type) {
-            auto type = left_primitive->primitive_type;
-
-            if (type == PrimitiveType::t_flot || type == PrimitiveType::t_nubr) {
-                HIRDataType hir_type = convert_type_to_hir(left_type);
-                HIROperationType operation_type = convert_operation_to_hir(node->operator_type);
-
-                auto instruction = current_base_block->instruction<HIROperation>();
-                instruction->operation_type = operation_type;
-                instruction->result_type = hir_type;
-                instruction->operand_type = hir_type;
-                instruction->left = left;
-                current_base_block->instructions.push_back(instruction);
-
-                if (operation_type == HIROperationType::assign) {
-                    instruction->target = left;
-                    instruction->left = right;
-                    register_stack.push_back(left);
-                } else {
-                    int id = middle_end.id_table.get_unused_id();
-                    instruction->target = id;
-                    instruction->right = right;
-                    register_stack.push_back(id);
-                }
-                return;
-            }
-        }
+    if (left_primitive->primitive_type != right_primitive->primitive_type) {
+        // TODO: Think about casting here
+        assert(false);
     }
 
-    assert(!"Cannot compile this just yet");
+    auto type = left_primitive->primitive_type;
+
+    if (type == PrimitiveType::t_flot || type == PrimitiveType::t_nubr) {
+        HIRDataType hir_type = convert_type_to_hir(left_type);
+        HIRDataType result_type = convert_type_to_hir(middle_end.type_table.get_type(node));
+        HIROperationType operation_type = convert_operation_to_hir(node->operator_type);
+
+        auto instruction = current_base_block->instruction<HIROperation>();
+        instruction->operation_type = operation_type;
+        instruction->operand_type = hir_type;
+        instruction->result_type = result_type;
+        current_base_block->instructions.push_back(instruction);
+
+        if (operation_type == HIROperationType::assign) {
+            instruction->target = left;
+            instruction->left = right;
+            register_stack.push_back(left);
+        } else {
+            int id = middle_end.id_table.get_unused_id();
+            instruction->target = id;
+            instruction->left = left;
+            instruction->right = right;
+            register_stack.push_back(id);
+        }
+        return;
+    }
+}
+
+void bonk::HIRGeneratorVisitor::compile_lazy_logic(TreeNodeBinaryOperation* node) {
+    Type* left_type = middle_end.type_table.get_type(node->left.get());
+    Type* right_type = middle_end.type_table.get_type(node->right.get());
+
+    assert(left_type->kind == TypeKind::primitive);
+    assert(right_type->kind == TypeKind::primitive || right_type->kind == TypeKind::nothing);
+
+    // Compile left part, and only compile right part if it's needed
+    node->left->accept(this);
+
+    int left = register_stack.back();
+    register_stack.pop_back();
+
+    int true_label = middle_end.id_table.get_unused_id();
+    int false_label = middle_end.id_table.get_unused_id();
+    int end_label = middle_end.id_table.get_unused_id();
+
+    HIRJumpNZ* jump1 = nullptr;
+
+    if (node->operator_type == OperatorType::o_and) {
+        jump1 = current_base_block->instruction<HIRJumpNZ>(left, true_label, false_label);
+    } else {
+        jump1 = current_base_block->instruction<HIRJumpNZ>(left, false_label, true_label);
+    }
+
+    int result = middle_end.id_table.get_unused_id();
+
+    current_base_block->instructions.push_back(jump1);
+    current_base_block->instructions.push_back(
+        current_base_block->instruction<HIRLabel>(true_label));
+
+    node->right->accept(this);
+
+    if (right_type->kind == TypeKind::nothing) {
+        // If right part is nothing, the or/and construction
+        // should work like a 'if' statement, like this:
+        // ((cond and true_branch) or false_branch)
+        // So, if cond turned out to be false, the value of the
+        // (cond and true_branch) expression should be false,
+        // and vice versa. So the 'cond' value is pushed to the
+        // register stack.
+
+        // Move left to result
+        auto instruction = current_base_block->instruction<HIROperation>();
+        instruction->operation_type = HIROperationType::assign;
+        instruction->result_type = convert_type_to_hir(left_type);
+        instruction->operand_type = instruction->operand_type;
+        instruction->target = result;
+        instruction->left = left;
+        current_base_block->instructions.push_back(instruction);
+    } else {
+        // If it's an ordinary or/and construction, the value of
+        // should actually be calculated.
+        int right = register_stack.back();
+        register_stack.pop_back();
+
+        HIRDataType hir_type = convert_type_to_hir(left_type);
+        HIROperationType operation_type = convert_operation_to_hir(node->operator_type);
+
+        auto instruction = current_base_block->instruction<HIROperation>();
+        instruction->operation_type = operation_type;
+        instruction->result_type = hir_type;
+        instruction->operand_type = hir_type;
+        instruction->target = result;
+        instruction->left = left;
+        instruction->right = right;
+        current_base_block->instructions.push_back(instruction);
+    }
+
+    auto jump2 = current_base_block->instruction<HIRJump>();
+    jump2->label_id = end_label;
+    current_base_block->instructions.push_back(jump2);
+
+    current_base_block->instructions.push_back(
+        current_base_block->instruction<HIRLabel>(false_label));
+
+    auto instruction = current_base_block->instruction<HIROperation>();
+    instruction->operation_type = HIROperationType::assign;
+    instruction->result_type = convert_type_to_hir(left_type);
+    instruction->operand_type = instruction->operand_type;
+    instruction->target = result;
+    instruction->left = left;
+    current_base_block->instructions.push_back(instruction);
+
+    current_base_block->instructions.push_back(
+        current_base_block->instruction<HIRLabel>(end_label));
+
+    register_stack.push_back(result);
 }
 
 void bonk::HIRGeneratorVisitor::visit(bonk::TreeNodeUnaryOperation* node) {
@@ -234,7 +332,7 @@ void bonk::HIRGeneratorVisitor::visit(bonk::TreeNodeBonkStatement* node) {
 void bonk::HIRGeneratorVisitor::visit(bonk::TreeNodeLoopStatement* node) {
     auto old_loop_context = current_loop_context;
 
-    if(node->loop_parameters) {
+    if (node->loop_parameters) {
         // Setup loop variables
         node->loop_parameters->accept(this);
     }
@@ -415,5 +513,19 @@ bonk::HIRDataType bonk::HIRGeneratorVisitor::convert_type_to_hir(bonk::Type* typ
 
     default:
         assert(!"Unsupported type");
+    }
+}
+
+bool bonk::HIRGeneratorVisitor::is_comparison_operation(bonk::HIROperationType type) {
+    switch (type) {
+    case HIROperationType::equal:
+    case HIROperationType::not_equal:
+    case HIROperationType::less:
+    case HIROperationType::less_equal:
+    case HIROperationType::greater:
+    case HIROperationType::greater_equal:
+        return true;
+    default:
+        return false;
     }
 }
