@@ -363,7 +363,7 @@ std::unique_ptr<TreeNodeLoopStatement> Parser::parse_loop_statement() {
         std::make_unique<TreeNodeLoopStatement>();
     loop_statement->source_position = start_position;
 
-    if (next_lexeme()->is(LexemeType::l_identifier)) {
+    if (next_lexeme()->is(BraceType('['))) {
         loop_statement->loop_parameters = parse_parameter_list_definition();
     }
 
