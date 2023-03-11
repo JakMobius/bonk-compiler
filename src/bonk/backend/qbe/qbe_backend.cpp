@@ -59,7 +59,7 @@ bool bonk::qbe_backend::QBEBackend::compile_procedure_header(bonk::IRInstruction
         if(i != 0) linked_compiler.config.output_file.get_stream() << ", ";
         auto& parameter = procedure.parameters[i];
         print_hir_type(parameter.type);
-        linked_compiler.config.output_file.get_stream() << " $" << parameter.register_id;
+        linked_compiler.config.output_file.get_stream() << " %r" << parameter.register_id;
     }
 
     linked_compiler.config.output_file.get_stream() << ") {\n@start\n";
@@ -151,6 +151,7 @@ bool bonk::qbe_backend::QBEBackend::compile_instruction(HIROperation& instructio
         linked_compiler.config.output_file.get_stream() << "div ";
         break;
     case HIROperationType::assign:
+        linked_compiler.config.output_file.get_stream() << "copy ";
         break;
     case HIROperationType::equal:
         linked_compiler.config.output_file.get_stream() << "ceq";

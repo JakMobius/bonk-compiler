@@ -5,6 +5,7 @@
 #include "bonk/backend/qbe/qbe_backend.hpp"
 #include "bonk/backend/x86/x86_backend.hpp"
 #include "bonk/compiler.hpp"
+#include "bonk/middleend/ir/hir_printer.hpp"
 #include "bonk/middleend/middleend.hpp"
 #include "bonk/tree/json_dump_ast_visitor.hpp"
 
@@ -37,6 +38,8 @@ int main(int argc, const char* argv[]) {
         .help("show this help message and exit");
     program.add_argument("--ast").default_value(false).implicit_value(true).help(
         "output AST as JSON");
+    program.add_argument("--hir").default_value(false).implicit_value(true).help(
+        "output intermediate representation");
     program.add_argument("-o", "--output-file")
         .default_value(std::string("out"))
         .nargs(1)
@@ -58,6 +61,7 @@ int main(int argc, const char* argv[]) {
     const auto input_file_path = program.get<std::string>("input");
     const auto help_flag = program.get<bool>("--help");
     const auto ast_flag = program.get<bool>("--ast");
+    const auto hir_flag = program.get<bool>("--hir");
     const auto output_file_path = program.get<std::string>("--output-file");
     const auto target_flag = program.get<std::string>("--target");
 
@@ -113,7 +117,16 @@ int main(int argc, const char* argv[]) {
                   std::istreambuf_iterator<char>());
 
     auto lexemes = bonk::LexicalAnalyzer(compiler).parse_file(input_file_path.c_str(), source.c_str());
+
+    if (compiler.state) {
+        return 1;
+    }
+
     auto ast = bonk::Parser(compiler).parse_file(&lexemes);
+
+    if (compiler.state) {
+        return 1;
+    }
 
     if (ast) {
         if (ast_flag) {
@@ -125,10 +138,19 @@ int main(int argc, const char* argv[]) {
             bonk::MiddleEnd middle_end(compiler);
             auto ir_program = middle_end.run_ast(ast.get());
 
-            backend->compile_program(*ir_program);
+            if(!ir_program) {
+                return 1;
+            }
 
-            if (chmod(output_file_path.c_str(), 511) < 0) {
-                compiler.warning() << "failed to add execution permissions to file";
+            if(hir_flag) {
+                bonk::HIRPrinter printer{*output_file};
+                printer.print(*ir_program);
+            } else {
+                backend->compile_program(*ir_program);
+
+                if (chmod(output_file_path.c_str(), 511) < 0) {
+                    compiler.warning() << "failed to add execution permissions to file";
+                }
             }
         }
     }

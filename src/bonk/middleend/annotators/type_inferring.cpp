@@ -304,6 +304,8 @@ void bonk::TypeInferringVisitor::visit(TreeNodeCall* node) {
 
             Type* valid_type = infer_type(definition);
 
+            if(valid_type->kind == TypeKind::error) continue;
+
             if (*valid_type != *argument_type) {
                 middle_end.linked_compiler.error().at(argument->parameter_value->source_position)
                     << "Cannot pass '" << *argument_type << "' to parameter '"

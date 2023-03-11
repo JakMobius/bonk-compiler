@@ -182,7 +182,7 @@ std::unique_ptr<TreeNodeParameterListDefinition> Parser::parse_parameter_list_de
 }
 
 std::unique_ptr<TreeNodeCodeBlock> Parser::parse_code_block() {
-    // CodeBlock: { (Statement;)* }
+    // CodeBlock: { (CodeBlock | LoopStatement | Statement;)* }
 
     auto start_position = next_lexeme()->start_position;
     eat_lexeme();
@@ -190,13 +190,20 @@ std::unique_ptr<TreeNodeCodeBlock> Parser::parse_code_block() {
     code_block->source_position = start_position;
 
     while (!next_lexeme()->is(BraceType('}'))) {
-        code_block->body.push_back(parse_statement());
-        if (next_lexeme()->is(LexemeType::l_semicolon)) {
-            eat_lexeme();
+
+        if (next_lexeme()->is(BraceType('{'))) {
+            code_block->body.push_back(parse_code_block());
+        } else if (next_lexeme()->is(OperatorType::o_loop)) {
+            code_block->body.push_back(parse_loop_statement());
         } else {
-            linked_compiler.error().at(next_lexeme()->start_position)
-                << "Expected semicolon after statement";
-            return nullptr;
+            code_block->body.push_back(parse_statement());
+            if (next_lexeme()->is(LexemeType::l_semicolon)) {
+                eat_lexeme();
+            } else {
+                linked_compiler.error().at(next_lexeme()->start_position)
+                    << "Expected semicolon after statement";
+                return nullptr;
+            }
         }
     }
 
@@ -206,15 +213,10 @@ std::unique_ptr<TreeNodeCodeBlock> Parser::parse_code_block() {
 }
 
 std::unique_ptr<TreeNode> Parser::parse_statement() {
-    // Statement: { CodeBlock | Expression | LoopStatement | BonkStatement | BrekStatement |
-    // VariableDefinition }
+    // Statement: { Expression | BonkStatement | BrekStatement | VariableDeclaration }
 
-    if (next_lexeme()->is(BraceType('{'))) {
-        return parse_code_block();
-    } else if (next_lexeme()->is(OperatorType::o_bowl)) {
+    if (next_lexeme()->is(OperatorType::o_bowl)) {
         return parse_variable_definition();
-    } else if (next_lexeme()->is(OperatorType::o_loop)) {
-        return parse_loop_statement();
     } else if (next_lexeme()->is(OperatorType::o_bonk)) {
         return parse_bonk_statement();
     } else if (next_lexeme()->is(OperatorType::o_brek)) {

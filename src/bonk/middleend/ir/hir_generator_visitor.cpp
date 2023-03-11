@@ -120,10 +120,11 @@ void bonk::HIRGeneratorVisitor::visit(bonk::TreeNodeBinaryOperation* node) {
     Type* left_type = middle_end.type_table.get_type(node->left.get());
     Type* right_type = middle_end.type_table.get_type(node->right.get());
 
-    int left = register_stack.back();
-    register_stack.pop_back();
     int right = register_stack.back();
     register_stack.pop_back();
+    int left = register_stack.back();
+    register_stack.pop_back();
+
 
     // Assume that the operation is done on the numbers, just for now
 
@@ -139,16 +140,23 @@ void bonk::HIRGeneratorVisitor::visit(bonk::TreeNodeBinaryOperation* node) {
                 HIRDataType hir_type = convert_type_to_hir(left_type);
                 HIROperationType operation_type = convert_operation_to_hir(node->operator_type);
 
-                int id = middle_end.id_table.get_unused_id();
                 auto instruction = current_base_block->instruction<HIROperation>();
                 instruction->operation_type = operation_type;
                 instruction->result_type = hir_type;
                 instruction->operand_type = hir_type;
-                instruction->target = id;
                 instruction->left = left;
-                instruction->right = right;
                 current_base_block->instructions.push_back(instruction);
-                register_stack.push_back(id);
+
+                if (operation_type == HIROperationType::assign) {
+                    instruction->target = left;
+                    instruction->left = right;
+                    register_stack.push_back(left);
+                } else {
+                    int id = middle_end.id_table.get_unused_id();
+                    instruction->target = id;
+                    instruction->right = right;
+                    register_stack.push_back(id);
+                }
                 return;
             }
         }
@@ -226,8 +234,10 @@ void bonk::HIRGeneratorVisitor::visit(bonk::TreeNodeBonkStatement* node) {
 void bonk::HIRGeneratorVisitor::visit(bonk::TreeNodeLoopStatement* node) {
     auto old_loop_context = current_loop_context;
 
-    // Setup loop variables
-    node->loop_parameters->accept(this);
+    if(node->loop_parameters) {
+        // Setup loop variables
+        node->loop_parameters->accept(this);
+    }
 
     int loop_start_id = middle_end.id_table.get_id(node);
     int loop_end_id = middle_end.id_table.get_unused_id();
@@ -241,6 +251,11 @@ void bonk::HIRGeneratorVisitor::visit(bonk::TreeNodeLoopStatement* node) {
 
     // Compile loop body
     node->body->accept(this);
+
+    // Insert jump to loop start
+    auto jump_instruction = current_base_block->instruction<HIRJump>();
+    jump_instruction->label_id = loop_start_id;
+    current_base_block->instructions.push_back(jump_instruction);
 
     // Insert loop end label
     auto loop_end_label = current_base_block->instruction<HIRLabel>(loop_end_id);

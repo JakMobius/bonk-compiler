@@ -19,6 +19,7 @@ MessageStreamProxy Compiler::error() {
 }
 
 MessageStreamProxy Compiler::fatal_error() {
+    state = BONK_COMPILER_STATE_FATAL_ERROR;
     return {CompilerMessageType::fatal_error, config.error_file};
 }
 
