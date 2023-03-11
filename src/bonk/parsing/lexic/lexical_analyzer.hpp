@@ -139,12 +139,12 @@ struct Lexeme {
 
 struct LexicalAnalyzer {
     std::string_view text{};
-    Compiler* linked_compiler;
+    Compiler& linked_compiler;
     ParserPosition current_position{};
     std::vector<Lexeme> lexemes{};
     std::vector<bool> operator_match{};
 
-    LexicalAnalyzer(Compiler* compiler);
+    LexicalAnalyzer(Compiler& compiler);
 
     std::vector<bonk::Lexeme> parse_file(const char* filename, std::string_view text);
 

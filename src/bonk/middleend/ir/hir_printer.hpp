@@ -11,24 +11,24 @@ class HIRPrinter {
 
   public:
 
-    MiddleEnd* middle_end = nullptr;
-
     HIRPrinter(const OutputStream& stream) : stream(stream) {
     }
 
     void print(const bonk::IRProgram& block) const;
 
-    void print(const bonk::HIRLabel& instruction) const;
-    void print(const bonk::HIRConstantLoad& instruction) const;
-    void print(const bonk::HIRSymbolLoad& instruction) const;
-    void print(const bonk::HIRJump& instruction) const;
-    void print(const bonk::HIRJumpNZ& instruction) const;
-    void print(const bonk::HIRCall& instruction) const;
-    void print(const bonk::HIRReturn& instruction) const;
-    void print(const bonk::HIROperation& instruction) const;
-    void print(const bonk::HIRProcedure& instruction) const;
-    void print(const bonk::HIRParameter& instruction) const;
-    void print(const bonk::HIRInstruction& instruction) const;
+    void print(const bonk::IRProgram& program, const bonk::HIRLabel& instruction) const;
+    void print(const bonk::IRProgram& program, const bonk::HIRConstantLoad& instruction) const;
+    void print(const bonk::IRProgram& program, const bonk::HIRSymbolLoad& instruction) const;
+    void print(const bonk::IRProgram& program, const bonk::HIRJump& instruction) const;
+    void print(const bonk::IRProgram& program, const bonk::HIRJumpNZ& instruction) const;
+    void print(const bonk::IRProgram& program, const bonk::HIRCall& instruction) const;
+    void print(const bonk::IRProgram& program, const bonk::HIRReturn& instruction) const;
+    void print(const bonk::IRProgram& program, const bonk::HIROperation& instruction) const;
+    void print(const bonk::IRProgram& program, const bonk::HIRProcedure& instruction) const;
+    void print(const bonk::IRProgram& program, const bonk::HIRParameter& instruction) const;
+    void print(const bonk::IRProgram& program, const bonk::HIRInstruction& instruction) const;
+
+    void print_label(const bonk::IRProgram& program, int label) const;
 
     void print(bonk::HIROperationType type) const;
     void print(HIRDataType type) const;

@@ -6,6 +6,8 @@ struct IRInstruction;
 struct IRBaseBlock;
 struct IRProcedure;
 struct IRProgram;
+struct IDTable;
+struct SymbolTable;
 
 } // namespace bonk
 
@@ -44,8 +46,13 @@ struct IRInstructionPool {
 };
 
 struct IRProgram {
+    IDTable& id_table;
+    SymbolTable& symbol_table;
     IRInstructionPool instruction_pool{};
     std::vector<IRProcedure> procedures{};
+
+    IRProgram(IDTable& id_table, SymbolTable& symbol_table) : id_table(id_table), symbol_table(symbol_table) {
+    }
 
     // Proxy for IRInstructionPool::instruction
     template <typename T, typename... Args> T* instruction(Args&&... args) {

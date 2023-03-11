@@ -4,7 +4,7 @@
 
 namespace bonk::x86_backend {
 
-bool Backend::compile_ast(std::unique_ptr<TreeNode> ast, const OutputStream& output) {
+bool Backend::compile_program(IRProgram& program) {
 
     macho::MachoFile file;
     BackendContext context{&linked_compiler, &file};
@@ -22,7 +22,7 @@ bool Backend::compile_ast(std::unique_ptr<TreeNode> ast, const OutputStream& out
         return false;
     }
 
-    file.flush(output);
+//    file.flush(output);
 
     return true;
 }

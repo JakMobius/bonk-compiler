@@ -19,8 +19,8 @@ TEST(Parser, TestHiveBowls) {
         }
     )";
 
-    auto lexemes = compiler.lexical_analyzer.parse_file("test", source);
-    auto ast = compiler.parser.parse_file(&lexemes);
+    auto lexemes = bonk::LexicalAnalyzer(compiler).parse_file("test", source);
+    auto ast = bonk::Parser(compiler).parse_file(&lexemes);
 
     ASSERT_TRUE(compiler.state == bonk::BONK_COMPILER_OK);
     ASSERT_NE(ast, nullptr);
@@ -98,8 +98,8 @@ TEST(Parser, TestHiveBloks) {
         }
     )";
 
-    auto lexemes = compiler.lexical_analyzer.parse_file("test", source);
-    auto ast = compiler.parser.parse_file(&lexemes);
+    auto lexemes = bonk::LexicalAnalyzer(compiler).parse_file("test", source);
+    auto ast = bonk::Parser(compiler).parse_file(&lexemes);
 
     ASSERT_TRUE(compiler.state == bonk::BONK_COMPILER_OK);
     ASSERT_NE(ast, nullptr);
@@ -175,8 +175,8 @@ TEST(Parser, TestHiveCalls) {
         }
     )";
 
-    auto lexemes = compiler.lexical_analyzer.parse_file("test", source);
-    auto ast = compiler.parser.parse_file(&lexemes);
+    auto lexemes = bonk::LexicalAnalyzer(compiler).parse_file("test", source);
+    auto ast = bonk::Parser(compiler).parse_file(&lexemes);
 
     ASSERT_TRUE(compiler.state == bonk::BONK_COMPILER_OK);
     ASSERT_NE(ast, nullptr);
@@ -249,8 +249,8 @@ TEST(Parser, TestOperatorPrecedence) {
             }
         )";
 
-    auto lexemes = compiler.lexical_analyzer.parse_file("test", source);
-    auto ast = compiler.parser.parse_file(&lexemes);
+    auto lexemes = bonk::LexicalAnalyzer(compiler).parse_file("test", source);
+    auto ast = bonk::Parser(compiler).parse_file(&lexemes);
 
     ASSERT_TRUE(compiler.state == bonk::BONK_COMPILER_OK);
     ASSERT_NE(ast, nullptr);

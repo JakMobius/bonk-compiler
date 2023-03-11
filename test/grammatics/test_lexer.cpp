@@ -16,7 +16,7 @@ TEST(Lexer, TestHive) {
         }
     )";
 
-    auto lexemes = compiler.lexical_analyzer.parse_file("test", source);
+    auto lexemes = bonk::LexicalAnalyzer(compiler).parse_file("test", source);
 
     ASSERT_TRUE(compiler.state == bonk::BONK_COMPILER_OK);
     ASSERT_EQ(lexemes.size(), 26);
@@ -61,7 +61,7 @@ TEST(Lexer, TestStrings) {
         "test\\with\\backslashes"
     )";
 
-    auto lexemes = compiler.lexical_analyzer.parse_file("test", source);
+    auto lexemes = bonk::LexicalAnalyzer(compiler).parse_file("test", source);
 
     ASSERT_TRUE(compiler.state == bonk::BONK_COMPILER_OK);
     ASSERT_EQ(lexemes.size(), 6);
@@ -95,7 +95,7 @@ TEST(Lexer, TestNumbers) {
         0b101010
     )";
 
-    auto lexemes = compiler.lexical_analyzer.parse_file("test", source);
+    auto lexemes = bonk::LexicalAnalyzer(compiler).parse_file("test", source);
 
     ASSERT_TRUE(compiler.state == bonk::BONK_COMPILER_OK);
     ASSERT_EQ(lexemes.size(), 15);
@@ -152,7 +152,7 @@ TEST(Lexer, TestGlobal) {
         }
     )";
 
-    auto lexemes = compiler.lexical_analyzer.parse_file("test", source);
+    auto lexemes = bonk::LexicalAnalyzer(compiler).parse_file("test", source);
 
     ASSERT_FALSE(lexemes.empty());
     ASSERT_TRUE(compiler.state == bonk::BONK_COMPILER_OK);
@@ -171,7 +171,7 @@ TEST(Lexer, TestOperators) {
 
     std::string source = source_stream.str();
 
-    auto lexemes = compiler.lexical_analyzer.parse_file("test", source);
+    auto lexemes = bonk::LexicalAnalyzer(compiler).parse_file("test", source);
 
     ASSERT_FALSE(lexemes.empty());
     ASSERT_TRUE(compiler.state == bonk::BONK_COMPILER_OK);

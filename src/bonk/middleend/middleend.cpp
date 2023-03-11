@@ -6,7 +6,7 @@
 bonk::MiddleEnd::MiddleEnd(bonk::Compiler& linked_compiler) : linked_compiler(linked_compiler) {
 }
 
-bool bonk::MiddleEnd::run_ast(TreeNode* ast) {
+std::unique_ptr<bonk::IRProgram> bonk::MiddleEnd::run_ast(TreeNode* ast) {
 
     bonk::BasicSymbolAnnotator symbol_annotator{*this};
     bonk::TypeAnnotator type_annotator{*this};
@@ -14,25 +14,20 @@ bool bonk::MiddleEnd::run_ast(TreeNode* ast) {
     symbol_annotator.annotate_ast(ast);
 
     if (linked_compiler.state) {
-        return false;
+        return nullptr;
     }
 
     type_annotator.annotate_ast(ast);
 
     if (linked_compiler.state) {
-        return false;
+        return nullptr;
     }
 
     bonk::HIRGeneratorVisitor hir_generator{*this};
-    IRProgram program{};
-    hir_generator.generate(ast, &program);
 
-    StdOutputStream stream{std::cout};
-    HIRPrinter printer{stream};
-    printer.middle_end = this;
-    printer.print(program);
+    auto program = hir_generator.generate(ast);
 
-    return true;
+    return program;
 }
 
 long long bonk::IDTable::get_unused_id() {

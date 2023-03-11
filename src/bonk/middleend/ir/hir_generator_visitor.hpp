@@ -31,7 +31,7 @@ class HIRGeneratorVisitor : ASTVisitor {
     HIRGeneratorVisitor(MiddleEnd& middle_end) : middle_end(middle_end) {
     }
 
-    void generate(TreeNode* ast, IRProgram* program);
+    std::unique_ptr<IRProgram> generate(TreeNode* ast);
 
     HIROperationType convert_operation_to_hir(OperatorType type);
     HIRDataType convert_type_to_hir(Type* type);

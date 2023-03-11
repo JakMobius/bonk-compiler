@@ -45,7 +45,7 @@ bool LexicalAnalyzer::parse_number_lexeme(Lexeme* target) {
 
     int mantissa_digits = parse_digits_lexeme(10, &integer_result, &float_result);
     if (mantissa_digits == 0 && next_char() != '.') {
-        linked_compiler->error().at(current_position) << "expected number";
+        linked_compiler.error().at(current_position) << "expected number";
         return false;
     }
 
@@ -62,7 +62,7 @@ bool LexicalAnalyzer::parse_number_lexeme(Lexeme* target) {
             eat_char();
             mantissa_digits = parse_digits_lexeme(radix, &integer_result, &float_result);
             if (mantissa_digits == 0) {
-                linked_compiler->error().at(current_position) << "expected number";
+                linked_compiler.error().at(current_position) << "expected number";
                 return false;
             }
         }
@@ -73,7 +73,7 @@ bool LexicalAnalyzer::parse_number_lexeme(Lexeme* target) {
         eat_char();
         fraction_digits = parse_digits_lexeme(radix, nullptr, &fraction);
         if (fraction_digits == 0) {
-            linked_compiler->error().at(current_position) << "expected fraction";
+            linked_compiler.error().at(current_position) << "expected fraction";
             return false;
         }
         for (int i = 0; i < fraction_digits; i++)
@@ -93,7 +93,7 @@ bool LexicalAnalyzer::parse_number_lexeme(Lexeme* target) {
         long long exponent = 0;
         int exponent_digits = parse_digits_lexeme(radix, &exponent, nullptr);
         if (exponent_digits == 0) {
-            linked_compiler->error().at(current_position) << "exponent is empty";
+            linked_compiler.error().at(current_position) << "exponent is empty";
             return false;
         }
 

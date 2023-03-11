@@ -13,8 +13,7 @@ const char* BONK_KEYWORD_NAMES[] = {"flot", "nubr", "strg", "many", nullptr};
 
 const char* BONK_BRACE_NAMES[] = {"{", "}", "(", ")", "[", "]", nullptr};
 
-LexicalAnalyzer::LexicalAnalyzer(Compiler* compiler) {
-    linked_compiler = compiler;
+LexicalAnalyzer::LexicalAnalyzer(Compiler& compiler): linked_compiler(compiler) {
 
     int operator_count = 0;
     while (BONK_OPERATOR_NAMES[operator_count])
@@ -83,7 +82,7 @@ void LexicalAnalyzer::next() {
     // Read next word
     std::string_view word = next_word();
     if (word.empty()) {
-        linked_compiler->error().at(current_position)
+        linked_compiler.error().at(current_position)
             << "unexpected character '" << next_char() << "'\n";
         return;
     }
@@ -112,7 +111,7 @@ bool LexicalAnalyzer::parse_string_lexeme(Lexeme* target) {
 
     while (next_char() != (char)quote_type) {
         if (next_char() == '\0') {
-            linked_compiler->error().at(current_position)
+            linked_compiler.error().at(current_position)
                 << "unexpected end of file while parsing string\n";
             return false;
         }
@@ -142,7 +141,7 @@ bool LexicalAnalyzer::parse_string_lexeme(Lexeme* target) {
                 stream << '\'';
                 break;
             default:
-                linked_compiler->error().at(current_position)
+                linked_compiler.error().at(current_position)
                     << "unexpected escape sequence '\\" << next_char() << "'\n";
                 return false;
             }
@@ -170,7 +169,7 @@ std::vector<Lexeme> LexicalAnalyzer::parse_file(const char* filename, std::strin
     current_position.line = 1;
     text = source;
 
-    while (!linked_compiler->state) {
+    while (!linked_compiler.state) {
         next();
         if (lexemes.back().type == LexemeType::l_eof)
             break;

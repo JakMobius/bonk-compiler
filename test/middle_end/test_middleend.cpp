@@ -19,14 +19,14 @@ TEST(MiddleEnd, TypecheckerTest1) {
         }
     )";
 
-    auto lexemes = compiler.lexical_analyzer.parse_file("test", source);
-    auto ast = compiler.parser.parse_file(&lexemes);
+    auto lexemes = bonk::LexicalAnalyzer(compiler).parse_file("test", source);
+    auto ast = bonk::Parser(compiler).parse_file(&lexemes);
 
     ASSERT_NE(ast, nullptr);
 
     bonk::MiddleEnd middle_end(compiler);
 
-    EXPECT_EQ(middle_end.run_ast(ast.get()), false);
+    EXPECT_EQ(middle_end.run_ast(ast.get()), nullptr);
     EXPECT_EQ(error_stringstream.str(),
               "test:4:17: error: Cannot perform '*=' between flot and strg\n");
 }
@@ -52,14 +52,14 @@ TEST(MiddleEnd, TypecheckerTest2) {
         }
     )";
 
-    auto lexemes = compiler.lexical_analyzer.parse_file("test", source);
-    auto ast = compiler.parser.parse_file(&lexemes);
+    auto lexemes = bonk::LexicalAnalyzer(compiler).parse_file("test", source);
+    auto ast = bonk::Parser(compiler).parse_file(&lexemes);
 
     ASSERT_NE(ast, nullptr);
 
     bonk::MiddleEnd middle_end(compiler);
 
-    EXPECT_EQ(middle_end.run_ast(ast.get()), false);
+    EXPECT_EQ(middle_end.run_ast(ast.get()), nullptr);
     EXPECT_EQ(error_stringstream.str(),
               "test:11:41: error: Cannot perform '+' between TestHive and flot\n");
 }
@@ -80,12 +80,14 @@ TEST(MiddleEnd, CodegenTest) {
         }
     )";
 
-    auto lexemes = compiler.lexical_analyzer.parse_file("test", source);
-    auto ast = compiler.parser.parse_file(&lexemes);
+    auto lexemes = bonk::LexicalAnalyzer(compiler).parse_file("test", source);
+    auto ast = bonk::Parser(compiler).parse_file(&lexemes);
 
     ASSERT_NE(ast, nullptr);
 
     bonk::MiddleEnd middle_end(compiler);
 
-    middle_end.run_ast(ast.get());
+    auto ir_program = middle_end.run_ast(ast.get());
+
+    EXPECT_EQ(ir_program->procedures.size(), 2);
 }

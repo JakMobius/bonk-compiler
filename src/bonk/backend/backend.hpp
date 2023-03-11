@@ -7,8 +7,9 @@ struct Compiler;
 
 }
 
-#include "utils/streams.hpp"
 #include "../tree/ast.hpp"
+#include "bonk/middleend/ir/ir.hpp"
+#include "utils/streams.hpp"
 
 namespace bonk {
 
@@ -18,7 +19,7 @@ struct Backend {
 
     virtual ~Backend() = default;
 
-    virtual bool compile_ast(std::unique_ptr<TreeNode> ast, const OutputStream& target);
+    virtual bool compile_program(IRProgram& program) = 0;
 };
 
 } // namespace bonk

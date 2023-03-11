@@ -54,7 +54,7 @@ class JsonDumpAstVisitor : public ASTVisitor {
         dump_node_location(node);
         dump_type(node, "BlockDefinition");
 
-        serializer.field("block_name").block_string_field() << node->block_name;
+        accept_node_or_null("block_name", node->block_name);
         accept_node_or_null("block_parameters", node->block_parameters);
         accept_node_or_null("body", node->body);
     }

@@ -3,6 +3,7 @@
 #include "annotators/basic_symbol_annotator.hpp"
 #include "annotators/type_annotator.hpp"
 #include "bonk/compiler.hpp"
+#include "bonk/middleend/ir/ir.hpp"
 
 namespace bonk {
 
@@ -62,10 +63,10 @@ class MiddleEnd {
     IDTable id_table {*this};
 
     explicit MiddleEnd(Compiler& linked_compiler);
-    ;
+
     ~MiddleEnd() = default;
 
-    bool run_ast(TreeNode* ast);
+    std::unique_ptr<IRProgram> run_ast(TreeNode* ast);
 };
 
 } // namespace bonk

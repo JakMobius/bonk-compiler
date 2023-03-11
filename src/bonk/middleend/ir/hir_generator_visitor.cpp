@@ -1,6 +1,7 @@
 
 #include "hir_generator_visitor.hpp"
 #include "hir.hpp"
+#include "hir_base_block_separator.hpp"
 
 void bonk::HIRGeneratorVisitor::visit(bonk::TreeNodeProgram* node) {
     ASTVisitor::visit(node);
@@ -327,9 +328,13 @@ void bonk::HIRGeneratorVisitor::visit(bonk::TreeNodeCall* node) {
     }
 }
 
-void bonk::HIRGeneratorVisitor::generate(bonk::TreeNode* ast, bonk::IRProgram* program) {
-    current_program = program;
+std::unique_ptr<bonk::IRProgram> bonk::HIRGeneratorVisitor::generate(bonk::TreeNode* ast) {
+    auto program = std::make_unique<IRProgram>(middle_end.id_table, middle_end.symbol_table);
+    current_program = program.get();
     ast->accept(this);
+
+    HIRBaseBlockSeparator::separate_blocks(*program);
+    return program;
 }
 
 bonk::HIROperationType bonk::HIRGeneratorVisitor::convert_operation_to_hir(OperatorType type) {
