@@ -9,3 +9,4 @@ add_executable(bonk ${SOURCES})
 target_include_directories(bonk PUBLIC src)
 
 add_subdirectory(test)
+add_subdirectory(bonk_stdlib)
