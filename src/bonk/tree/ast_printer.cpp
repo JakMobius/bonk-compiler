@@ -17,7 +17,11 @@ void bonk::ASTPrinter::visit(TreeNodeBlockDefinition* node) {
     if (node->block_parameters) {
         node->block_parameters->accept(this);
     }
-    node->body->accept(this);
+    if(node->body) {
+        node->body->accept(this);
+    } else {
+        stream.get_stream() << "\n";
+    }
 }
 
 void bonk::ASTPrinter::visit(TreeNodeVariableDefinition* node) {

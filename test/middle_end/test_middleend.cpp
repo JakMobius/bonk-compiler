@@ -2,6 +2,7 @@
 #include <sstream>
 #include <gtest/gtest.h>
 #include "bonk/middleend/converters/hive_constructor_generator.hpp"
+#include "bonk/middleend/converters/stdlib_header_generator.hpp"
 #include "bonk/middleend/middleend.hpp"
 #include "bonk/parsing/parser.hpp"
 #include "bonk/tree/ast_printer.hpp"
@@ -94,6 +95,39 @@ TEST(MiddleEnd, CodegenTest) {
     EXPECT_EQ(ir_program->procedures.size(), 2);
 }
 
+TEST(MiddleEnd, StdLibHeaderGenerator) {
+    auto error_stream = bonk::StdOutputStream(std::cout);
+
+    bonk::CompilerConfig config{.error_file = error_stream};
+    bonk::Compiler compiler(config);
+
+    const char* source = R"(
+        blok main {}
+    )";
+
+    auto lexemes = bonk::LexicalAnalyzer(compiler).parse_file("test", source);
+    auto ast = bonk::Parser(compiler).parse_file(&lexemes);
+
+    ASSERT_NE(ast, nullptr);
+
+    bonk::MiddleEnd middle_end(compiler);
+    bonk::StdLibHeaderGenerator header_generator(middle_end);
+
+    header_generator.generate(ast.get());
+
+    std::stringstream ast_stringstream;
+    bonk::StdOutputStream stream{ast_stringstream};
+    bonk::ASTPrinter printer{stream};
+    ast->accept(&printer);
+
+    std::string ast_string = ast_stringstream.str();
+
+    EXPECT_NE(ast_string.find("blok $$bonk_create_object[bowl size: nubr]"), std::string::npos);
+    EXPECT_NE(ast_string.find("blok $$bonk_object_free[bowl object: nubr]"), std::string::npos);
+    EXPECT_NE(ast_string.find("blok $$bonk_object_inc_reference[bowl object: nubr]"), std::string::npos);
+    EXPECT_NE(ast_string.find("blok $$bonk_object_dec_reference[bowl object: nubr]"), std::string::npos);
+}
+
 TEST(MiddleEnd, ConstructorGeneratorTest) {
     auto error_stream = bonk::StdOutputStream(std::cout);
 
@@ -181,10 +215,4 @@ TEST(MiddleEnd, ConstructorGeneratorTest) {
         EXPECT_EQ(((bonk::TreeNodeNumberConstant*)parameter->parameter_value.get())->integer_value,
                   20);
     }
-
-    // Print the AST
-
-    bonk::StdOutputStream stream{std::cout};
-    bonk::ASTPrinter printer{stream};
-    ast->accept(&printer);
 }
