@@ -1,15 +1,18 @@
 
 #include "middleend.hpp"
+#include "bonk/middleend/converters/hive_constructor_generator.hpp"
 #include "bonk/middleend/ir/hir_generator_visitor.hpp"
-#include "bonk/middleend/ir/hir_printer.hpp"
 
 bonk::MiddleEnd::MiddleEnd(bonk::Compiler& linked_compiler) : linked_compiler(linked_compiler) {
 }
 
 std::unique_ptr<bonk::IRProgram> bonk::MiddleEnd::run_ast(TreeNode* ast) {
 
+    bonk::HiveConstructorGenerator constructor_generator{*this};
     bonk::BasicSymbolAnnotator symbol_annotator{*this};
     bonk::TypeAnnotator type_annotator{*this};
+
+    constructor_generator.generate(ast);
 
     symbol_annotator.annotate_ast(ast);
 
@@ -35,7 +38,7 @@ long long bonk::IDTable::get_unused_id() {
 }
 
 long long bonk::IDTable::get_id(bonk::TreeNode* node) {
-    auto def = middle_end.symbol_table.get_definition(node) ;
+    auto def = middle_end.symbol_table.get_definition(node);
 
     if (def) {
         node = def;
@@ -72,9 +75,20 @@ void bonk::TypeTable::write_to_cache(TreeNode* node, Type* type) {
 void bonk::TypeTable::save_type(std::unique_ptr<Type> type) {
     type_storage.insert(std::move(type));
 }
+
 bonk::Type* bonk::TypeTable::get_type(bonk::TreeNode* node) {
     auto it = type_cache.find(node);
     if (it == type_cache.end())
         return nullptr;
     return it->second;
+}
+
+std::string_view bonk::HiddenSymbolStorage::get_hidden_symbol(const std::string& symbol) {
+    // Find the symbol in the set, if it's not there, insert it
+    auto it = hidden_symbols.find(symbol);
+    if (it == hidden_symbols.end()) {
+        it = hidden_symbols.insert(symbol).first;
+        return *it;
+    }
+    return *it;
 }

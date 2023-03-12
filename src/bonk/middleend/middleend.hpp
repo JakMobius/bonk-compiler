@@ -54,6 +54,12 @@ struct IDTable {
     TreeNode* get_node(long long id);
 };
 
+struct HiddenSymbolStorage {
+    std::unordered_set<std::string> hidden_symbols;
+
+    std::string_view get_hidden_symbol(const std::string& symbol);
+};
+
 class MiddleEnd {
   public:
     Compiler& linked_compiler;
@@ -61,6 +67,7 @@ class MiddleEnd {
     SymbolTable symbol_table;
     TypeTable type_table;
     IDTable id_table {*this};
+    HiddenSymbolStorage hidden_text_storage;
 
     explicit MiddleEnd(Compiler& linked_compiler);
 

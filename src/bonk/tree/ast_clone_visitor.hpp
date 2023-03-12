@@ -1,21 +1,22 @@
 #pragma once
 
-#include <sstream>
-#include "ast.hpp"
 #include "ast_visitor.hpp"
-#include "utils/json_serializer.hpp"
-
 namespace bonk {
 
-class JsonDumpAstVisitor : public ASTVisitor {
-
-    JsonSerializer& serializer;
-
+class ASTCloneVisitor : ASTVisitor {
   public:
-    explicit JsonDumpAstVisitor(JsonSerializer& serializer) : serializer(serializer) {
+    template <typename T> std::unique_ptr<T> clone(T* node) {
+        if(!node) return nullptr;
+        result = nullptr;
+        node->accept(this);
+        assert(result != nullptr);
+        return std::unique_ptr<T>(static_cast<T*>(result.release()));
     }
 
-    void dump_node_location(TreeNode* node);
+    bool copy_source_positions = false;
+
+  private:
+    std::unique_ptr<TreeNode> result;
 
     void visit(TreeNodeProgram* node) override;
     void visit(TreeNodeHelp* node) override;
@@ -35,21 +36,17 @@ class JsonDumpAstVisitor : public ASTVisitor {
     void visit(TreeNodeManyType* node) override;
     void visit(TreeNodeHiveAccess* node) override;
     void visit(TreeNodeBonkStatement* node) override;
+    void visit(TreeNodeBrekStatement* node) override;
     void visit(TreeNodeLoopStatement* node) override;
     void visit(TreeNodeHiveDefinition* node) override;
     void visit(TreeNodeCall* node) override;
 
-  private:
-    void dump_type(TreeNode* node, std::string_view type);
-
-    template <typename T> void accept_node_or_null(std::string_view field_name, T& node) {
-        if (node) {
-            serializer.field(field_name).block_start_block();
-            node->accept(this);
-            serializer.close_block();
-        } else {
-            serializer.field(field_name).block_add_null();
+    template <typename T> std::unique_ptr<T> shallow_copy(T* node) {
+        auto copy = std::make_unique<T>();
+        if (copy_source_positions) {
+            copy->source_position = node->source_position;
         }
+        return copy;
     }
 };
 
