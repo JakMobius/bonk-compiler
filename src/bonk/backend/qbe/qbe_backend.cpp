@@ -4,28 +4,26 @@
 #include "bonk/middleend/ir/hir.hpp"
 #include "bonk/middleend/middleend.hpp"
 
-bool bonk::qbe_backend::QBEBackend::compile_program(bonk::IRProgram& program) {
+void bonk::qbe_backend::QBEBackend::compile_program(bonk::IRProgram& program) {
 
     current_program = &program;
 
-    bool result = true;
-
     for (auto& procedure : program.procedures) {
-        if (!compile_procedure(procedure))
-            result = false;
+        compile_procedure(procedure);
     }
-
-    return result;
 }
 
-bool bonk::qbe_backend::QBEBackend::compile_procedure(bonk::IRProcedure& procedure) {
+void bonk::qbe_backend::QBEBackend::compile_procedure(bonk::IRProcedure& procedure) {
 
     bool is_first = true;
 
     for (auto& block : procedure.base_blocks) {
         for (auto& instruction : block.instructions) {
             if (is_first) {
-                compile_procedure_header(*instruction);
+                if(!compile_procedure_header(*instruction)) {
+                    // Procedure is external
+                    return;
+                }
                 is_first = false;
             } else {
                 compile_instruction(*instruction);
@@ -35,8 +33,6 @@ bool bonk::qbe_backend::QBEBackend::compile_procedure(bonk::IRProcedure& procedu
     }
 
     compile_procedure_footer();
-
-    return true;
 }
 
 bool bonk::qbe_backend::QBEBackend::compile_procedure_header(bonk::IRInstruction& instruction) {
@@ -47,16 +43,21 @@ bool bonk::qbe_backend::QBEBackend::compile_procedure_header(bonk::IRInstruction
 
     auto& procedure = static_cast<HIRProcedure&>(instruction);
 
+    if(procedure.is_external) {
+        return false;
+    }
+
     linked_compiler.config.output_file.get_stream() << "export function ";
     print_hir_type(procedure.return_type);
     linked_compiler.config.output_file.get_stream() << " ";
     TreeNode* procedure_definition = current_program->id_table.get_node(procedure.procedure_id);
     std::string_view procedure_name =
         current_program->symbol_table.symbol_names[procedure_definition];
-    linked_compiler.config.output_file.get_stream() << "$" << procedure_name << " (";
+    linked_compiler.config.output_file.get_stream() << "$\"_" << procedure_name << "\" (";
 
     for (int i = 0; i < procedure.parameters.size(); i++) {
-        if(i != 0) linked_compiler.config.output_file.get_stream() << ", ";
+        if (i != 0)
+            linked_compiler.config.output_file.get_stream() << ", ";
         auto& parameter = procedure.parameters[i];
         print_hir_type(parameter.type);
         linked_compiler.config.output_file.get_stream() << " %r" << parameter.register_id;
@@ -71,12 +72,11 @@ void bonk::qbe_backend::QBEBackend::compile_procedure_footer() {
     linked_compiler.config.output_file.get_stream() << "}\n";
 }
 
-bool bonk::qbe_backend::QBEBackend::compile_instruction(HIRLabel& instruction) {
+void bonk::qbe_backend::QBEBackend::compile_instruction(HIRLabel& instruction) {
     linked_compiler.config.output_file.get_stream() << "@L" << instruction.label_id << "\n";
-    return true;
 }
 
-bool bonk::qbe_backend::QBEBackend::compile_instruction(HIRConstantLoad& instruction) {
+void bonk::qbe_backend::QBEBackend::compile_instruction(HIRConstantLoad& instruction) {
     auto target = instruction.target;
     auto value = instruction.constant;
     auto type = instruction.type;
@@ -107,11 +107,9 @@ bool bonk::qbe_backend::QBEBackend::compile_instruction(HIRConstantLoad& instruc
     }
 
     linked_compiler.config.output_file.get_stream() << "\n";
-
-    return true;
 }
 
-bool bonk::qbe_backend::QBEBackend::compile_instruction(HIRSymbolLoad& instruction) {
+void bonk::qbe_backend::QBEBackend::compile_instruction(HIRSymbolLoad& instruction) {
     auto type = instruction.type;
 
     padding();
@@ -122,12 +120,10 @@ bool bonk::qbe_backend::QBEBackend::compile_instruction(HIRSymbolLoad& instructi
     TreeNode* symbol_definition = current_program->id_table.get_node(instruction.symbol_id);
     std::string_view symbol_name = current_program->symbol_table.symbol_names[symbol_definition];
 
-    linked_compiler.config.output_file.get_stream() << " $" << symbol_name << "\n";
-
-    return true;
+    linked_compiler.config.output_file.get_stream() << " $\"_" << symbol_name << "\"\n";
 }
 
-bool bonk::qbe_backend::QBEBackend::compile_instruction(HIROperation& instruction) {
+void bonk::qbe_backend::QBEBackend::compile_instruction(HIROperation& instruction) {
     auto target = instruction.target;
 
     padding();
@@ -199,25 +195,21 @@ bool bonk::qbe_backend::QBEBackend::compile_instruction(HIROperation& instructio
     }
 
     linked_compiler.config.output_file.get_stream() << "\n";
-
-    return true;
 }
 
-bool bonk::qbe_backend::QBEBackend::compile_instruction(HIRJump& instruction) {
+void bonk::qbe_backend::QBEBackend::compile_instruction(HIRJump& instruction) {
     padding();
     linked_compiler.config.output_file.get_stream() << "jmp @L" << instruction.label_id << "\n";
-    return true;
 }
 
-bool bonk::qbe_backend::QBEBackend::compile_instruction(HIRJumpNZ& instruction) {
+void bonk::qbe_backend::QBEBackend::compile_instruction(HIRJumpNZ& instruction) {
     padding();
     linked_compiler.config.output_file.get_stream()
         << "jnz %r" << instruction.condition << ", @L" << instruction.nz_label << ", @L"
         << instruction.z_label << "\n";
-    return true;
 }
 
-bool bonk::qbe_backend::QBEBackend::compile_instruction(HIRCall& instruction) {
+void bonk::qbe_backend::QBEBackend::compile_instruction(HIRCall& instruction) {
     padding();
 
     if (instruction.return_value.has_value()) {
@@ -231,7 +223,7 @@ bool bonk::qbe_backend::QBEBackend::compile_instruction(HIRCall& instruction) {
         current_program->id_table.get_node(instruction.procedure_label_id);
     std::string_view symbol_name = current_program->symbol_table.symbol_names[symbol_definition];
 
-    linked_compiler.config.output_file.get_stream() << "call $" << symbol_name << "(";
+    linked_compiler.config.output_file.get_stream() << "call $\"_" << symbol_name << "\"(";
 
     for (int i = 0; i < call_parameters.size(); i++) {
         if (i != 0)
@@ -242,27 +234,43 @@ bool bonk::qbe_backend::QBEBackend::compile_instruction(HIRCall& instruction) {
     call_parameters.clear();
 
     linked_compiler.config.output_file.get_stream() << ")\n";
-    return true;
 }
 
-bool bonk::qbe_backend::QBEBackend::compile_instruction(HIRReturn& instruction) {
+void bonk::qbe_backend::QBEBackend::compile_instruction(HIRReturn& instruction) {
     padding();
     linked_compiler.config.output_file.get_stream() << "ret";
     if (instruction.return_value.has_value()) {
-        linked_compiler.config.output_file.get_stream() << " %r" << instruction.return_value.value();
+        linked_compiler.config.output_file.get_stream()
+            << " %r" << instruction.return_value.value();
     }
     linked_compiler.config.output_file.get_stream() << "\n";
-
-    return true;
 }
 
-bool bonk::qbe_backend::QBEBackend::compile_instruction(HIRParameter& instruction) {
+void bonk::qbe_backend::QBEBackend::compile_instruction(HIRParameter& instruction) {
     call_parameters.push_back({instruction.type, instruction.parameter});
-
-    return true;
 }
 
-bool bonk::qbe_backend::QBEBackend::compile_instruction(bonk::IRInstruction& instruction) {
+void bonk::qbe_backend::QBEBackend::compile_instruction(HIRMemoryLoad& instruction) {
+
+    padding();
+    linked_compiler.config.output_file.get_stream() << "%r" << instruction.target << " =";
+    print_hir_type(instruction.type);
+    linked_compiler.config.output_file.get_stream()
+            << " load";
+    print_hir_type(instruction.type);
+    linked_compiler.config.output_file.get_stream() << "%r" << instruction.address << "\n";
+}
+
+void bonk::qbe_backend::QBEBackend::compile_instruction(HIRMemoryStore& instruction) {
+
+    padding();
+    linked_compiler.config.output_file.get_stream() << "store";
+    print_hir_type(instruction.type);
+    linked_compiler.config.output_file.get_stream()
+        << " %r" << instruction.value << ", %r" << instruction.address << "\n";
+}
+
+void bonk::qbe_backend::QBEBackend::compile_instruction(bonk::IRInstruction& instruction) {
 
     auto hir_instruction = static_cast<HIRInstruction&>(instruction);
 
@@ -285,11 +293,15 @@ bool bonk::qbe_backend::QBEBackend::compile_instruction(bonk::IRInstruction& ins
         return compile_instruction(static_cast<HIRReturn&>(instruction));
     case HIRInstructionType::parameter:
         return compile_instruction(static_cast<HIRParameter&>(instruction));
+    case HIRInstructionType::memory_load:
+        return compile_instruction(static_cast<HIRMemoryLoad&>(instruction));
+    case HIRInstructionType::memory_store:
+        return compile_instruction(static_cast<HIRMemoryStore&>(instruction));
     case HIRInstructionType::procedure:
         assert(!"Procedure header occurred in the middle of the procedure");
+    default:
+        assert(!"Unknown instruction type");
     }
-
-    return true;
 }
 
 void bonk::qbe_backend::QBEBackend::print_hir_type(bonk::HIRDataType type) {

@@ -5,15 +5,16 @@
 namespace bonk {
 
 const char* BONK_OPERATOR_NAMES[] = {
-    "@",    "+",    "-",    "*",    "/",  "+=",  "-=", "*=",   "/=",
-    "=",    "==",   "<",    ">",    "<=", ">=",  "!=", "blok", "hive",
-    "brek", "bowl", "bonk", "loop", "of", "and", "or", "not", "help", nullptr};
+    "@",    "+",    "-",  "*",   "/",  "+=",  "-=",   "*=",   "/=",   "=",
+    "==",   "<",    ">",  "<=",  ">=", "!=",  "blok", "hive", "brek", "bowl",
+    "bonk", "loop", "of", "and", "or", "not", "help", nullptr};
 
-const char* BONK_KEYWORD_NAMES[] = {"flot", "nubr", "strg", "many", nullptr};
+const char* BONK_KEYWORD_NAMES[] = {"buul", "shrt", "nubr", "long", "flot",
+                                    "dabl", "strg", "many", nullptr};
 
 const char* BONK_BRACE_NAMES[] = {"{", "}", "(", ")", "[", "]", nullptr};
 
-LexicalAnalyzer::LexicalAnalyzer(Compiler& compiler): linked_compiler(compiler) {
+LexicalAnalyzer::LexicalAnalyzer(Compiler& compiler) : linked_compiler(compiler) {
 
     int operator_count = 0;
     while (BONK_OPERATOR_NAMES[operator_count])
@@ -201,7 +202,7 @@ void LexicalAnalyzer::eat_char() {
 std::string_view LexicalAnalyzer::next_word() {
     int position = current_position.index;
 
-    while (isalnum(next_char()) || next_char() == '_' || isdigit(next_char())) {
+    while (isalnum(next_char()) || next_char() == '_') {
         eat_char();
     }
 
@@ -213,13 +214,18 @@ int LexicalAnalyzer::next_operator() {
 
     int position = current_position.index;
     int operators_left = operator_match.size();
+    bool could_be_identifier = true;
 
-    for (auto&& i : operator_match) i = true;
+    for (auto&& i : operator_match)
+        i = true;
 
     int matched_operator = -1;
 
     while (char c = text[position]) {
         int lexeme_position = position - current_position.index;
+
+        // Invariant: operators don't contain numbers
+        could_be_identifier = could_be_identifier && (isalnum(c) || c == '_');
 
         for (int i = 0; i < operator_match.size(); i++) {
             if (!operator_match[i])
@@ -239,13 +245,19 @@ int LexicalAnalyzer::next_operator() {
             }
         }
 
-        if (operators_left == 0)
+        if (operators_left == 0) {
             break;
+        }
 
         position++;
     }
 
     if (matched_operator != -1) {
+        // Check if the operator is not followed by an identifier character
+        if (could_be_identifier && isalnum(text[position]) || text[position] == '_') {
+            return -1;
+        }
+
         int length = strlen(BONK_OPERATOR_NAMES[matched_operator]);
         // Invariant: operators do not contain newlines
         current_position.index += length;

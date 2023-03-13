@@ -51,7 +51,7 @@ struct TreeNodeBonkStatement;
 struct TreeNodeBrekStatement;
 struct TreeNodeLoopStatement;
 
-enum class PrimitiveType { t_unset, t_nubr, t_flot, t_strg };
+enum class PrimitiveType { t_unset, t_buul, t_shrt, t_nubr, t_long, t_flot, t_dabl, t_strg };
 extern const char* BONK_PRIMITIVE_TYPE_NAMES[];
 
 } // namespace bonk

@@ -50,7 +50,7 @@ void JsonSerializer::close_block() {
         padding();
     }
 
-    state = states[states.size() - 1];
+    state = states.back();
     states.pop_back();
 
     output_stream.get_stream() << '}';

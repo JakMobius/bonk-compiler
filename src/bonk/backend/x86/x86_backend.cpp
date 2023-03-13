@@ -4,7 +4,7 @@
 
 namespace bonk::x86_backend {
 
-bool Backend::compile_program(IRProgram& program) {
+void Backend::compile_program(IRProgram& program) {
 
     macho::MachoFile file;
     BackendContext context{&linked_compiler, &file};
@@ -19,12 +19,11 @@ bool Backend::compile_program(IRProgram& program) {
 
     if (linked_compiler.state) {
         linked_compiler.state = BONK_COMPILER_OK;
-        return false;
+        return;
     }
 
 //    file.flush(output);
 
-    return true;
 }
 
 } // namespace bonk::x86_backend

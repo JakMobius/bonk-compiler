@@ -55,6 +55,20 @@ void bonk::HIRPrinter::print(const bonk::IRProgram& program, const bonk::HIRJump
     print_label(program, instruction.z_label);
 }
 
+void bonk::HIRPrinter::print(const bonk::IRProgram& program,
+                             const bonk::HIRMemoryLoad& instruction) const {
+    stream.get_stream() << "%" << instruction.target << " <- load ";
+    print(instruction.type);
+    stream.get_stream() << " %" << instruction.address;
+}
+
+void bonk::HIRPrinter::print(const bonk::IRProgram& program,
+                             const bonk::HIRMemoryStore& instruction) const {
+    stream.get_stream() << "store ";
+    print(instruction.type);
+    stream.get_stream() << " %" << instruction.value << ", %" << instruction.address;
+}
+
 void bonk::HIRPrinter::print(const bonk::IRProgram& program, const bonk::HIRCall& instruction) const {
 
     if (instruction.return_value.has_value()) {
@@ -89,6 +103,9 @@ void bonk::HIRPrinter::print(const bonk::IRProgram& program, const bonk::HIROper
 }
 
 void bonk::HIRPrinter::print(const bonk::IRProgram& program, const bonk::HIRProcedure& instruction) const {
+    if(instruction.is_external) {
+        stream.get_stream() << "external ";
+    }
     stream.get_stream() << "blok ";
 
     auto node = program.id_table.get_node(instruction.procedure_id);
@@ -223,6 +240,14 @@ void bonk::HIRPrinter::print(const bonk::IRProgram& program, const bonk::HIRInst
     case HIRInstructionType::parameter:
         print(program, static_cast<const HIRParameter&>(instruction));
         break;
+    case HIRInstructionType::memory_load:
+        print(program, static_cast<const HIRMemoryLoad&>(instruction));
+        break;
+    case HIRInstructionType::memory_store:
+        print(program, static_cast<const HIRMemoryStore&>(instruction));
+        break;
+    default:
+        assert(!"Unknown instruction type");
     }
 }
 

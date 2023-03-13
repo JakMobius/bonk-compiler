@@ -1,13 +1,28 @@
 #pragma once
 
-#include "annotators/basic_symbol_annotator.hpp"
-#include "annotators/type_annotator.hpp"
+namespace bonk {
+
+class MiddleEnd;
+
+}
+
+#include <unordered_map>
+#include <unordered_set>
 #include "bonk/compiler.hpp"
+#include "bonk/middleend/annotators/types.hpp"
 #include "bonk/middleend/ir/ir.hpp"
 
 namespace bonk {
 
+struct SymbolScope {
+    SymbolScope* parent_scope;
+    TreeNode* definition;
+    std::unordered_map<std::string_view, TreeNode*> symbols;
+};
+
 struct SymbolTable {
+    std::vector<std::unique_ptr<SymbolScope>> scopes;
+    std::unordered_map<TreeNode*, SymbolScope*> symbol_scopes;
     std::unordered_map<TreeNode*, TreeNode*> symbol_definitions;
     std::unordered_map<TreeNode*, std::string> symbol_names;
 
@@ -66,14 +81,15 @@ class MiddleEnd {
 
     SymbolTable symbol_table;
     TypeTable type_table;
-    IDTable id_table {*this};
+    IDTable id_table{*this};
     HiddenSymbolStorage hidden_text_storage;
 
     explicit MiddleEnd(Compiler& linked_compiler);
 
     ~MiddleEnd() = default;
 
-    std::unique_ptr<IRProgram> run_ast(TreeNode* ast);
+    bool transform_ast(TreeNode* ast);
+    std::unique_ptr<IRProgram> generate_hir(TreeNode* ast);
 };
 
 } // namespace bonk

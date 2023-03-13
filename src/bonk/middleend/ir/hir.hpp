@@ -3,6 +3,7 @@
 namespace bonk {
 
 enum class HIRInstructionType {
+    unset,
     label,
     constant_load,
     symbol_load,
@@ -12,7 +13,9 @@ enum class HIRInstructionType {
     call,
     return_op,
     parameter,
-    procedure
+    procedure,
+    memory_load,
+    memory_store,
 };
 
 enum class HIROperationType {
@@ -51,22 +54,22 @@ enum class HIRDataType {
 namespace bonk {
 
 struct HIRInstruction : IRInstruction {
-    HIRInstructionType type;
+    HIRInstructionType type = HIRInstructionType::unset;
 
     HIRInstruction(HIRInstructionType type);
     virtual ~HIRInstruction() = default;
 };
 
 struct HIRLabel : HIRInstruction {
-    int label_id;
+    int label_id = -1;
 
     HIRLabel(int label_id);
 };
 
 struct HIRConstantLoad : HIRInstruction {
-    IRRegister target;
-    HIRDataType type;
-    unsigned long long constant;
+    IRRegister target = 0;
+    HIRDataType type = HIRDataType::unset;
+    unsigned long long constant = 0;
 
     HIRConstantLoad(IRRegister target, unsigned long long constant, HIRDataType type);
     HIRConstantLoad(IRRegister target, uint64_t constant);
@@ -78,9 +81,9 @@ struct HIRConstantLoad : HIRInstruction {
 };
 
 struct HIRSymbolLoad : HIRInstruction {
-    IRRegister target;
-    HIRDataType type;
-    int symbol_id;
+    IRRegister target = 0;
+    HIRDataType type = HIRDataType::unset;
+    int symbol_id = -1;
 
     HIRSymbolLoad(IRRegister target, int symbol_id, HIRDataType type);
 };
@@ -89,9 +92,9 @@ struct HIROperation : HIRInstruction {
     IRRegister target{};
     IRRegister left{};
     std::optional<IRRegister> right{};
-    HIROperationType operation_type;
-    HIRDataType operand_type;
-    HIRDataType result_type;
+    HIROperationType operation_type = HIROperationType::plus;
+    HIRDataType operand_type = HIRDataType::unset;
+    HIRDataType result_type = HIRDataType::unset;
 
     HIROperation();
 };
@@ -103,16 +106,16 @@ struct HIRJump : HIRInstruction {
 };
 
 struct HIRJumpNZ : HIRInstruction {
-    IRRegister condition;
-    int nz_label;
-    int z_label;
+    IRRegister condition = 0;
+    int nz_label = -1;
+    int z_label = -1;
 
     HIRJumpNZ(IRRegister condition, int nz_label, int z_label);
 };
 
 struct HIRCall : HIRInstruction {
-    HIRDataType return_type;
-    std::optional<IRRegister> return_value;
+    HIRDataType return_type = HIRDataType::unset;
+    std::optional<IRRegister> return_value = std::nullopt;
 
     int procedure_label_id = -1;
 
@@ -120,31 +123,48 @@ struct HIRCall : HIRInstruction {
 };
 
 struct HIRReturn : HIRInstruction {
-    HIRDataType return_type;
-    std::optional<IRRegister> return_value;
+    HIRDataType return_type = HIRDataType::unset;
+    std::optional<IRRegister> return_value = std::nullopt;
 
     HIRReturn(IRRegister return_value);
     HIRReturn();
 };
 
 struct HIRParameter : HIRInstruction {
-    HIRDataType type;
-    IRRegister parameter;
+    HIRDataType type = HIRDataType::unset;
+    IRRegister parameter = 0;
 
     HIRParameter();
 };
 
 struct HIRProcedureParameter {
-    HIRDataType type;
-    IRRegister register_id;
+    HIRDataType type = HIRDataType::unset;
+    IRRegister register_id = 0;
 };
 
 struct HIRProcedure : HIRInstruction {
-    int procedure_id;
+    int procedure_id = -1;
     std::vector<HIRProcedureParameter> parameters;
-    HIRDataType return_type;
+    HIRDataType return_type = HIRDataType::unset;
+    bool is_external = false;
 
     HIRProcedure(int procedure_id, HIRDataType return_type);
+};
+
+struct HIRMemoryLoad : HIRInstruction {
+    IRRegister target = 0;
+    IRRegister address = 0;
+    HIRDataType type = HIRDataType::unset;
+
+    HIRMemoryLoad();
+};
+
+struct HIRMemoryStore : HIRInstruction {
+    IRRegister address = 0;
+    IRRegister value = 0;
+    HIRDataType type = HIRDataType::unset;
+
+    HIRMemoryStore();
 };
 
 } // namespace bonk

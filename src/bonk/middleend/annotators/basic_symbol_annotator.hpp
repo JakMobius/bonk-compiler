@@ -7,6 +7,7 @@ class MiddleEnd;
 }
 
 #include <unordered_map>
+#include "bonk/middleend/middleend.hpp"
 #include "bonk/tree/ast_visitor.hpp"
 
 namespace bonk {
@@ -16,22 +17,12 @@ class NameResolver {
     virtual TreeNode* get_name_definition(std::string_view name) = 0;
 };
 
-class Scope {
-  public:
-    std::unordered_map<std::string_view, TreeNode*> variables;
-    TreeNode* ast_node;
-
-    Scope(TreeNode* ast_node) : ast_node(ast_node) {}
-};
-
 class ScopedNameResolver : public NameResolver {
   public:
-    std::vector<Scope> scopes;
+    SymbolScope* current_scope = nullptr;
 
     ScopedNameResolver();
 
-    void push_scope(TreeNode* ast_node);
-    void pop_scope();
     TreeNode* get_name_definition(std::string_view name) override;
     void define_variable(std::string_view name, TreeNode* definition);
 };
@@ -44,7 +35,7 @@ class BasicSymbolAnnotator : ASTVisitor {
 
     BasicSymbolAnnotator(MiddleEnd& middleend);
 
-    void annotate_ast(TreeNode* ast);
+    void annotate_program(TreeNode* ast);
 
     void visit(bonk::TreeNodeProgram* node) override;
     void visit(bonk::TreeNodeCodeBlock* node) override;
@@ -56,8 +47,10 @@ class BasicSymbolAnnotator : ASTVisitor {
     void visit(bonk::TreeNodeIdentifier* node) override;
     void visit(bonk::TreeNodeHiveAccess* node) override;
 
-    std::string_view get_definition_identifier(TreeNode* definition);
+    void push_scope(TreeNode* ast_node);
+    void pop_scope();
 
+    std::string_view get_definition_identifier(TreeNode* definition);
     void handle_definition(TreeNode* node);
     std::string name_for_def_in_current_scope(TreeNode* node);
 };

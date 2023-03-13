@@ -161,8 +161,11 @@ void bonk::ASTPrinter::visit(TreeNodeHiveAccess* node) {
 }
 
 void bonk::ASTPrinter::visit(TreeNodeBonkStatement* node) {
-    stream.get_stream() << "bonk ";
-    node->expression->accept(this);
+    stream.get_stream() << "bonk";
+    if(node->expression) {
+        stream.get_stream() << " ";
+        node->expression->accept(this);
+    }
 }
 
 void bonk::ASTPrinter::visit(TreeNodeBrekStatement* node) {
@@ -199,7 +202,9 @@ void bonk::ASTPrinter::visit(TreeNodeHiveDefinition* node) {
 void bonk::ASTPrinter::visit(TreeNodeCall* node) {
     stream.get_stream() << "@";
     node->callee->accept(this);
-    node->arguments->accept(this);
+    if(node->arguments) {
+        node->arguments->accept(this);
+    }
 }
 
 void bonk::ASTPrinter::padding() {

@@ -1,36 +1,37 @@
 
 #include "middleend.hpp"
+#include "bonk/middleend/annotators/basic_symbol_annotator.hpp"
+#include "bonk/middleend/annotators/type_annotator.hpp"
+#include "bonk/middleend/converters/hive_constructor_call_replacer.hpp"
 #include "bonk/middleend/converters/hive_constructor_generator.hpp"
+#include "bonk/middleend/converters/stdlib_header_generator.hpp"
 #include "bonk/middleend/ir/hir_generator_visitor.hpp"
 
 bonk::MiddleEnd::MiddleEnd(bonk::Compiler& linked_compiler) : linked_compiler(linked_compiler) {
 }
 
-std::unique_ptr<bonk::IRProgram> bonk::MiddleEnd::run_ast(TreeNode* ast) {
+bool bonk::MiddleEnd::transform_ast(TreeNode* ast) {
 
-    bonk::HiveConstructorGenerator constructor_generator{*this};
-    bonk::BasicSymbolAnnotator symbol_annotator{*this};
-    bonk::TypeAnnotator type_annotator{*this};
+    bonk::StdLibHeaderGenerator(*this).generate(ast);
+    if (linked_compiler.state) return false;
 
-    constructor_generator.generate(ast);
+    bonk::HiveConstructorGenerator(*this).generate(ast);
+    if (linked_compiler.state) return false;
 
-    symbol_annotator.annotate_ast(ast);
+    bonk::BasicSymbolAnnotator(*this).annotate_program(ast);
+    if (linked_compiler.state) return false;
 
-    if (linked_compiler.state) {
-        return nullptr;
-    }
+    bonk::HiveConstructorCallReplacer(*this).replace(ast);
+    if (linked_compiler.state) return false;
 
-    type_annotator.annotate_ast(ast);
+    bonk::TypeAnnotator(*this).annotate_ast(ast);
+    if (linked_compiler.state) return false;
 
-    if (linked_compiler.state) {
-        return nullptr;
-    }
+    return true;
+}
 
-    bonk::HIRGeneratorVisitor hir_generator{*this};
-
-    auto program = hir_generator.generate(ast);
-
-    return program;
+std::unique_ptr<bonk::IRProgram> bonk::MiddleEnd::generate_hir(TreeNode* ast) {
+    return bonk::HIRGeneratorVisitor(*this).generate(ast);
 }
 
 long long bonk::IDTable::get_unused_id() {

@@ -161,7 +161,8 @@ void bonk::TypeInferringVisitor::visit(TreeNodeBinaryOperation* node) {
     auto left_type = infer_type(node->left.get());
     auto right_type = infer_type(node->right.get());
 
-    if(left_type->kind == TypeKind::error || right_type->kind == TypeKind::error) return;
+    if (left_type->kind == TypeKind::error || right_type->kind == TypeKind::error)
+        return;
 
     if (!left_type->allows_binary_operation(node->operator_type, right_type)) {
         middle_end.linked_compiler.error().at(node->right->source_position)
@@ -170,7 +171,7 @@ void bonk::TypeInferringVisitor::visit(TreeNodeBinaryOperation* node) {
         return;
     }
 
-    switch(node->operator_type) {
+    switch (node->operator_type) {
 
     case OperatorType::o_plus:
     case OperatorType::o_minus:
@@ -191,7 +192,8 @@ void bonk::TypeInferringVisitor::visit(TreeNodeBinaryOperation* node) {
     case OperatorType::o_less_equal:
     case OperatorType::o_greater_equal:
     case OperatorType::o_not_equal:
-        middle_end.type_table.annotate<TrivialType>(node)->primitive_type = bonk::PrimitiveType::t_nubr;
+        middle_end.type_table.annotate<TrivialType>(node)->primitive_type =
+            bonk::PrimitiveType::t_buul;
         return;
     default:
         assert(!"Unsupported binary operator");
@@ -258,8 +260,6 @@ void bonk::TypeInferringVisitor::visit(TreeNodeHiveDefinition* node) {
 }
 
 void bonk::TypeInferringVisitor::visit(TreeNodeCall* node) {
-    // TODO: this function is way too long, try to decompose it
-    // in the future.
 
     // Determine the return type of the function
     auto callee_type = infer_type(node->callee.get());
@@ -267,76 +267,51 @@ void bonk::TypeInferringVisitor::visit(TreeNodeCall* node) {
     if (!callee_type || callee_type->kind == TypeKind::error)
         return;
 
-    if (callee_type->kind != TypeKind::blok && callee_type->kind != TypeKind::hive) {
+    if (callee_type->kind != TypeKind::blok) {
         middle_end.linked_compiler.error().at(node->callee->source_position)
             << "Cannot call non-function type";
+        return;
     }
 
-    if (callee_type->kind == TypeKind::hive) {
-        auto hive_type = (HiveType*)callee_type;
-        middle_end.type_table.annotate(node, infer_type(hive_type->hive_definition));
-    } else {
-        auto function_type = (BlokType*)callee_type;
-        middle_end.type_table.annotate(node, function_type->return_type.get());
-    }
+    auto function_type = (BlokType*)callee_type;
+    middle_end.type_table.annotate(node, function_type->return_type.get());
 
     // Infer type of expressions in arguments
     // and check if they are compatible with function arguments
-    if (node->arguments) {
-        for (auto& argument : node->arguments->parameters) {
-            Type* argument_type = infer_type(argument->parameter_value.get());
+    if (!node->arguments) return;
 
-            if (argument_type->kind == TypeKind::error)
-                continue;
+    for (auto& argument : node->arguments->parameters) {
+        Type* argument_type = infer_type(argument->parameter_value.get());
 
-            TreeNode* definition = nullptr;
+        if (argument_type->kind == TypeKind::error)
+            continue;
 
-            if (callee_type->kind == TypeKind::hive) {
-                // Find field named like argument and check if it is compatible with argument type
-                auto hive_type = (HiveType*)callee_type;
-                HiveFieldNameResolver resolver{hive_type->hive_definition};
+        // Find parameter named like argument and check if it is compatible with argument
+        // type
+        FunctionParameterNameResolver resolver{function_type};
 
-                definition =
-                    resolver.get_name_definition(argument->parameter_name->identifier_text);
+        auto definition = resolver.get_name_definition(argument->parameter_name->identifier_text);
 
-                if (definition == nullptr) {
-                    middle_end.linked_compiler.error().at(argument->parameter_name->source_position)
-                        << "Cannot find hive field '" << argument->parameter_name->identifier_text
-                        << "' in hive '" << hive_type->hive_definition->hive_name->identifier_text
-                        << "'";
-                    continue;
-                }
-            } else {
-                // Find parameter named like argument and check if it is compatible with argument
-                // type
-                auto function_type = (BlokType*)callee_type;
-                FunctionParameterNameResolver resolver{function_type};
+        if (definition == nullptr) {
+            middle_end.linked_compiler.error().at(argument->parameter_name->source_position)
+                << "Cannot find function parameter '"
+                << argument->parameter_name->identifier_text << "' in function '"
+                << *function_type << "'";
+            continue;
+        }
 
-                definition =
-                    resolver.get_name_definition(argument->parameter_name->identifier_text);
+        middle_end.symbol_table.symbol_definitions[argument->parameter_name.get()] = definition;
 
-                if (definition == nullptr) {
-                    middle_end.linked_compiler.error().at(argument->parameter_name->source_position)
-                        << "Cannot find function parameter '"
-                        << argument->parameter_name->identifier_text << "' in function '"
-                        << function_type << "'";
-                    continue;
-                }
-            }
+        Type* valid_type = infer_type(definition);
 
-            middle_end.symbol_table.symbol_definitions[argument->parameter_name.get()] =
-                definition;
+        if (valid_type->kind == TypeKind::error)
+            continue;
 
-            Type* valid_type = infer_type(definition);
-
-            if(valid_type->kind == TypeKind::error) continue;
-
-            if (*valid_type != *argument_type) {
-                middle_end.linked_compiler.error().at(argument->parameter_value->source_position)
-                    << "Cannot pass '" << *argument_type << "' to parameter '"
-                    << argument->parameter_name->identifier_text << "' of type '" << *valid_type
-                    << "'";
-            }
+        if (*valid_type != *argument_type) {
+            middle_end.linked_compiler.error().at(argument->parameter_value->source_position)
+                << "Cannot pass '" << *argument_type << "' to parameter '"
+                << argument->parameter_name->identifier_text << "' of type '" << *valid_type
+                << "'";
         }
     }
 }

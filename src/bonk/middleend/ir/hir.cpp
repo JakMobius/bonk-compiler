@@ -53,8 +53,7 @@ bonk::HIRSymbolLoad::HIRSymbolLoad(bonk::IRRegister target, int symbol_id, bonk:
 bonk::HIROperation::HIROperation() : HIRInstruction(HIRInstructionType::operation) {
 }
 
-bonk::HIRJump::HIRJump()
-    : HIRInstruction(HIRInstructionType::jump), label_id() {
+bonk::HIRJump::HIRJump() : HIRInstruction(HIRInstructionType::jump), label_id() {
 }
 
 bonk::HIRJumpNZ::HIRJumpNZ(bonk::IRRegister condition, int nz_label, int z_label)
@@ -62,8 +61,7 @@ bonk::HIRJumpNZ::HIRJumpNZ(bonk::IRRegister condition, int nz_label, int z_label
       z_label(z_label) {
 }
 
-bonk::HIRCall::HIRCall()
-    : HIRInstruction(HIRInstructionType::call), procedure_label_id() {
+bonk::HIRCall::HIRCall() : HIRInstruction(HIRInstructionType::call), procedure_label_id() {
 }
 
 bonk::HIRReturn::HIRReturn(bonk::IRRegister return_value)
@@ -73,11 +71,18 @@ bonk::HIRReturn::HIRReturn(bonk::IRRegister return_value)
 bonk::HIRReturn::HIRReturn() : HIRInstruction(HIRInstructionType::return_op) {
 }
 
-bonk::HIRParameter::HIRParameter()
-    : HIRInstruction(HIRInstructionType::parameter) {
+bonk::HIRParameter::HIRParameter() : HIRInstruction(HIRInstructionType::parameter) {
 }
 
 bonk::HIRProcedure::HIRProcedure(int procedure_id, bonk::HIRDataType return_type)
     : HIRInstruction(HIRInstructionType::procedure), procedure_id(procedure_id),
       return_type(return_type) {
+}
+
+bonk::HIRMemoryLoad::HIRMemoryLoad() : HIRInstruction(HIRInstructionType::memory_load) {
+
+}
+
+bonk::HIRMemoryStore::HIRMemoryStore() : HIRInstruction(HIRInstructionType::memory_store) {
+
 }

@@ -6,8 +6,12 @@ namespace bonk {
 
 const char* BONK_PRIMITIVE_TYPE_NAMES[] = {
     "unset",
+    "buul",
+    "shrt",
     "nubr",
+    "long",
     "flot",
+    "dabl",
     "strg"
 };
 

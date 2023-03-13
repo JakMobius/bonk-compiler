@@ -13,6 +13,11 @@ struct HIRLoopContext {
     int loop_end_label;
 };
 
+struct RegisterStackItem {
+    IRRegister register_id;
+    bool is_reference;
+};
+
 class HIRGeneratorVisitor : ASTVisitor {
 
     MiddleEnd& middle_end;
@@ -25,7 +30,7 @@ class HIRGeneratorVisitor : ASTVisitor {
 
     std::optional<HIRLoopContext> current_loop_context {};
 
-    std::vector<IRRegister> register_stack;
+    std::vector<RegisterStackItem> register_stack;
 
   public:
     HIRGeneratorVisitor(MiddleEnd& middle_end) : middle_end(middle_end) {
@@ -57,6 +62,10 @@ class HIRGeneratorVisitor : ASTVisitor {
     void visit(TreeNodeBrekStatement* node) override;
     void compile_lazy_logic(TreeNodeBinaryOperation* node);
     bool is_comparison_operation(HIROperationType type);
+
+    void push_value(IRRegister register_id);
+    void push_reference(IRRegister register_id);
+    IRRegister load_value(RegisterStackItem item, HIRDataType type);
 };
 
 } // namespace bonk

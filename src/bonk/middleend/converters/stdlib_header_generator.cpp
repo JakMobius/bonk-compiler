@@ -8,7 +8,7 @@ void bonk::StdLibHeaderGenerator::generate(bonk::TreeNode* ast) {
 
     generate_stdlib_function("$$bonk_create_object")
         .parameter("size", PrimitiveType::t_nubr)
-        .return_type(PrimitiveType::t_nubr)
+        .return_type(PrimitiveType::t_long)
         .attach(program);
 
     generate_stdlib_function("$$bonk_object_inc_reference")

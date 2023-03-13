@@ -26,6 +26,8 @@ class HIRPrinter {
     void print(const bonk::IRProgram& program, const bonk::HIROperation& instruction) const;
     void print(const bonk::IRProgram& program, const bonk::HIRProcedure& instruction) const;
     void print(const bonk::IRProgram& program, const bonk::HIRParameter& instruction) const;
+    void print(const bonk::IRProgram& program, const bonk::HIRMemoryLoad& instruction) const;
+    void print(const bonk::IRProgram& program, const bonk::HIRMemoryStore& instruction) const;
     void print(const bonk::IRProgram& program, const bonk::HIRInstruction& instruction) const;
 
     void print_label(const bonk::IRProgram& program, int label) const;

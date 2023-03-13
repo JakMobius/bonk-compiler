@@ -81,6 +81,7 @@ void bonk::JsonDumpAstVisitor::visit(bonk::TreeNodeParameterList* node) {
             serializer.array_add_null();
         }
     }
+    serializer.close_array();
 }
 
 void bonk::JsonDumpAstVisitor::visit(bonk::TreeNodeParameterListItem* node) {

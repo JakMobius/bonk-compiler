@@ -120,6 +120,8 @@ bonk::HiveConstructorGenerator::generate_hive_constructor(TreeNodeHiveDefinition
     bonk->expression = std::move(object_identifier);
     constructor->body->body.push_back(std::move(bonk));
 
+    hive_fields.clear();
+
     return constructor;
 }
 int bonk::HiveConstructorGenerator::get_hive_footprint() {

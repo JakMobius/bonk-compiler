@@ -22,8 +22,12 @@ enum class LexemeType {
 };
 
 enum class KeywordType {
-    k_flot,
+    k_buul,
+    k_shrt,
     k_nubr,
+    k_long,
+    k_flot,
+    k_dabl,
     k_strg,
     k_many
 };

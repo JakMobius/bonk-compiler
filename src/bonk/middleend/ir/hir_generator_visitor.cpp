@@ -12,8 +12,7 @@ void bonk::HIRGeneratorVisitor::visit(bonk::TreeNodeHelp* node) {
 }
 
 void bonk::HIRGeneratorVisitor::visit(bonk::TreeNodeIdentifier* node) {
-    int id = middle_end.id_table.get_id(node);
-    register_stack.push_back(id);
+    push_value(middle_end.id_table.get_id(node));
 }
 
 void bonk::HIRGeneratorVisitor::visit(bonk::TreeNodeBlockDefinition* node) {
@@ -44,11 +43,20 @@ void bonk::HIRGeneratorVisitor::visit(bonk::TreeNodeBlockDefinition* node) {
 
     current_base_block->instructions.push_back(procedure_header);
 
-    node->body->accept(this);
+    if (node->body) {
+        node->body->accept(this);
+    } else {
+        procedure_header->is_external = true;
+    }
     current_block_definition = old_block;
 }
 
 void bonk::HIRGeneratorVisitor::visit(bonk::TreeNodeVariableDefinition* node) {
+    if(!current_block_definition) {
+        // It could be a global variable or a field of a hive
+        return;
+    }
+
     if (node->variable_value == nullptr)
         return;
 
@@ -69,7 +77,7 @@ void bonk::HIRGeneratorVisitor::visit(bonk::TreeNodeVariableDefinition* node) {
     instruction->result_type = hir_variable_type;
     instruction->operand_type = hir_variable_type;
     instruction->target = variable_id;
-    instruction->left = result;
+    instruction->left = result.register_id;
     current_base_block->instructions.push_back(instruction);
 }
 
@@ -101,7 +109,7 @@ void bonk::HIRGeneratorVisitor::visit(bonk::TreeNodeNumberConstant* node) {
     float value = node->double_value;
     auto instruction = current_base_block->instruction<HIRConstantLoad>(id, value);
     current_base_block->instructions.push_back(instruction);
-    register_stack.push_back(id);
+    push_value(id);
 }
 
 void bonk::HIRGeneratorVisitor::visit(bonk::TreeNodeStringConstant* node) {
@@ -111,7 +119,7 @@ void bonk::HIRGeneratorVisitor::visit(bonk::TreeNodeStringConstant* node) {
     uint64_t string_pointer = 0;
     auto instruction = current_base_block->instruction<HIRConstantLoad>(id, string_pointer);
     current_base_block->instructions.push_back(instruction);
-    register_stack.push_back(id);
+    push_value(id);
 }
 
 void bonk::HIRGeneratorVisitor::visit(bonk::TreeNodeBinaryOperation* node) {
@@ -124,20 +132,14 @@ void bonk::HIRGeneratorVisitor::visit(bonk::TreeNodeBinaryOperation* node) {
     Type* left_type = middle_end.type_table.get_type(node->left.get());
     Type* right_type = middle_end.type_table.get_type(node->right.get());
 
-    // AST should have all complex operations already resolved, so only primitive
-    // types should be left here.
-
-    assert(left_type->kind == TypeKind::primitive);
-    assert(right_type->kind == TypeKind::primitive);
-
     auto left_primitive = (TrivialType*)left_type;
     auto right_primitive = (TrivialType*)right_type;
 
     ASTVisitor::visit(node);
 
-    int right = register_stack.back();
+    auto right = register_stack.back();
     register_stack.pop_back();
-    int left = register_stack.back();
+    auto left = register_stack.back();
     register_stack.pop_back();
 
     if (left_primitive->primitive_type != right_primitive->primitive_type) {
@@ -147,29 +149,49 @@ void bonk::HIRGeneratorVisitor::visit(bonk::TreeNodeBinaryOperation* node) {
 
     auto type = left_primitive->primitive_type;
 
-    if (type == PrimitiveType::t_flot || type == PrimitiveType::t_nubr) {
-        HIRDataType hir_type = convert_type_to_hir(left_type);
-        HIRDataType result_type = convert_type_to_hir(middle_end.type_table.get_type(node));
-        HIROperationType operation_type = convert_operation_to_hir(node->operator_type);
+    assert(type != PrimitiveType::t_strg && type != PrimitiveType::t_unset);
+
+    HIRDataType hir_type = convert_type_to_hir(left_type);
+    HIRDataType result_type = convert_type_to_hir(middle_end.type_table.get_type(node));
+    HIROperationType operation_type = convert_operation_to_hir(node->operator_type);
+
+    if (operation_type == HIROperationType::assign) {
+
+        auto right_loaded = load_value(right, hir_type);
+
+        if (left.is_reference) {
+            auto instruction = current_base_block->instruction<HIRMemoryStore>();
+            instruction->address = left.register_id;
+            instruction->value = right_loaded;
+            instruction->type = hir_type;
+            push_value(right_loaded);
+            current_base_block->instructions.push_back(instruction);
+        } else {
+            auto instruction = current_base_block->instruction<HIROperation>();
+            instruction->operation_type = operation_type;
+            instruction->operand_type = hir_type;
+            instruction->result_type = result_type;
+            instruction->target = left.register_id;
+            instruction->left = right_loaded;
+            push_value(left.register_id);
+            current_base_block->instructions.push_back(instruction);
+        }
+
+    } else {
+        assert(left_type->kind == TypeKind::primitive);
+        assert(right_type->kind == TypeKind::primitive);
+
+        int id = middle_end.id_table.get_unused_id();
 
         auto instruction = current_base_block->instruction<HIROperation>();
         instruction->operation_type = operation_type;
         instruction->operand_type = hir_type;
         instruction->result_type = result_type;
+        instruction->target = id;
+        instruction->left = load_value(left, hir_type);
+        instruction->right = load_value(right, hir_type);
+        push_value(id);
         current_base_block->instructions.push_back(instruction);
-
-        if (operation_type == HIROperationType::assign) {
-            instruction->target = left;
-            instruction->left = right;
-            register_stack.push_back(left);
-        } else {
-            int id = middle_end.id_table.get_unused_id();
-            instruction->target = id;
-            instruction->left = left;
-            instruction->right = right;
-            register_stack.push_back(id);
-        }
-        return;
     }
 }
 
@@ -183,7 +205,7 @@ void bonk::HIRGeneratorVisitor::compile_lazy_logic(TreeNodeBinaryOperation* node
     // Compile left part, and only compile right part if it's needed
     node->left->accept(this);
 
-    int left = register_stack.back();
+    int left = load_value(register_stack.back(), convert_type_to_hir(left_type));
     register_stack.pop_back();
 
     int true_label = middle_end.id_table.get_unused_id();
@@ -208,7 +230,7 @@ void bonk::HIRGeneratorVisitor::compile_lazy_logic(TreeNodeBinaryOperation* node
 
     if (right_type->kind == TypeKind::nothing) {
         // If right part is nothing, the or/and construction
-        // should work like a 'if' statement, like this:
+        // should work like an 'if' statement, like this:
         // ((cond and true_branch) or false_branch)
         // So, if cond turned out to be false, the value of the
         // (cond and true_branch) expression should be false,
@@ -224,9 +246,9 @@ void bonk::HIRGeneratorVisitor::compile_lazy_logic(TreeNodeBinaryOperation* node
         instruction->left = left;
         current_base_block->instructions.push_back(instruction);
     } else {
-        // If it's an ordinary or/and construction, the value of
+        // If it's an ordinary or/and construction, its value
         // should actually be calculated.
-        int right = register_stack.back();
+        int right = load_value(register_stack.back(), convert_type_to_hir(right_type));
         register_stack.pop_back();
 
         HIRDataType hir_type = convert_type_to_hir(left_type);
@@ -260,7 +282,7 @@ void bonk::HIRGeneratorVisitor::compile_lazy_logic(TreeNodeBinaryOperation* node
     current_base_block->instructions.push_back(
         current_base_block->instruction<HIRLabel>(end_label));
 
-    register_stack.push_back(result);
+    push_value(result);
 }
 
 void bonk::HIRGeneratorVisitor::visit(bonk::TreeNodeUnaryOperation* node) {
@@ -268,7 +290,7 @@ void bonk::HIRGeneratorVisitor::visit(bonk::TreeNodeUnaryOperation* node) {
 
     Type* type = middle_end.type_table.get_type(node->operand.get());
 
-    int operand = register_stack.back();
+    int operand = register_stack.back().register_id;
 
     if (type->kind == TypeKind::primitive) {
         auto primitive = (TreeNodePrimitiveType*)type;
@@ -277,17 +299,17 @@ void bonk::HIRGeneratorVisitor::visit(bonk::TreeNodeUnaryOperation* node) {
             HIRDataType hir_type = convert_type_to_hir(type);
 
             int zero_operand = middle_end.id_table.get_unused_id();
-            HIRConstantLoad* zero_instruction = nullptr;
+            HIRConstantLoad* zero_load_instruction = nullptr;
 
             if (primitive->primitive_type == PrimitiveType::t_nubr) {
-                zero_instruction =
+                zero_load_instruction =
                     current_base_block->instruction<HIRConstantLoad>(zero_operand, (uint32_t)0);
             } else {
-                zero_instruction =
+                zero_load_instruction =
                     current_base_block->instruction<HIRConstantLoad>(zero_operand, (float)0.0f);
             }
 
-            current_base_block->instructions.push_back(zero_instruction);
+            current_base_block->instructions.push_back(zero_load_instruction);
 
             int id = middle_end.id_table.get_unused_id();
             auto instruction = current_base_block->instruction<HIROperation>();
@@ -299,7 +321,7 @@ void bonk::HIRGeneratorVisitor::visit(bonk::TreeNodeUnaryOperation* node) {
             instruction->right = operand;
 
             current_base_block->instructions.push_back(instruction);
-            register_stack.push_back(id);
+            push_value(id);
             return;
         }
     }
@@ -308,9 +330,51 @@ void bonk::HIRGeneratorVisitor::visit(bonk::TreeNodeUnaryOperation* node) {
 }
 
 void bonk::HIRGeneratorVisitor::visit(bonk::TreeNodeHiveAccess* node) {
-    //    ASTVisitor::visit(node);
+    node->hive->accept(this);
 
-    assert("Hive access is not implemented yet");
+    auto hive = register_stack.back();
+    auto hive_type = middle_end.type_table.get_type(node->hive.get());
+    assert(hive_type->kind == TypeKind::hive);
+
+    auto hive_definition = ((HiveType*)hive_type)->hive_definition;
+
+    int offset = 0;
+
+    for (auto& child : hive_definition->body) {
+        if (child->type == TreeNodeType::n_variable_definition) {
+            auto variable = (TreeNodeVariableDefinition*)child.get();
+            if (variable->variable_name->identifier_text == node->field->identifier_text)
+                break;
+
+            auto variable_type = middle_end.type_table.get_type(variable);
+            offset += variable_type->footprint();
+        } else if (child->type == TreeNodeType::n_block_definition) {
+            auto block = (TreeNodeBlockDefinition*)child.get();
+            if (block->block_name->identifier_text == node->field->identifier_text) {
+                assert(!"Cannot access block methods yet");
+                break;
+            }
+        }
+    }
+
+    int constant_storage = middle_end.id_table.get_unused_id();
+
+    auto constant_load =
+        current_base_block->instruction<HIRConstantLoad>(constant_storage, (uint64_t)offset);
+    current_base_block->instructions.push_back(constant_load);
+
+    int id = middle_end.id_table.get_unused_id();
+
+    auto instruction = current_base_block->instruction<HIROperation>();
+    instruction->operation_type = HIROperationType::plus;
+    instruction->result_type = HIRDataType::dword;
+    instruction->operand_type = HIRDataType::dword;
+    instruction->target = id;
+    instruction->left = load_value(hive, HIRDataType::dword);
+    instruction->right = constant_storage;
+    current_base_block->instructions.push_back(instruction);
+
+    push_reference(id);
 }
 
 void bonk::HIRGeneratorVisitor::visit(bonk::TreeNodeBonkStatement* node) {
@@ -320,7 +384,7 @@ void bonk::HIRGeneratorVisitor::visit(bonk::TreeNodeBonkStatement* node) {
 
     if (node->expression) {
         Type* type = middle_end.type_table.get_type(node->expression.get());
-        int id = register_stack.back();
+        int id = register_stack.back().register_id;
         register_stack.pop_back();
         instruction->return_value = id;
         instruction->return_type = convert_type_to_hir(type);
@@ -422,7 +486,7 @@ void bonk::HIRGeneratorVisitor::visit(bonk::TreeNodeCall* node) {
             register_stack.pop_back();
 
             auto instruction = current_base_block->instruction<HIRParameter>();
-            instruction->parameter = argument_id;
+            instruction->parameter = argument_id.register_id;
             instruction->type = convert_type_to_hir(argument_type);
             current_base_block->instructions.push_back(instruction);
         }
@@ -434,7 +498,7 @@ void bonk::HIRGeneratorVisitor::visit(bonk::TreeNodeCall* node) {
         instruction->return_type = convert_type_to_hir(block_type->return_type.get());
         current_base_block->instructions.push_back(instruction);
 
-        register_stack.push_back(return_register);
+        push_value(return_register);
 
     } else {
         assert(!"Cannot call function by pointer yet");
@@ -493,10 +557,18 @@ bonk::HIRDataType bonk::HIRGeneratorVisitor::convert_type_to_hir(bonk::Type* typ
         case PrimitiveType::t_strg:
             // Pointer type
             return HIRDataType::dword;
+        case PrimitiveType::t_buul:
+            return HIRDataType::byte;
+        case PrimitiveType::t_shrt:
+            return HIRDataType::hword;
         case PrimitiveType::t_nubr:
             return HIRDataType::word;
+        case PrimitiveType::t_long:
+            return HIRDataType::dword;
         case PrimitiveType::t_flot:
             return HIRDataType::float32;
+        case PrimitiveType::t_dabl:
+            return HIRDataType::float64;
         default:
             assert(false);
         }
@@ -527,5 +599,27 @@ bool bonk::HIRGeneratorVisitor::is_comparison_operation(bonk::HIROperationType t
         return true;
     default:
         return false;
+    }
+}
+
+void bonk::HIRGeneratorVisitor::push_value(bonk::IRRegister register_id) {
+    register_stack.push_back({register_id, false});
+}
+
+void bonk::HIRGeneratorVisitor::push_reference(bonk::IRRegister register_id) {
+    register_stack.push_back({register_id, true});
+}
+
+bonk::IRRegister bonk::HIRGeneratorVisitor::load_value(RegisterStackItem item, HIRDataType type) {
+    if (item.is_reference) {
+        int value_register = middle_end.id_table.get_unused_id();
+        auto instruction = current_base_block->instruction<HIRMemoryLoad>();
+        instruction->target = value_register;
+        instruction->type = type;
+        instruction->address = item.register_id;
+        current_base_block->instructions.push_back(instruction);
+        return value_register;
+    } else {
+        return item.register_id;
     }
 }

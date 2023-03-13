@@ -1,6 +1,8 @@
 
 #include <sstream>
 #include <gtest/gtest.h>
+#include "bonk/middleend/annotators/basic_symbol_annotator.hpp"
+#include "bonk/middleend/converters/hive_constructor_call_replacer.hpp"
 #include "bonk/middleend/converters/hive_constructor_generator.hpp"
 #include "bonk/middleend/converters/stdlib_header_generator.hpp"
 #include "bonk/middleend/middleend.hpp"
@@ -29,7 +31,9 @@ TEST(MiddleEnd, TypecheckerTest1) {
 
     bonk::MiddleEnd middle_end(compiler);
 
-    EXPECT_EQ(middle_end.run_ast(ast.get()), nullptr);
+    middle_end.transform_ast(ast.get());
+
+    EXPECT_EQ(middle_end.generate_hir(ast.get()), nullptr);
     EXPECT_EQ(error_stringstream.str(),
               "test:4:17: error: Cannot perform '*=' between flot and strg\n");
 }
@@ -62,7 +66,9 @@ TEST(MiddleEnd, TypecheckerTest2) {
 
     bonk::MiddleEnd middle_end(compiler);
 
-    EXPECT_EQ(middle_end.run_ast(ast.get()), nullptr);
+    middle_end.transform_ast(ast.get());
+
+    EXPECT_EQ(middle_end.generate_hir(ast.get()), nullptr);
     EXPECT_EQ(error_stringstream.str(),
               "test:11:41: error: Cannot perform '+' between TestHive and flot\n");
 }
@@ -90,7 +96,8 @@ TEST(MiddleEnd, CodegenTest) {
 
     bonk::MiddleEnd middle_end(compiler);
 
-    auto ir_program = middle_end.run_ast(ast.get());
+    middle_end.transform_ast(ast.get());
+    auto ir_program = middle_end.generate_hir(ast.get());
 
     EXPECT_EQ(ir_program->procedures.size(), 2);
 }
@@ -140,6 +147,11 @@ TEST(MiddleEnd, ConstructorGeneratorTest) {
             bowl y: strg;
             bowl z: many nubr;
         }
+
+        blok main {
+            bowl my_hive_type = TestHive;
+            bowl my_hive_instance: TestHive = @TestHive[y = "hey", z = [1, 2, 3]];
+        }
     )";
 
     auto lexemes = bonk::LexicalAnalyzer(compiler).parse_file("test", source);
@@ -148,19 +160,31 @@ TEST(MiddleEnd, ConstructorGeneratorTest) {
     ASSERT_NE(ast, nullptr);
 
     bonk::MiddleEnd middle_end(compiler);
-    bonk::HiveConstructorGenerator constructor_generator(middle_end);
+    bonk::StdLibHeaderGenerator(middle_end).generate(ast.get());
+    bonk::HiveConstructorGenerator(middle_end).generate(ast.get());
+    bonk::BasicSymbolAnnotator(middle_end).annotate_program(ast.get());
+    bonk::HiveConstructorCallReplacer(middle_end).replace(ast.get());
 
-    constructor_generator.generate(ast.get());
+    ASSERT_EQ(compiler.state, bonk::BONK_COMPILER_OK);
 
     // Make sure the constructor was generated
     EXPECT_EQ(ast->type, bonk::TreeNodeType::n_program);
     auto program = (bonk::TreeNodeProgram*)(ast.get());
-    EXPECT_EQ(program->body.size(), 2);
-    EXPECT_EQ(program->body.front()->type, bonk::TreeNodeType::n_hive_definition);
-    EXPECT_EQ(program->body.back()->type, bonk::TreeNodeType::n_block_definition);
+
+    // Find the hive definition
+    auto hive_it = program->body.begin();
+    for(; hive_it != program->body.end(); hive_it++) {
+        if((*hive_it)->type == bonk::TreeNodeType::n_hive_definition) break;
+    }
+
+    auto constructor_it = hive_it;
+    ++constructor_it;
+
+    ASSERT_NE(hive_it, program->body.end());
+    EXPECT_EQ(hive_it->get()->type, bonk::TreeNodeType::n_hive_definition);
 
     // Make sure the constructor has the correct signature
-    auto constructor = (bonk::TreeNodeBlockDefinition*)program->body.back().get();
+    auto constructor = (bonk::TreeNodeBlockDefinition*)(*constructor_it).get();
     EXPECT_EQ(constructor->block_name->identifier_text, "TestHive$$constructor");
     EXPECT_EQ(constructor->block_parameters->parameters.size(), 3);
     {
@@ -215,4 +239,41 @@ TEST(MiddleEnd, ConstructorGeneratorTest) {
         EXPECT_EQ(((bonk::TreeNodeNumberConstant*)parameter->parameter_value.get())->integer_value,
                   20);
     }
+
+    // Count the number of calls to the constructor
+    struct IdentifierVisitor : bonk::ASTVisitor {
+        int constructor_reference_count = 0;
+        int hive_reference_count = 0;
+        void visit(bonk::TreeNodeIdentifier* identifier) override {
+            if (identifier->identifier_text == "TestHive$$constructor") {
+                constructor_reference_count++;
+            } else if (identifier->identifier_text == "TestHive") {
+                hive_reference_count++;
+            }
+        }
+    } visitor;
+
+    ast->accept(&visitor);
+
+    // Make sure that the replacer replaced all the identifiers
+    // used in value context.
+
+    // <compiler-generated definition of TestHive$$constructor> <- 1
+    // bowl hive_type = TestHive; <- 2
+    // bowl hive_instance: (...) = @TestHive; <- 3
+    EXPECT_EQ(visitor.constructor_reference_count, 3);
+
+    // Make sure that the replacer didn't replace what it shouldn't have
+    // hive TestHive <- 1
+    // bowl hive_instance: TestHive = (...) <- 2
+    EXPECT_EQ(visitor.hive_reference_count, 2);
+
+    std::stringstream ast_stringstream;
+    bonk::StdOutputStream stream{ast_stringstream};
+    bonk::ASTPrinter printer{stream};
+    ast->accept(&printer);
+
+    std::string ast_string = ast_stringstream.str();
+
+    std::cout << ast_string;
 }
