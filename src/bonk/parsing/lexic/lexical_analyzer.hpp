@@ -87,15 +87,24 @@ extern const char* BONK_BRACE_NAMES[];
 #include <variant>
 #include <vector>
 #include "../parser_position.hpp"
-#include "bonk/tree/ast.hpp"
 #include "identifier_lexeme.hpp"
 #include "number_lexeme.hpp"
 
 namespace bonk {
 
+enum class NumberConstantKind { rather_integer, rather_double };
+
+struct NumberConstantContents {
+    long double double_value = 0;
+    signed long long integer_value = 0;
+    NumberConstantKind kind = NumberConstantKind::rather_integer;
+
+    void set_integer(long long integer);
+    void set_double(long double double_value);
+};
+
 struct NumberLexeme {
-    long long int integer_value;
-    long double double_value;
+    NumberConstantContents contents;
 };
 
 struct KeywordLexeme {

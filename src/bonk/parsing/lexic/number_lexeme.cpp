@@ -43,6 +43,8 @@ bool LexicalAnalyzer::parse_number_lexeme(Lexeme* target) {
     char c = '\0';
     int radix = 10;
 
+    bool rather_double = false;
+
     int mantissa_digits = parse_digits_lexeme(10, &integer_result, &float_result);
     if (mantissa_digits == 0 && next_char() != '.') {
         linked_compiler.error().at(current_position) << "expected number";
@@ -70,6 +72,7 @@ bool LexicalAnalyzer::parse_number_lexeme(Lexeme* target) {
 
     c = next_char();
     if (radix == 10 && c == '.') {
+        rather_double = true;
         eat_char();
         fraction_digits = parse_digits_lexeme(radix, nullptr, &fraction);
         if (fraction_digits == 0) {
@@ -83,6 +86,7 @@ bool LexicalAnalyzer::parse_number_lexeme(Lexeme* target) {
 
     c = next_char();
     if (radix == 10 && (c == 'e' || c == 'E')) {
+        rather_double = true;
         eat_char();
         c = next_char();
         bool sign = true;
@@ -114,13 +118,19 @@ bool LexicalAnalyzer::parse_number_lexeme(Lexeme* target) {
     }
 
     target->type = LexemeType::l_number;
-    target->data = NumberLexeme{integer_result, float_result};
+    NumberLexeme number_lexeme;
+
+    number_lexeme.contents.double_value = float_result;
+    number_lexeme.contents.integer_value = integer_result;
+    number_lexeme.contents.kind =
+        rather_double ? NumberConstantKind::rather_double : NumberConstantKind::rather_integer;
+
+    target->data = number_lexeme;
 
     return true;
 }
 
-int LexicalAnalyzer::parse_digits_lexeme(int radix, long long* integer_value,
-                                          double* float_value) {
+int LexicalAnalyzer::parse_digits_lexeme(int radix, long long* integer_value, double* float_value) {
     long long integer_result = 0;
     double float_result = 0;
     int digits = 0;

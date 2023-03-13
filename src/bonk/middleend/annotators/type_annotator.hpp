@@ -15,14 +15,6 @@ class MiddleEnd;
 
 namespace bonk {
 
-
-
-/* This class performs type-checking and annotates the AST tree with types.
- * It requires `symbol_table` to be filled in by basic_symbol_annotator.
- * In turn, it populates the `symbol_table` with hive field symbols and
- * function arguments, as it's impossible to recognize them without
- * type information. */
-
 class TypeAnnotator : ASTVisitor {
 
   public:

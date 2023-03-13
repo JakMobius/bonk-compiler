@@ -103,21 +103,30 @@ TEST(Lexer, TestNumbers) {
         ASSERT_EQ(lexemes[i].type, bonk::LexemeType::l_number);
     }
     EXPECT_EQ(lexemes[14].type, bonk::LexemeType::l_eof);
-    EXPECT_EQ(std::get<bonk::NumberLexeme>(lexemes[0].data).integer_value, 1);
-    EXPECT_NEAR(std::get<bonk::NumberLexeme>(lexemes[0].data).double_value, 1, 1e-20);
-    EXPECT_NEAR(std::get<bonk::NumberLexeme>(lexemes[1].data).double_value, 1, 1e-20);
-    EXPECT_NEAR(std::get<bonk::NumberLexeme>(lexemes[2].data).double_value, .05, 1e-10);
-    EXPECT_NEAR(std::get<bonk::NumberLexeme>(lexemes[3].data).double_value, 1e+10, 1);
-    EXPECT_NEAR(std::get<bonk::NumberLexeme>(lexemes[4].data).double_value, 1.0e-10, 1e-20);
-    EXPECT_NEAR(std::get<bonk::NumberLexeme>(lexemes[5].data).double_value, 1.0e+10, 1);
-    EXPECT_NEAR(std::get<bonk::NumberLexeme>(lexemes[6].data).double_value, .1E10, 1);
-    EXPECT_NEAR(std::get<bonk::NumberLexeme>(lexemes[7].data).double_value, .1E-10, 1e-20);
-    EXPECT_EQ(std::get<bonk::NumberLexeme>(lexemes[8].data).integer_value, 1);
-    EXPECT_EQ(std::get<bonk::NumberLexeme>(lexemes[9].data).integer_value, 0xFF);
-    EXPECT_EQ(std::get<bonk::NumberLexeme>(lexemes[10].data).integer_value, 1);
-    EXPECT_EQ(std::get<bonk::NumberLexeme>(lexemes[11].data).integer_value, 7 + 7 * 8);
-    EXPECT_EQ(std::get<bonk::NumberLexeme>(lexemes[12].data).integer_value, 1);
-    EXPECT_EQ(std::get<bonk::NumberLexeme>(lexemes[13].data).integer_value, 0b101010);
+    EXPECT_EQ(std::get<bonk::NumberLexeme>(lexemes[0].data).contents.integer_value, 1);
+    EXPECT_EQ(std::get<bonk::NumberLexeme>(lexemes[0].data).contents.kind,
+              bonk::NumberConstantKind::rather_integer);
+    EXPECT_NEAR(std::get<bonk::NumberLexeme>(lexemes[0].data).contents.double_value, 1, 1e-20);
+    EXPECT_NEAR(std::get<bonk::NumberLexeme>(lexemes[1].data).contents.double_value, 1, 1e-20);
+    EXPECT_EQ(std::get<bonk::NumberLexeme>(lexemes[1].data).contents.kind,
+              bonk::NumberConstantKind::rather_double);
+    EXPECT_NEAR(std::get<bonk::NumberLexeme>(lexemes[2].data).contents.double_value, .05, 1e-10);
+    EXPECT_NEAR(std::get<bonk::NumberLexeme>(lexemes[3].data).contents.double_value, 1e+10, 1);
+    EXPECT_EQ(std::get<bonk::NumberLexeme>(lexemes[3].data).contents.kind,
+              bonk::NumberConstantKind::rather_double);
+    EXPECT_NEAR(std::get<bonk::NumberLexeme>(lexemes[4].data).contents.double_value, 1.0e-10,
+                1e-20);
+    EXPECT_NEAR(std::get<bonk::NumberLexeme>(lexemes[5].data).contents.double_value, 1.0e+10, 1);
+    EXPECT_NEAR(std::get<bonk::NumberLexeme>(lexemes[6].data).contents.double_value, .1E10, 1);
+    EXPECT_NEAR(std::get<bonk::NumberLexeme>(lexemes[7].data).contents.double_value, .1E-10, 1e-20);
+    EXPECT_EQ(std::get<bonk::NumberLexeme>(lexemes[8].data).contents.integer_value, 1);
+    EXPECT_EQ(std::get<bonk::NumberLexeme>(lexemes[9].data).contents.integer_value, 0xFF);
+    EXPECT_EQ(std::get<bonk::NumberLexeme>(lexemes[10].data).contents.integer_value, 1);
+    EXPECT_EQ(std::get<bonk::NumberLexeme>(lexemes[11].data).contents.integer_value, 7 + 7 * 8);
+    EXPECT_EQ(std::get<bonk::NumberLexeme>(lexemes[12].data).contents.integer_value, 1);
+    EXPECT_EQ(std::get<bonk::NumberLexeme>(lexemes[13].data).contents.integer_value, 0b101010);
+    EXPECT_EQ(std::get<bonk::NumberLexeme>(lexemes[13].data).contents.kind,
+              bonk::NumberConstantKind::rather_integer);
 }
 
 TEST(Lexer, TestGlobal) {

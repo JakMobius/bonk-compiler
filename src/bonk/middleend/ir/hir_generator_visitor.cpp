@@ -1,5 +1,6 @@
 
 #include "hir_generator_visitor.hpp"
+#include "bonk/middleend/annotators/type_visitor.hpp"
 #include "hir.hpp"
 #include "hir_base_block_separator.hpp"
 
@@ -45,6 +46,12 @@ void bonk::HIRGeneratorVisitor::visit(bonk::TreeNodeBlockDefinition* node) {
 
     if (node->body) {
         node->body->accept(this);
+
+        // If function returns nothing, add a return instruction
+        if (type->return_type->kind == TypeKind::nothing) {
+            auto instruction = current_base_block->instruction<HIRReturn>();
+            current_base_block->instructions.push_back(instruction);
+        }
     } else {
         procedure_header->is_external = true;
     }
@@ -103,11 +110,42 @@ void bonk::HIRGeneratorVisitor::visit(bonk::TreeNodeArrayConstant* node) {
 }
 
 void bonk::HIRGeneratorVisitor::visit(bonk::TreeNodeNumberConstant* node) {
-    ASTVisitor::visit(node);
+    // Get type of the constant
+    Type* type = middle_end.type_table.get_type(node);
+
+    HIRDataType hir_type = convert_type_to_hir(type);
 
     int id = middle_end.id_table.get_unused_id();
-    float value = node->double_value;
-    auto instruction = current_base_block->instruction<HIRConstantLoad>(id, value);
+    auto instruction = current_base_block->instruction<HIRConstantLoad>(id, 0, hir_type);
+
+    switch(hir_type) {
+    case HIRDataType::unset:
+        assert(false);
+
+    case HIRDataType::byte:
+        instruction->constant = (uint8_t)node->contents.integer_value;
+        break;
+    case HIRDataType::hword:
+        instruction->constant = (uint16_t)node->contents.integer_value;
+        break;
+    case HIRDataType::word:
+        instruction->constant = (uint32_t)node->contents.integer_value;
+        break;
+    case HIRDataType::dword:
+        instruction->constant = (uint64_t)node->contents.integer_value;
+        break;
+    case HIRDataType::float32: {
+        auto value = (float)node->contents.double_value;
+        instruction->constant = *(uint32_t*)&value;
+        break;
+    }
+    case HIRDataType::float64: {
+        auto value = (double)node->contents.double_value;
+        instruction->constant = *(uint64_t*)&value;
+        break;
+    }
+    }
+
     current_base_block->instructions.push_back(instruction);
     push_value(id);
 }
@@ -132,9 +170,6 @@ void bonk::HIRGeneratorVisitor::visit(bonk::TreeNodeBinaryOperation* node) {
     Type* left_type = middle_end.type_table.get_type(node->left.get());
     Type* right_type = middle_end.type_table.get_type(node->right.get());
 
-    auto left_primitive = (TrivialType*)left_type;
-    auto right_primitive = (TrivialType*)right_type;
-
     ASTVisitor::visit(node);
 
     auto right = register_stack.back();
@@ -142,14 +177,7 @@ void bonk::HIRGeneratorVisitor::visit(bonk::TreeNodeBinaryOperation* node) {
     auto left = register_stack.back();
     register_stack.pop_back();
 
-    if (left_primitive->primitive_type != right_primitive->primitive_type) {
-        // TODO: Think about casting here
-        assert(false);
-    }
-
-    auto type = left_primitive->primitive_type;
-
-    assert(type != PrimitiveType::t_strg && type != PrimitiveType::t_unset);
+    assert(left_type->kind != TypeKind::unset && right_type->kind != TypeKind::unset);
 
     HIRDataType hir_type = convert_type_to_hir(left_type);
     HIRDataType result_type = convert_type_to_hir(middle_end.type_table.get_type(node));
@@ -338,24 +366,23 @@ void bonk::HIRGeneratorVisitor::visit(bonk::TreeNodeHiveAccess* node) {
 
     auto hive_definition = ((HiveType*)hive_type)->hive_definition;
 
-    int offset = 0;
+    int field_index = 0;
 
     for (auto& child : hive_definition->body) {
         if (child->type == TreeNodeType::n_variable_definition) {
             auto variable = (TreeNodeVariableDefinition*)child.get();
             if (variable->variable_name->identifier_text == node->field->identifier_text)
                 break;
-
-            auto variable_type = middle_end.type_table.get_type(variable);
-            offset += variable_type->footprint();
+            field_index++;
         } else if (child->type == TreeNodeType::n_block_definition) {
             auto block = (TreeNodeBlockDefinition*)child.get();
             if (block->block_name->identifier_text == node->field->identifier_text) {
                 assert(!"Cannot access block methods yet");
-                break;
             }
         }
     }
+
+    int offset = middle_end.get_hive_field_offset(hive_definition, field_index);
 
     int constant_storage = middle_end.id_table.get_unused_id();
 

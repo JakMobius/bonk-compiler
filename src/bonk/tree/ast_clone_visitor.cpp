@@ -109,8 +109,7 @@ void bonk::ASTCloneVisitor::visit(TreeNodeArrayConstant* node) {
 void bonk::ASTCloneVisitor::visit(TreeNodeNumberConstant* node) {
     auto copy = shallow_copy(node);
 
-    copy->double_value = node->double_value;
-    copy->integer_value = node->integer_value;
+    copy->contents = node->contents;
 
     result = std::move(copy);
 }

@@ -594,8 +594,7 @@ std::unique_ptr<TreeNode> Parser::parse_expression_primary() {
             std::make_unique<TreeNodeNumberConstant>();
         number_constant->source_position = start_position;
         auto number_lexeme = std::get<NumberLexeme>(next_lexeme()->data);
-        number_constant->double_value = number_lexeme.double_value;
-        number_constant->integer_value = number_lexeme.integer_value;
+        number_constant->contents = number_lexeme.contents;
         eat_lexeme();
         return number_constant;
     }

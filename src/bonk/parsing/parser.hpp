@@ -14,6 +14,7 @@ struct Compiler;
 #include <optional>
 #include <vector>
 #include "./lexic/lexical_analyzer.hpp"
+#include "bonk/tree/ast.hpp"
 
 namespace bonk {
 

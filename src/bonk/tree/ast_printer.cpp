@@ -104,7 +104,7 @@ void bonk::ASTPrinter::visit(TreeNodeArrayConstant* node) {
 }
 
 void bonk::ASTPrinter::visit(TreeNodeNumberConstant* node) {
-    stream.get_stream() << node->double_value;
+    stream.get_stream() << node->contents.double_value;
 }
 
 void bonk::ASTPrinter::visit(TreeNodeStringConstant* node) {

@@ -30,8 +30,16 @@ struct SymbolTable {
 };
 
 struct TypeTable {
+    TypeTable* parent_table = nullptr;
     std::unordered_map<TreeNode*, Type*> type_cache{};
     std::unordered_set<std::unique_ptr<Type>> type_storage{};
+
+    template <typename T> T* create() {
+        auto type = std::make_unique<T>();
+        T* pure_type = type.get();
+        save_type(std::move(type));
+        return pure_type;
+    }
 
     template <typename T> T* annotate(TreeNode* node) {
         auto type = std::make_unique<T>();
@@ -52,6 +60,7 @@ struct TypeTable {
     void save_type(std::unique_ptr<Type> type);
 
     Type* get_type(TreeNode* node);
+    void sink_types_to_parent_table();
 };
 
 struct IDTable {
@@ -79,8 +88,8 @@ class MiddleEnd {
   public:
     Compiler& linked_compiler;
 
-    SymbolTable symbol_table;
     TypeTable type_table;
+    SymbolTable symbol_table;
     IDTable id_table{*this};
     HiddenSymbolStorage hidden_text_storage;
 
@@ -90,6 +99,8 @@ class MiddleEnd {
 
     bool transform_ast(TreeNode* ast);
     std::unique_ptr<IRProgram> generate_hir(TreeNode* ast);
+
+    int get_hive_field_offset(TreeNodeHiveDefinition* hive_definition, int field_index);
 };
 
 } // namespace bonk

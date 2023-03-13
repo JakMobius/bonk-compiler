@@ -292,4 +292,16 @@ bool Lexeme::is_string(std::string_view exact) const {
     return type == LexemeType::l_string && std::get<StringLexeme>(data).string == exact;
 }
 
+void NumberConstantContents::set_integer(long long int integer) {
+    kind = NumberConstantKind::rather_integer;
+    integer_value = integer;
+    double_value = integer;
+}
+
+void NumberConstantContents::set_double(long double double_value) {
+    kind = NumberConstantKind::rather_double;
+    integer_value = double_value;
+    double_value = double_value;
+}
+
 } // namespace bonk

@@ -2,8 +2,10 @@
 #include "middleend.hpp"
 #include "bonk/middleend/annotators/basic_symbol_annotator.hpp"
 #include "bonk/middleend/annotators/type_annotator.hpp"
+#include "bonk/middleend/annotators/type_visitor.hpp"
 #include "bonk/middleend/converters/hive_constructor_call_replacer.hpp"
-#include "bonk/middleend/converters/hive_constructor_generator.hpp"
+#include "bonk/middleend/converters/hive_ctor_dtor_early_generator.hpp"
+#include "bonk/middleend/converters/hive_ctor_dtor_late_generator.hpp"
 #include "bonk/middleend/converters/stdlib_header_generator.hpp"
 #include "bonk/middleend/ir/hir_generator_visitor.hpp"
 
@@ -13,25 +15,59 @@ bonk::MiddleEnd::MiddleEnd(bonk::Compiler& linked_compiler) : linked_compiler(li
 bool bonk::MiddleEnd::transform_ast(TreeNode* ast) {
 
     bonk::StdLibHeaderGenerator(*this).generate(ast);
-    if (linked_compiler.state) return false;
+    if (linked_compiler.state)
+        return false;
 
-    bonk::HiveConstructorGenerator(*this).generate(ast);
-    if (linked_compiler.state) return false;
+    bonk::HiveConstructorDestructorEarlyGenerator(*this).generate(ast);
+    if (linked_compiler.state)
+        return false;
 
     bonk::BasicSymbolAnnotator(*this).annotate_program(ast);
-    if (linked_compiler.state) return false;
+    if (linked_compiler.state)
+        return false;
 
     bonk::HiveConstructorCallReplacer(*this).replace(ast);
-    if (linked_compiler.state) return false;
+    if (linked_compiler.state)
+        return false;
 
     bonk::TypeAnnotator(*this).annotate_ast(ast);
-    if (linked_compiler.state) return false;
+    if (linked_compiler.state)
+        return false;
+
+    bonk::HiveConstructorDestructorLateGenerator(*this).generate(ast);
+    if (linked_compiler.state)
+        return false;
 
     return true;
 }
 
 std::unique_ptr<bonk::IRProgram> bonk::MiddleEnd::generate_hir(TreeNode* ast) {
     return bonk::HIRGeneratorVisitor(*this).generate(ast);
+}
+
+int bonk::MiddleEnd::get_hive_field_offset(bonk::TreeNodeHiveDefinition* hive_definition,
+                                           int field_index) {
+    int offset = 0;
+
+    for (auto& it : hive_definition->body) {
+        if (it->type != TreeNodeType::n_variable_definition)
+            continue;
+        if (field_index == 0)
+            break;
+        field_index--;
+
+        auto variable_definition = (TreeNodeVariableDefinition*)it.get();
+        auto variable_type = type_table.get_type(variable_definition);
+
+        int footprint = FootprintCounter().get_footprint(variable_type);
+
+        offset += footprint;
+
+        // Align the field to its size
+        offset = (offset + footprint - 1) / footprint * footprint;
+    }
+
+    return offset;
 }
 
 long long bonk::IDTable::get_unused_id() {
@@ -79,9 +115,40 @@ void bonk::TypeTable::save_type(std::unique_ptr<Type> type) {
 
 bonk::Type* bonk::TypeTable::get_type(bonk::TreeNode* node) {
     auto it = type_cache.find(node);
-    if (it == type_cache.end())
+    if (it == type_cache.end()) {
+        if (parent_table) {
+            return parent_table->get_type(node);
+        }
         return nullptr;
+    }
     return it->second;
+}
+void bonk::TypeTable::sink_types_to_parent_table() {
+    // Moves all types from current table to the parent table, apart from 'never'
+    // types. This allows to reduce complexity of type checking.
+
+    if (!parent_table)
+        return;
+
+    for (auto it = type_storage.begin(); it != type_storage.end();) {
+        if (NeverSearchVisitor().search(it->get())) {
+            ++it;
+            continue;
+        }
+
+        auto node_handle = type_storage.extract(it++);
+        parent_table->type_storage.insert(std::move(node_handle.value()));
+    }
+
+    for (auto it = type_cache.begin(); it != type_cache.end();) {
+        if (NeverSearchVisitor().search(it->second)) {
+            ++it;
+            continue;
+        }
+
+        parent_table->type_cache.insert({it->first, it->second});
+        it = type_cache.erase(it);
+    }
 }
 
 std::string_view bonk::HiddenSymbolStorage::get_hidden_symbol(const std::string& symbol) {

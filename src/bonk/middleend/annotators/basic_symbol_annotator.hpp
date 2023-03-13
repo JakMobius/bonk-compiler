@@ -27,7 +27,7 @@ class ScopedNameResolver : public NameResolver {
     void define_variable(std::string_view name, TreeNode* definition);
 };
 
-class BasicSymbolAnnotator : ASTVisitor {
+class BasicSymbolAnnotator : public ASTVisitor {
 
   public:
     ScopedNameResolver scoped_name_resolver;

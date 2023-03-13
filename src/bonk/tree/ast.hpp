@@ -209,8 +209,7 @@ struct TreeNodeArrayConstant : TreeNode {
 };
 
 struct TreeNodeNumberConstant : TreeNode {
-    long double double_value = 0;
-    long long integer_value = 0;
+    NumberConstantContents contents;
 
     TreeNodeNumberConstant() {
         type = TreeNodeType::n_number_constant;

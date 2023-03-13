@@ -20,7 +20,7 @@ void bonk::qbe_backend::QBEBackend::compile_procedure(bonk::IRProcedure& procedu
     for (auto& block : procedure.base_blocks) {
         for (auto& instruction : block.instructions) {
             if (is_first) {
-                if(!compile_procedure_header(*instruction)) {
+                if (!compile_procedure_header(*instruction)) {
                     // Procedure is external
                     return;
                 }
@@ -43,12 +43,12 @@ bool bonk::qbe_backend::QBEBackend::compile_procedure_header(bonk::IRInstruction
 
     auto& procedure = static_cast<HIRProcedure&>(instruction);
 
-    if(procedure.is_external) {
+    if (procedure.is_external) {
         return false;
     }
 
-    linked_compiler.config.output_file.get_stream() << "export function ";
-    print_hir_type(procedure.return_type);
+    linked_compiler.config.output_file.get_stream()
+        << "export function " << get_hir_type(procedure.return_type);
     linked_compiler.config.output_file.get_stream() << " ";
     TreeNode* procedure_definition = current_program->id_table.get_node(procedure.procedure_id);
     std::string_view procedure_name =
@@ -59,8 +59,8 @@ bool bonk::qbe_backend::QBEBackend::compile_procedure_header(bonk::IRInstruction
         if (i != 0)
             linked_compiler.config.output_file.get_stream() << ", ";
         auto& parameter = procedure.parameters[i];
-        print_hir_type(parameter.type);
-        linked_compiler.config.output_file.get_stream() << " %r" << parameter.register_id;
+        linked_compiler.config.output_file.get_stream()
+            << get_hir_type(parameter.type) << " %r" << parameter.register_id;
     }
 
     linked_compiler.config.output_file.get_stream() << ") {\n@start\n";
@@ -83,9 +83,8 @@ void bonk::qbe_backend::QBEBackend::compile_instruction(HIRConstantLoad& instruc
 
     padding();
 
-    linked_compiler.config.output_file.get_stream() << "%r" << target << " =";
-    print_hir_type(type);
-    linked_compiler.config.output_file.get_stream() << " copy ";
+    linked_compiler.config.output_file.get_stream()
+        << "%r" << target << " =" << get_hir_type(type) << " copy ";
 
     switch (type) {
     case HIRDataType::byte:
@@ -114,8 +113,8 @@ void bonk::qbe_backend::QBEBackend::compile_instruction(HIRSymbolLoad& instructi
 
     padding();
 
-    linked_compiler.config.output_file.get_stream() << "%r" << instruction.target << " =";
-    print_hir_type(type);
+    linked_compiler.config.output_file.get_stream()
+        << "%r" << instruction.target << " =" << get_hir_type(type);
 
     TreeNode* symbol_definition = current_program->id_table.get_node(instruction.symbol_id);
     std::string_view symbol_name = current_program->symbol_table.symbol_names[symbol_definition];
@@ -128,10 +127,8 @@ void bonk::qbe_backend::QBEBackend::compile_instruction(HIROperation& instructio
 
     padding();
 
-    linked_compiler.config.output_file.get_stream() << "%r" << target << " =";
-    print_hir_type(instruction.result_type);
-
-    linked_compiler.config.output_file.get_stream() << " ";
+    linked_compiler.config.output_file.get_stream()
+        << "%r" << target << " =" << get_hir_type(instruction.result_type) << " ";
 
     switch (instruction.operation_type) {
     case HIROperationType::plus:
@@ -150,34 +147,12 @@ void bonk::qbe_backend::QBEBackend::compile_instruction(HIROperation& instructio
         linked_compiler.config.output_file.get_stream() << "copy ";
         break;
     case HIROperationType::equal:
-        linked_compiler.config.output_file.get_stream() << "ceq";
-        print_hir_type(instruction.operand_type);
-        linked_compiler.config.output_file.get_stream() << " ";
-        break;
     case HIROperationType::not_equal:
-        linked_compiler.config.output_file.get_stream() << "cne";
-        print_hir_type(instruction.operand_type);
-        linked_compiler.config.output_file.get_stream() << " ";
-        break;
     case HIROperationType::less:
-        linked_compiler.config.output_file.get_stream() << "clt";
-        print_hir_type(instruction.operand_type);
-        linked_compiler.config.output_file.get_stream() << " ";
-        break;
     case HIROperationType::less_equal:
-        linked_compiler.config.output_file.get_stream() << "cle";
-        print_hir_type(instruction.operand_type);
-        linked_compiler.config.output_file.get_stream() << " ";
-        break;
     case HIROperationType::greater:
-        linked_compiler.config.output_file.get_stream() << "cgt";
-        print_hir_type(instruction.operand_type);
-        linked_compiler.config.output_file.get_stream() << " ";
-        break;
     case HIROperationType::greater_equal:
-        linked_compiler.config.output_file.get_stream() << "cge";
-        print_hir_type(instruction.operand_type);
-        linked_compiler.config.output_file.get_stream() << " ";
+        print_comparison(instruction.operation_type, instruction.operand_type);
         break;
     case HIROperationType::and_op:
     case HIROperationType::or_op:
@@ -195,6 +170,47 @@ void bonk::qbe_backend::QBEBackend::compile_instruction(HIROperation& instructio
     }
 
     linked_compiler.config.output_file.get_stream() << "\n";
+}
+
+void bonk::qbe_backend::QBEBackend::print_comparison(HIROperationType type, HIRDataType operand_type) {
+
+    linked_compiler.config.output_file.get_stream() << 'c';
+
+    switch(operand_type) {
+        case HIRDataType::byte:
+        case HIRDataType::hword:
+        case HIRDataType::word:
+        case HIRDataType::dword:
+            linked_compiler.config.output_file.get_stream() << 's';
+            break;
+        default:
+            break;
+    }
+
+    switch (type) {
+    case HIROperationType::equal:
+        linked_compiler.config.output_file.get_stream() << "eq";
+        break;
+    case HIROperationType::not_equal:
+        linked_compiler.config.output_file.get_stream() << "ne";
+        break;
+    case HIROperationType::less:
+        linked_compiler.config.output_file.get_stream() << "lt";
+        break;
+    case HIROperationType::less_equal:
+        linked_compiler.config.output_file.get_stream() << "le";
+        break;
+    case HIROperationType::greater:
+        linked_compiler.config.output_file.get_stream() << "gt";
+        break;
+    case HIROperationType::greater_equal:
+        linked_compiler.config.output_file.get_stream() << "ge";
+        break;
+    default:
+        assert(false);
+    }
+
+    linked_compiler.config.output_file.get_stream() << get_hir_type(operand_type) << " ";
 }
 
 void bonk::qbe_backend::QBEBackend::compile_instruction(HIRJump& instruction) {
@@ -215,8 +231,9 @@ void bonk::qbe_backend::QBEBackend::compile_instruction(HIRCall& instruction) {
     if (instruction.return_value.has_value()) {
         linked_compiler.config.output_file.get_stream()
             << "%r" << instruction.return_value.value() << " =";
-        print_hir_type(instruction.return_type);
-        linked_compiler.config.output_file.get_stream() << " ";
+
+        linked_compiler.config.output_file.get_stream()
+            << get_hir_type(instruction.return_type) << " ";
     }
 
     TreeNode* symbol_definition =
@@ -228,8 +245,8 @@ void bonk::qbe_backend::QBEBackend::compile_instruction(HIRCall& instruction) {
     for (int i = 0; i < call_parameters.size(); i++) {
         if (i != 0)
             linked_compiler.config.output_file.get_stream() << ", ";
-        print_hir_type(call_parameters[i].type);
-        linked_compiler.config.output_file.get_stream() << " %r" << call_parameters[i].register_id;
+        linked_compiler.config.output_file.get_stream()
+            << get_hir_type(call_parameters[i].type) << " %r" << call_parameters[i].register_id;
     }
     call_parameters.clear();
 
@@ -251,23 +268,23 @@ void bonk::qbe_backend::QBEBackend::compile_instruction(HIRParameter& instructio
 }
 
 void bonk::qbe_backend::QBEBackend::compile_instruction(HIRMemoryLoad& instruction) {
-
     padding();
-    linked_compiler.config.output_file.get_stream() << "%r" << instruction.target << " =";
-    print_hir_type(instruction.type);
     linked_compiler.config.output_file.get_stream()
-            << " load";
-    print_hir_type(instruction.type);
+        << "%r" << instruction.target << " =" << get_hir_type(instruction.type) << " load"
+        << get_hir_type(instruction.type, false);
+
+    if(instruction.type == HIRDataType::hword || instruction.type == HIRDataType::byte) {
+        linked_compiler.config.output_file.get_stream() << "s";
+    }
+
     linked_compiler.config.output_file.get_stream() << "%r" << instruction.address << "\n";
 }
 
 void bonk::qbe_backend::QBEBackend::compile_instruction(HIRMemoryStore& instruction) {
-
     padding();
-    linked_compiler.config.output_file.get_stream() << "store";
-    print_hir_type(instruction.type);
     linked_compiler.config.output_file.get_stream()
-        << " %r" << instruction.value << ", %r" << instruction.address << "\n";
+        << "store" << get_hir_type(instruction.type, false) << " %r" << instruction.value << ", %r"
+        << instruction.address << "\n";
 }
 
 void bonk::qbe_backend::QBEBackend::compile_instruction(bonk::IRInstruction& instruction) {
@@ -304,26 +321,20 @@ void bonk::qbe_backend::QBEBackend::compile_instruction(bonk::IRInstruction& ins
     }
 }
 
-void bonk::qbe_backend::QBEBackend::print_hir_type(bonk::HIRDataType type) {
+char bonk::qbe_backend::QBEBackend::get_hir_type(bonk::HIRDataType type, bool base_type) {
     switch (type) {
     case HIRDataType::float32:
-        linked_compiler.config.output_file.get_stream() << "s";
-        break;
+        return 's';
     case HIRDataType::float64:
-        linked_compiler.config.output_file.get_stream() << "d";
-        break;
+        return 'd';
     case HIRDataType::word:
-        linked_compiler.config.output_file.get_stream() << "w";
-        break;
+        return 'w';
     case HIRDataType::dword:
-        linked_compiler.config.output_file.get_stream() << "l";
-        break;
+        return 'l';
     case HIRDataType::byte:
-        linked_compiler.config.output_file.get_stream() << "b";
-        break;
+        return base_type ? 'w' : 'b';
     case HIRDataType::hword:
-        linked_compiler.config.output_file.get_stream() << "h";
-        break;
+        return base_type ? 'w' : 'h';
     default:
         assert(false);
     }

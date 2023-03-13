@@ -38,7 +38,8 @@ void bonk::HIRBaseBlockSeparator::separate_blocks(bonk::IRProcedure& procedure) 
         current_block->instructions.push_back(hir_instruction);
 
         if (hir_instruction->type == HIRInstructionType::jump ||
-            hir_instruction->type == HIRInstructionType::jump_nz) {
+            hir_instruction->type == HIRInstructionType::jump_nz ||
+            hir_instruction->type == HIRInstructionType::return_op) {
             procedure.create_base_block();
             current_block = &procedure.base_blocks.back();
             is_first_instruction = true;

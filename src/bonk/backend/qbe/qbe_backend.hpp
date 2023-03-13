@@ -28,11 +28,10 @@ class QBEBackend : public Backend {
     void compile_instruction(HIRMemoryLoad& instruction);
     void compile_instruction(HIRMemoryStore& instruction);
 
-    void print_hir_type(bonk::HIRDataType type);
+    char get_hir_type(bonk::HIRDataType type, bool base_type = true);
+    void print_comparison(HIROperationType type, HIRDataType operand_type);
 
     void padding();
-
-    void print_hir_operation(HIROperationType type);
 
   public:
     void compile_program(IRProgram& program) override;

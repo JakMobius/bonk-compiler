@@ -128,8 +128,11 @@ void bonk::JsonDumpAstVisitor::visit(bonk::TreeNodeNumberConstant* node) {
     dump_node_location(node);
     dump_type(node, "NumberConstant");
 
-    serializer.field("double_value").block_string_field() << node->double_value;
-    serializer.field("integer_value").block_string_field() << node->integer_value;
+    serializer.field("double_value").block_string_field() << node->contents.double_value;
+    serializer.field("integer_value").block_string_field() << node->contents.integer_value;
+    serializer.field("kind").block_string_field()
+        << (node->contents.kind == NumberConstantKind::rather_double ? "rather_double"
+                                                                     : "rather_integer");
 }
 
 void bonk::JsonDumpAstVisitor::visit(bonk::TreeNodeStringConstant* node) {
@@ -212,7 +215,6 @@ void bonk::JsonDumpAstVisitor::visit(bonk::TreeNodeHiveDefinition* node) {
             serializer.array_add_null();
     }
     serializer.close_array();
-
 }
 
 void bonk::JsonDumpAstVisitor::visit(bonk::TreeNodeCall* node) {
