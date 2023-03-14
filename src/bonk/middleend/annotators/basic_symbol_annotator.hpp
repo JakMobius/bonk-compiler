@@ -22,6 +22,7 @@ class ScopedNameResolver : public NameResolver {
     SymbolScope* current_scope = nullptr;
 
     ScopedNameResolver();
+    ScopedNameResolver(SymbolScope* scope);
 
     TreeNode* get_name_definition(std::string_view name) override;
     void define_variable(std::string_view name, TreeNode* definition);

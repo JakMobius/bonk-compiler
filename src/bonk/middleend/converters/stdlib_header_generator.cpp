@@ -1,5 +1,6 @@
 
 #include "stdlib_header_generator.hpp"
+#include "bonk/tree/ast_clone_visitor.hpp"
 
 void bonk::StdLibHeaderGenerator::generate(bonk::TreeNode* ast) {
     assert(ast->type == TreeNodeType::n_program);
@@ -11,18 +12,8 @@ void bonk::StdLibHeaderGenerator::generate(bonk::TreeNode* ast) {
         .return_type(PrimitiveType::t_long)
         .attach(program);
 
-    generate_stdlib_function("$$bonk_object_inc_reference")
-        .parameter("object", PrimitiveType::t_nubr)
-        .return_type(PrimitiveType::t_nubr)
-        .attach(program);
-
-    generate_stdlib_function("$$bonk_object_dec_reference")
-        .parameter("object", PrimitiveType::t_nubr)
-        .return_type(PrimitiveType::t_nubr)
-        .attach(program);
-
     generate_stdlib_function("$$bonk_object_free")
-        .parameter("object", PrimitiveType::t_nubr)
+        .parameter("object", PrimitiveType::t_long)
         .return_type(PrimitiveType::t_nubr)
         .attach(program);
 }
@@ -60,7 +51,12 @@ bonk::StdlibFunction& bonk::StdlibFunction::return_type(bonk::PrimitiveType retu
     auto trivial_type = std::make_unique<TrivialType>();
     trivial_type->primitive_type = return_type;
 
-    middle_end.type_table.annotate<BlokType>(function.get())->return_type = std::move(trivial_type);
+    auto type = middle_end.type_table.annotate<BlokType>(function.get());
+    type->return_type = std::move(trivial_type);
+
+    for(auto& parameter : function->block_parameters->parameters) {
+        type->parameters.push_back(parameter.get());
+    }
 
     return *this;
 }

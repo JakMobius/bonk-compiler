@@ -158,6 +158,37 @@ void bonk::HiveConstructorDestructorLateGenerator::fill_destructor(
         destructor->body->body.push_back(std::move(assignment));
     }
 
+    // Now call the $$bonk_destroy_object function
+
+    // @$$bonk_object_free[object = object]
+    auto call = std::make_unique<TreeNodeCall>();
+    auto callee_identifier = std::make_unique<TreeNodeIdentifier>();
+    callee_identifier->identifier_text =
+        middle_end.hidden_text_storage.get_hidden_symbol("$$bonk_object_free");
+    call->callee = std::move(callee_identifier);
+    call->arguments = std::make_unique<TreeNodeParameterList>();
+
+    auto object_text = middle_end.hidden_text_storage.get_hidden_symbol("object");
+
+    auto object_parameter_name = std::make_unique<TreeNodeIdentifier>();
+    object_parameter_name->identifier_text = object_text;
+
+    auto object_parameter_value = std::make_unique<TreeNodeIdentifier>();
+    object_parameter_value->identifier_text = object_text;
+
+    // Annotate the object parameter with the long type, so that the
+    // type annotator will not raise an error
+    middle_end.type_table.annotate<TrivialType>(object_parameter_value.get())->primitive_type =
+        PrimitiveType::t_long;
+
+    auto size_parameter = std::make_unique<TreeNodeParameterListItem>();
+    size_parameter->parameter_name = std::move(object_parameter_name);
+    size_parameter->parameter_value = std::move(object_parameter_value);
+
+    call->arguments->parameters.push_back(std::move(size_parameter));
+
+    destructor->body->body.push_back(std::move(call));
+
     // Now, the destructor body should be annotated properly
 
     BasicSymbolAnnotator symbol_annotator{middle_end};

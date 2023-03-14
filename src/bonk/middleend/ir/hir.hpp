@@ -2,6 +2,8 @@
 
 namespace bonk {
 
+struct TreeNodeHiveDefinition;
+
 enum class HIRInstructionType {
     unset,
     label,
@@ -16,6 +18,8 @@ enum class HIRInstructionType {
     procedure,
     memory_load,
     memory_store,
+    inc_ref_counter,
+    dec_ref_counter,
 };
 
 enum class HIROperationType {
@@ -69,13 +73,13 @@ struct HIRLabel : HIRInstruction {
 struct HIRConstantLoad : HIRInstruction {
     IRRegister target = 0;
     HIRDataType type = HIRDataType::unset;
-    unsigned long long constant = 0;
+    long long constant = 0;
 
-    HIRConstantLoad(IRRegister target, unsigned long long constant, HIRDataType type);
-    HIRConstantLoad(IRRegister target, uint64_t constant);
-    HIRConstantLoad(IRRegister target, uint32_t constant);
-    HIRConstantLoad(IRRegister target, uint16_t constant);
-    HIRConstantLoad(IRRegister target, uint8_t constant);
+    HIRConstantLoad(IRRegister target, long long constant, HIRDataType type);
+    HIRConstantLoad(IRRegister target, int64_t constant);
+    HIRConstantLoad(IRRegister target, int32_t constant);
+    HIRConstantLoad(IRRegister target, int16_t constant);
+    HIRConstantLoad(IRRegister target, int8_t constant);
     HIRConstantLoad(IRRegister target, float constant);
     HIRConstantLoad(IRRegister target, double constant);
 };
@@ -165,6 +169,19 @@ struct HIRMemoryStore : HIRInstruction {
     HIRDataType type = HIRDataType::unset;
 
     HIRMemoryStore();
+};
+
+struct HIRIncRefCounter : HIRInstruction {
+    IRRegister address = 0;
+
+    HIRIncRefCounter();
+};
+
+struct HIRDecRefCounter : HIRInstruction {
+    IRRegister address = 0;
+    TreeNodeHiveDefinition* hive_definition = nullptr;
+
+    HIRDecRefCounter();
 };
 
 } // namespace bonk

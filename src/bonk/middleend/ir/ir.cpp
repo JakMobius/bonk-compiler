@@ -34,5 +34,5 @@ bonk::IRInstructionPool::~IRInstructionPool() {
 }
 
 void bonk::IRProgram::create_procedure() {
-    procedures.emplace_back(*this);
+    procedures.push_back(std::make_unique<IRProcedure>(*this));
 }

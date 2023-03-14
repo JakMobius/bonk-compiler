@@ -6,6 +6,9 @@
 #include "bonk/middleend/converters/hive_ctor_dtor_early_generator.hpp"
 #include "bonk/middleend/converters/stdlib_header_generator.hpp"
 #include "bonk/middleend/ir/hir.hpp"
+#include "bonk/middleend/ir/hir_early_generator_visitor.hpp"
+#include "bonk/middleend/ir/hir_printer.hpp"
+#include "bonk/middleend/ir/hir_ref_count_replacer.hpp"
 #include "bonk/middleend/middleend.hpp"
 #include "bonk/parsing/parser.hpp"
 #include "bonk/tree/ast_printer.hpp"
@@ -261,7 +264,7 @@ TEST(MiddleEnd, CodegenTest) {
 
     for (const auto& procedure : ir_program->procedures) {
         auto procedure_header =
-            (bonk::HIRInstruction*)procedure.base_blocks[0].instructions.front();
+            (bonk::HIRInstruction*)procedure->base_blocks[0]->instructions.front();
         ASSERT_EQ(procedure_header->type, bonk::HIRInstructionType::procedure);
         auto procedure_id = ((bonk::HIRProcedure*)procedure_header)->procedure_id;
         auto procedure_definition = middle_end.id_table.get_node(procedure_id);
@@ -314,11 +317,7 @@ TEST(MiddleEnd, StdLibHeaderGenerator) {
     std::string ast_string = ast_stringstream.str();
 
     EXPECT_NE(ast_string.find("blok $$bonk_create_object[bowl size: nubr]"), std::string::npos);
-    EXPECT_NE(ast_string.find("blok $$bonk_object_free[bowl object: nubr]"), std::string::npos);
-    EXPECT_NE(ast_string.find("blok $$bonk_object_inc_reference[bowl object: nubr]"),
-              std::string::npos);
-    EXPECT_NE(ast_string.find("blok $$bonk_object_dec_reference[bowl object: nubr]"),
-              std::string::npos);
+    EXPECT_NE(ast_string.find("blok $$bonk_object_free[bowl object: long]"), std::string::npos);
 }
 
 TEST(MiddleEnd, ConstructorDestructorGeneratorTest) {
@@ -464,4 +463,143 @@ TEST(MiddleEnd, ConstructorDestructorGeneratorTest) {
     ast->accept(&printer);
     std::string ast_string = ast_stringstream.str();
     std::cout << ast_string;
+}
+
+bonk::IRProcedure* find_procedure(bonk::MiddleEnd& middle_end, bonk::IRProgram* program,
+                                  std::string_view name) {
+    for (auto& procedure : program->procedures) {
+        auto header = (bonk::HIRInstruction*)procedure->base_blocks[0]->instructions.front();
+        if (header->type != bonk::HIRInstructionType::procedure) {
+            ADD_FAILURE() << "Procedure header is not a 'procedure' command";
+            continue;
+        }
+        auto procedure_header = (bonk::HIRProcedure*)header;
+        auto definition = middle_end.id_table.get_node(procedure_header->procedure_id);
+        if (definition->type != bonk::TreeNodeType::n_block_definition) {
+            continue;
+        }
+        auto block_definition = (bonk::TreeNodeBlockDefinition*)definition;
+        if (block_definition->block_name->identifier_text == name) {
+            return procedure.get();
+        }
+    }
+    return nullptr;
+}
+
+TEST(MiddleEnd, RefCountReplacementTest1) {
+    auto output_stream = bonk::StdOutputStream(std::cout);
+    auto error_stream = bonk::StdOutputStream(std::cout);
+
+    bonk::CompilerConfig config{.error_file = error_stream};
+    bonk::Compiler compiler(config);
+
+    const char* source = R"(
+        hive Dummy {}
+
+        blok main { @Dummy; }
+    )";
+
+    auto lexemes = bonk::LexicalAnalyzer(compiler).parse_file("test", source);
+    auto ast = bonk::Parser(compiler).parse_file(&lexemes);
+
+    ASSERT_NE(ast, nullptr);
+
+    bonk::MiddleEnd middle_end(compiler);
+    middle_end.transform_ast(ast.get());
+
+    ASSERT_EQ(compiler.state, bonk::BONK_COMPILER_OK);
+
+    auto program = bonk::HIREarlyGeneratorVisitor(middle_end).generate(ast.get());
+
+    // Find procedure called "main"
+    bonk::IRProcedure* main_procedure = find_procedure(middle_end, program.get(), "main");
+    ASSERT_NE(main_procedure, nullptr) << "Procedure 'main' not found";
+
+//    std::cout << "Before refcount replacement:" << std::endl;
+//    bonk::HIRPrinter printer(output_stream);
+//    printer.print(*program, *main_procedure);
+
+    bonk::HIRRefCountReplacer(middle_end).replace_ref_counters(*main_procedure);
+
+//    std::cout << "After refcount replacement:" << std::endl;
+//    printer.print(*program, *main_procedure);
+
+    // Check that the procedure header is still a procedure header
+    auto first_instruction =
+        (bonk::HIRInstruction*)main_procedure->base_blocks[0]->instructions.front();
+
+    EXPECT_EQ(first_instruction->type, bonk::HIRInstructionType::procedure)
+        << "Procedure header is not a 'procedure' command";
+
+    // Check that the procedure doesn't have dec_ref instruction
+    for (auto& block : main_procedure->base_blocks) {
+        for (auto& instruction : block->instructions) {
+            auto hir_instruction = (bonk::HIRInstruction*)instruction;
+            EXPECT_NE(hir_instruction->type, bonk::HIRInstructionType::dec_ref_counter)
+                << "Decrement reference counter instruction found, but it should have been "
+                   "replaced";
+        }
+    }
+}
+
+TEST(MiddleEnd, RefCountReplacementTest2) {
+    auto output_stream = bonk::StdOutputStream(std::cout);
+    auto error_stream = bonk::StdOutputStream(std::cout);
+
+    bonk::CompilerConfig config{.error_file = error_stream};
+    bonk::Compiler compiler(config);
+
+    const char* source = R"(
+        hive TestHive {
+            bowl test_field1: flot = 100.0;
+            bowl test_field2: flot = 300.0;
+        }
+
+        blok bonk_main {
+            bonk @TestHive[test_field1 = 1.0];
+        }
+    )";
+
+    auto lexemes = bonk::LexicalAnalyzer(compiler).parse_file("test", source);
+    auto ast = bonk::Parser(compiler).parse_file(&lexemes);
+
+    ASSERT_NE(ast, nullptr);
+
+    bonk::MiddleEnd middle_end(compiler);
+    middle_end.transform_ast(ast.get());
+
+    ASSERT_EQ(compiler.state, bonk::BONK_COMPILER_OK);
+
+    auto program = bonk::HIREarlyGeneratorVisitor(middle_end).generate(ast.get());
+
+//    std::cout << "Before refcount replacement:" << std::endl;
+//    bonk::HIRPrinter printer(output_stream);
+//    printer.print(*program);
+
+    bonk::HIRRefCountReplacer(middle_end).replace_ref_counters(*program);
+
+//    std::cout << "After refcount replacement:" << std::endl;
+//    printer.print(*program);
+
+    // Check all the internal procedures
+    for (auto& procedure : program->procedures) {
+
+        auto first_instruction =
+            (bonk::HIRInstruction*)procedure->base_blocks[0]->instructions.front();
+        EXPECT_EQ(first_instruction->type, bonk::HIRInstructionType::procedure)
+            << "Procedure header is not a 'procedure' command";
+
+        // Check that the procedure doesn't have dec_ref instruction
+        for (auto& block : procedure->base_blocks) {
+            for (auto& instruction : block->instructions) {
+                auto hir_instruction = (bonk::HIRInstruction*)instruction;
+                EXPECT_NE(hir_instruction->type, bonk::HIRInstructionType::dec_ref_counter)
+                    << "Decrement reference counter instruction found, but it should have been "
+                       "replaced";
+                EXPECT_NE(hir_instruction->type, bonk::HIRInstructionType::inc_ref_counter)
+                    << "Increment reference counter instruction found, but it should have been "
+                       "replaced";
+            }
+        }
+    }
 }

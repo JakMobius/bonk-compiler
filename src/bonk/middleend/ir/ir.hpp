@@ -49,7 +49,7 @@ struct IRProgram {
     IDTable& id_table;
     SymbolTable& symbol_table;
     IRInstructionPool instruction_pool{};
-    std::vector<IRProcedure> procedures{};
+    std::vector<std::unique_ptr<IRProcedure>> procedures{};
 
     IRProgram(IDTable& id_table, SymbolTable& symbol_table) : id_table(id_table), symbol_table(symbol_table) {
     }
@@ -63,7 +63,7 @@ struct IRProgram {
 
 struct IRProcedure {
     IRProgram& program;
-    std::vector<IRBaseBlock> base_blocks{};
+    std::vector<std::unique_ptr<IRBaseBlock>> base_blocks{};
 
     IRProcedure(IRProgram& program) : program(program) {
     }
@@ -74,7 +74,7 @@ struct IRProcedure {
     }
 
     void create_base_block() {
-        base_blocks.emplace_back(*this);
+        base_blocks.push_back(std::make_unique<IRBaseBlock>(*this));
     }
 };
 

@@ -52,6 +52,9 @@ struct CompilerConfig {
     const OutputStream& error_file = NullOutputStream::instance;
     const OutputStream& listing_file = NullOutputStream::instance;
     const OutputStream& output_file = NullOutputStream::instance;
+    std::optional<std::string> stop_checkpoint;
+
+    bool should_stop_after(std::string_view stage) const;
 };
 
 struct Compiler {

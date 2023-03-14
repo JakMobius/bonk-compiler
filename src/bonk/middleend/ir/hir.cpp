@@ -9,28 +9,28 @@ bonk::HIRLabel::HIRLabel(int label_id)
     : HIRInstruction(HIRInstructionType::label), label_id(label_id) {
 }
 
-bonk::HIRConstantLoad::HIRConstantLoad(bonk::IRRegister target, unsigned long long int constant,
+bonk::HIRConstantLoad::HIRConstantLoad(bonk::IRRegister target, long long int constant,
                                        bonk::HIRDataType type)
     : HIRInstruction(HIRInstructionType::constant_load), target(target), type(type),
       constant(constant) {
 }
 
-bonk::HIRConstantLoad::HIRConstantLoad(bonk::IRRegister target, uint64_t constant)
+bonk::HIRConstantLoad::HIRConstantLoad(bonk::IRRegister target, int64_t constant)
     : HIRInstruction(HIRInstructionType::constant_load), target(target), type(HIRDataType::dword),
       constant(constant) {
 }
 
-bonk::HIRConstantLoad::HIRConstantLoad(bonk::IRRegister target, uint32_t constant)
+bonk::HIRConstantLoad::HIRConstantLoad(bonk::IRRegister target, int32_t constant)
     : HIRInstruction(HIRInstructionType::constant_load), target(target), type(HIRDataType::word),
       constant(constant) {
 }
 
-bonk::HIRConstantLoad::HIRConstantLoad(bonk::IRRegister target, uint16_t constant)
+bonk::HIRConstantLoad::HIRConstantLoad(bonk::IRRegister target, int16_t constant)
     : HIRInstruction(HIRInstructionType::constant_load), target(target), type(HIRDataType::hword),
       constant(constant) {
 }
 
-bonk::HIRConstantLoad::HIRConstantLoad(bonk::IRRegister target, uint8_t constant)
+bonk::HIRConstantLoad::HIRConstantLoad(bonk::IRRegister target, int8_t constant)
     : HIRInstruction(HIRInstructionType::constant_load), target(target), type(HIRDataType::byte),
       constant(constant) {
 }
@@ -80,9 +80,14 @@ bonk::HIRProcedure::HIRProcedure(int procedure_id, bonk::HIRDataType return_type
 }
 
 bonk::HIRMemoryLoad::HIRMemoryLoad() : HIRInstruction(HIRInstructionType::memory_load) {
-
 }
 
 bonk::HIRMemoryStore::HIRMemoryStore() : HIRInstruction(HIRInstructionType::memory_store) {
-
 }
+
+bonk::HIRIncRefCounter::HIRIncRefCounter() : HIRInstruction(HIRInstructionType::inc_ref_counter) {
+}
+
+bonk::HIRDecRefCounter::HIRDecRefCounter() : HIRInstruction(HIRInstructionType::dec_ref_counter) {
+}
+

@@ -190,6 +190,10 @@ void bonk::ScopedNameResolver::define_variable(std::string_view name, bonk::Tree
     current_scope->symbols[name] = definition;
 }
 
+bonk::ScopedNameResolver::ScopedNameResolver(bonk::SymbolScope* scope) {
+    current_scope = scope;
+}
+
 bool ForwardDeclaringSymbolAnnotator::visit_guard() {
     // This guard prevents this visitor from going deeper into the AST
     if (!should_visit) {

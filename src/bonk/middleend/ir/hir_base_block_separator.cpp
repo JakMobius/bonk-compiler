@@ -4,20 +4,20 @@
 
 void bonk::HIRBaseBlockSeparator::separate_blocks(bonk::IRProgram& program) {
     for (auto& procedure : program.procedures) {
-        separate_blocks(procedure);
+        separate_blocks(*procedure);
     }
 }
 
 void bonk::HIRBaseBlockSeparator::separate_blocks(bonk::IRProcedure& procedure) {
     assert(procedure.base_blocks.size() == 1);
-    IRBaseBlock block = procedure.base_blocks[0];
-    procedure.base_blocks[0].instructions.clear();
+    IRBaseBlock block = *procedure.base_blocks[0].get();
+    procedure.base_blocks[0]->instructions.clear();
 
     // First block in procedure should not be jumped to,
     // that's why is_first_instruction is initialized to false.
     bool is_first_instruction = false;
 
-    IRBaseBlock* current_block = &procedure.base_blocks[0];
+    IRBaseBlock* current_block = procedure.base_blocks[0].get();
 
     for (auto& instruction : block.instructions) {
         auto hir_instruction = (HIRInstruction*)instruction;
@@ -25,7 +25,7 @@ void bonk::HIRBaseBlockSeparator::separate_blocks(bonk::IRProcedure& procedure) 
         if (hir_instruction->type == HIRInstructionType::label) {
             if(!is_first_instruction) {
                 procedure.create_base_block();
-                current_block = &procedure.base_blocks.back();
+                current_block = procedure.base_blocks.back().get();
             }
         } else if (is_first_instruction) {
             // Create a new label for the block, insert it before the first instruction
@@ -41,7 +41,7 @@ void bonk::HIRBaseBlockSeparator::separate_blocks(bonk::IRProcedure& procedure) 
             hir_instruction->type == HIRInstructionType::jump_nz ||
             hir_instruction->type == HIRInstructionType::return_op) {
             procedure.create_base_block();
-            current_block = &procedure.base_blocks.back();
+            current_block = procedure.base_blocks.back().get();
             is_first_instruction = true;
         }
     }

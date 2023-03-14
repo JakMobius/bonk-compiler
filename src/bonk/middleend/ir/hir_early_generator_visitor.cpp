@@ -1,29 +1,44 @@
 
-#include "hir_generator_visitor.hpp"
+#include "hir_early_generator_visitor.hpp"
+#include "bonk/middleend/annotators/basic_symbol_annotator.hpp"
 #include "bonk/middleend/annotators/type_visitor.hpp"
 #include "hir.hpp"
 #include "hir_base_block_separator.hpp"
 
-void bonk::HIRGeneratorVisitor::visit(bonk::TreeNodeProgram* node) {
+void bonk::HIREarlyGeneratorVisitor::visit(bonk::TreeNodeProgram* node) {
     ASTVisitor::visit(node);
 }
 
-void bonk::HIRGeneratorVisitor::visit(bonk::TreeNodeHelp* node) {
+void bonk::HIREarlyGeneratorVisitor::visit(bonk::TreeNodeHelp* node) {
     ASTVisitor::visit(node);
 }
 
-void bonk::HIRGeneratorVisitor::visit(bonk::TreeNodeIdentifier* node) {
-    push_value(middle_end.id_table.get_id(node));
+void bonk::HIREarlyGeneratorVisitor::visit(bonk::TreeNodeIdentifier* node) {
+    // If identifier holds reference to a hive, increase reference counter
+
+    auto id = middle_end.id_table.get_id(node);
+
+    auto type = middle_end.type_table.get_type(node);
+    if (type->kind == TypeKind::hive) {
+        auto instruction = current_base_block->instruction<HIRIncRefCounter>();
+        instruction->address = id;
+        current_base_block->instructions.push_back(instruction);
+    }
+
+    push_value(id);
 }
 
-void bonk::HIRGeneratorVisitor::visit(bonk::TreeNodeBlockDefinition* node) {
+void bonk::HIREarlyGeneratorVisitor::visit(bonk::TreeNodeBlockDefinition* node) {
+    alive_scopes.emplace_back();
+    alive_scopes.back().block = node;
+
     auto old_block = current_block_definition;
     current_block_definition = node;
 
     current_program->create_procedure();
-    current_procedure = &current_program->procedures.back();
+    current_procedure = current_program->procedures.back().get();
     current_procedure->create_base_block();
-    current_base_block = &current_procedure->base_blocks.back();
+    current_base_block = current_procedure->base_blocks.back().get();
 
     int id = middle_end.id_table.get_id(node);
     auto type = (BlokType*)middle_end.type_table.get_type(node);
@@ -46,23 +61,23 @@ void bonk::HIRGeneratorVisitor::visit(bonk::TreeNodeBlockDefinition* node) {
 
     if (node->body) {
         node->body->accept(this);
-
-        // If function returns nothing, add a return instruction
-        if (type->return_type->kind == TypeKind::nothing) {
-            auto instruction = current_base_block->instruction<HIRReturn>();
-            current_base_block->instructions.push_back(instruction);
-        }
+        auto instruction = current_base_block->instruction<HIRReturn>();
+        current_base_block->instructions.push_back(instruction);
     } else {
         procedure_header->is_external = true;
     }
     current_block_definition = old_block;
+
+    alive_scopes.pop_back();
 }
 
-void bonk::HIRGeneratorVisitor::visit(bonk::TreeNodeVariableDefinition* node) {
-    if(!current_block_definition) {
+void bonk::HIREarlyGeneratorVisitor::visit(bonk::TreeNodeVariableDefinition* node) {
+    if (!current_block_definition) {
         // It could be a global variable or a field of a hive
         return;
     }
+
+    alive_scopes.back().alive_variables.push_back(node);
 
     if (node->variable_value == nullptr)
         return;
@@ -88,28 +103,54 @@ void bonk::HIRGeneratorVisitor::visit(bonk::TreeNodeVariableDefinition* node) {
     current_base_block->instructions.push_back(instruction);
 }
 
-void bonk::HIRGeneratorVisitor::visit(bonk::TreeNodeParameterList* node) {
+void bonk::HIREarlyGeneratorVisitor::visit(bonk::TreeNodeParameterList* node) {
     ASTVisitor::visit(node);
 }
 
-void bonk::HIRGeneratorVisitor::visit(bonk::TreeNodeParameterListItem* node) {
+void bonk::HIREarlyGeneratorVisitor::visit(bonk::TreeNodeParameterListItem* node) {
     ASTVisitor::visit(node);
 }
 
-void bonk::HIRGeneratorVisitor::visit(bonk::TreeNodeCodeBlock* node) {
+void bonk::HIREarlyGeneratorVisitor::visit(bonk::TreeNodeCodeBlock* node) {
+    alive_scopes.emplace_back();
+    alive_scopes.back().block = node;
+
     for (auto& element : node->body) {
         if (element) {
             element->accept(this);
+
+            // If the node is an expression of hive type, its reference counter must be
+            // decreased
+
+            // This check is needed because the node could be a variable definition
+            // or a bonk statement
+            if (!register_stack.empty()) {
+                auto statement_type = middle_end.type_table.get_type(element.get());
+                if (statement_type->kind == TypeKind::hive) {
+
+                    auto reference =
+                        load_value(register_stack.back(), convert_type_to_hir(statement_type));
+
+                    auto instruction = current_base_block->instruction<HIRDecRefCounter>();
+                    instruction->address = reference;
+                    instruction->hive_definition = ((HiveType*)statement_type)->hive_definition;
+                    current_base_block->instructions.push_back(instruction);
+                }
+            }
+
             register_stack.clear();
         }
     }
+
+    kill_alive_variables(node);
+    alive_scopes.pop_back();
 }
 
-void bonk::HIRGeneratorVisitor::visit(bonk::TreeNodeArrayConstant* node) {
+void bonk::HIREarlyGeneratorVisitor::visit(bonk::TreeNodeArrayConstant* node) {
     assert(!"Cannot compile this just yet");
 }
 
-void bonk::HIRGeneratorVisitor::visit(bonk::TreeNodeNumberConstant* node) {
+void bonk::HIREarlyGeneratorVisitor::visit(bonk::TreeNodeNumberConstant* node) {
     // Get type of the constant
     Type* type = middle_end.type_table.get_type(node);
 
@@ -118,7 +159,7 @@ void bonk::HIRGeneratorVisitor::visit(bonk::TreeNodeNumberConstant* node) {
     int id = middle_end.id_table.get_unused_id();
     auto instruction = current_base_block->instruction<HIRConstantLoad>(id, 0, hir_type);
 
-    switch(hir_type) {
+    switch (hir_type) {
     case HIRDataType::unset:
         assert(false);
 
@@ -150,17 +191,17 @@ void bonk::HIRGeneratorVisitor::visit(bonk::TreeNodeNumberConstant* node) {
     push_value(id);
 }
 
-void bonk::HIRGeneratorVisitor::visit(bonk::TreeNodeStringConstant* node) {
+void bonk::HIREarlyGeneratorVisitor::visit(bonk::TreeNodeStringConstant* node) {
     int id = middle_end.id_table.get_unused_id();
 
     // TODO: find the string in the string table and get its pointer
-    uint64_t string_pointer = 0;
+    int64_t string_pointer = 0;
     auto instruction = current_base_block->instruction<HIRConstantLoad>(id, string_pointer);
     current_base_block->instructions.push_back(instruction);
     push_value(id);
 }
 
-void bonk::HIRGeneratorVisitor::visit(bonk::TreeNodeBinaryOperation* node) {
+void bonk::HIREarlyGeneratorVisitor::visit(bonk::TreeNodeBinaryOperation* node) {
 
     if (node->operator_type == OperatorType::o_and || node->operator_type == OperatorType::o_or) {
         compile_lazy_logic(node);
@@ -185,7 +226,25 @@ void bonk::HIRGeneratorVisitor::visit(bonk::TreeNodeBinaryOperation* node) {
 
     if (operation_type == HIROperationType::assign) {
 
+        bool is_hive_reference = left_type->kind == TypeKind::hive;
+        assert(is_hive_reference == (right_type->kind == TypeKind::hive));
+
         auto right_loaded = load_value(right, hir_type);
+
+        IRRegister left_loaded = 0;
+
+        if (is_hive_reference) {
+            // Increase the reference counter of the right-side hive, because
+            // the assignment operator returns a temporary reference to the right-hand hive,
+            // and the left-hand hive will now also have a reference to the right-hand hive
+            // (reference 2)
+            auto instruction = current_base_block->instruction<HIRIncRefCounter>();
+            instruction->address = right_loaded;
+            current_base_block->instructions.push_back(instruction);
+
+            // Save the hive to decrease reference count later
+            left_loaded = load_value(left, hir_type);
+        }
 
         if (left.is_reference) {
             auto instruction = current_base_block->instruction<HIRMemoryStore>();
@@ -203,6 +262,19 @@ void bonk::HIRGeneratorVisitor::visit(bonk::TreeNodeBinaryOperation* node) {
             instruction->left = right_loaded;
             push_value(left.register_id);
             current_base_block->instructions.push_back(instruction);
+        }
+
+        if (is_hive_reference) {
+            // Decrease the reference counter of the left-side hive twice, because
+            //  1) The temporary reference to the right-hand hive is dead now
+            //  2) The left-hand hive now has a reference to the right-hand hive
+
+            for (int i = 0; i < 2; i++) {
+                auto instruction = current_base_block->instruction<HIRDecRefCounter>();
+                instruction->address = left_loaded;
+                instruction->hive_definition = ((HiveType*)left_type)->hive_definition;
+                current_base_block->instructions.push_back(instruction);
+            }
         }
 
     } else {
@@ -223,7 +295,7 @@ void bonk::HIRGeneratorVisitor::visit(bonk::TreeNodeBinaryOperation* node) {
     }
 }
 
-void bonk::HIRGeneratorVisitor::compile_lazy_logic(TreeNodeBinaryOperation* node) {
+void bonk::HIREarlyGeneratorVisitor::compile_lazy_logic(TreeNodeBinaryOperation* node) {
     Type* left_type = middle_end.type_table.get_type(node->left.get());
     Type* right_type = middle_end.type_table.get_type(node->right.get());
 
@@ -313,51 +385,52 @@ void bonk::HIRGeneratorVisitor::compile_lazy_logic(TreeNodeBinaryOperation* node
     push_value(result);
 }
 
-void bonk::HIRGeneratorVisitor::visit(bonk::TreeNodeUnaryOperation* node) {
+void bonk::HIREarlyGeneratorVisitor::visit(bonk::TreeNodeUnaryOperation* node) {
     ASTVisitor::visit(node);
 
     Type* type = middle_end.type_table.get_type(node->operand.get());
 
     int operand = register_stack.back().register_id;
 
-    if (type->kind == TypeKind::primitive) {
-        auto primitive = (TreeNodePrimitiveType*)type;
-        if (primitive->primitive_type == PrimitiveType::t_nubr ||
-            primitive->primitive_type == PrimitiveType::t_flot) {
-            HIRDataType hir_type = convert_type_to_hir(type);
+    assert(type->kind == TypeKind::primitive);
 
-            int zero_operand = middle_end.id_table.get_unused_id();
-            HIRConstantLoad* zero_load_instruction = nullptr;
+    auto primitive = (TreeNodePrimitiveType*)type;
 
-            if (primitive->primitive_type == PrimitiveType::t_nubr) {
-                zero_load_instruction =
-                    current_base_block->instruction<HIRConstantLoad>(zero_operand, (uint32_t)0);
-            } else {
-                zero_load_instruction =
-                    current_base_block->instruction<HIRConstantLoad>(zero_operand, (float)0.0f);
-            }
+    assert(primitive->primitive_type == PrimitiveType::t_shrt ||
+           primitive->primitive_type == PrimitiveType::t_nubr ||
+           primitive->primitive_type == PrimitiveType::t_long ||
+           primitive->primitive_type == PrimitiveType::t_flot ||
+           primitive->primitive_type == PrimitiveType::t_dabl);
 
-            current_base_block->instructions.push_back(zero_load_instruction);
+    HIRDataType hir_type = convert_type_to_hir(type);
 
-            int id = middle_end.id_table.get_unused_id();
-            auto instruction = current_base_block->instruction<HIROperation>();
-            instruction->operation_type = HIROperationType::minus;
-            instruction->result_type = hir_type;
-            instruction->operand_type = hir_type;
-            instruction->target = id;
-            instruction->left = zero_operand;
-            instruction->right = operand;
+    int zero_operand = middle_end.id_table.get_unused_id();
+    HIRConstantLoad* zero_load_instruction = nullptr;
 
-            current_base_block->instructions.push_back(instruction);
-            push_value(id);
-            return;
-        }
+    if (primitive->primitive_type == PrimitiveType::t_nubr) {
+        zero_load_instruction =
+            current_base_block->instruction<HIRConstantLoad>(zero_operand, (int32_t)0);
+    } else {
+        zero_load_instruction =
+            current_base_block->instruction<HIRConstantLoad>(zero_operand, (float)0.0f);
     }
 
-    assert(!"Cannot compile this just yet");
+    current_base_block->instructions.push_back(zero_load_instruction);
+
+    int id = middle_end.id_table.get_unused_id();
+    auto instruction = current_base_block->instruction<HIROperation>();
+    instruction->operation_type = HIROperationType::minus;
+    instruction->result_type = hir_type;
+    instruction->operand_type = hir_type;
+    instruction->target = id;
+    instruction->left = zero_operand;
+    instruction->right = operand;
+
+    current_base_block->instructions.push_back(instruction);
+    push_value(id);
 }
 
-void bonk::HIRGeneratorVisitor::visit(bonk::TreeNodeHiveAccess* node) {
+void bonk::HIREarlyGeneratorVisitor::visit(bonk::TreeNodeHiveAccess* node) {
     node->hive->accept(this);
 
     auto hive = register_stack.back();
@@ -387,40 +460,69 @@ void bonk::HIRGeneratorVisitor::visit(bonk::TreeNodeHiveAccess* node) {
     int constant_storage = middle_end.id_table.get_unused_id();
 
     auto constant_load =
-        current_base_block->instruction<HIRConstantLoad>(constant_storage, (uint64_t)offset);
+        current_base_block->instruction<HIRConstantLoad>(constant_storage, (int64_t)offset);
     current_base_block->instructions.push_back(constant_load);
 
-    int id = middle_end.id_table.get_unused_id();
+    int result_id = middle_end.id_table.get_unused_id();
 
     auto instruction = current_base_block->instruction<HIROperation>();
     instruction->operation_type = HIROperationType::plus;
     instruction->result_type = HIRDataType::dword;
     instruction->operand_type = HIRDataType::dword;
-    instruction->target = id;
+    instruction->target = result_id;
     instruction->left = load_value(hive, HIRDataType::dword);
     instruction->right = constant_storage;
     current_base_block->instructions.push_back(instruction);
 
-    push_reference(id);
+    // Decrease the reference count of the hive, and increase the reference count of the field
+    // if it is a hive reference
+
+    auto field_type = middle_end.type_table.get_type(node);
+    if (field_type->kind == TypeKind::hive) {
+        // Since result_id is a pointer to the field, we need to load the value of the field
+        int field_reference = middle_end.id_table.get_unused_id();
+        auto load_instruction = current_base_block->instruction<HIRMemoryLoad>();
+        load_instruction->target = field_reference;
+        load_instruction->type = HIRDataType::dword;
+        load_instruction->address = result_id;
+        current_base_block->instructions.push_back(load_instruction);
+
+        auto reference_increment = current_base_block->instruction<HIRIncRefCounter>();
+        reference_increment->address = field_reference;
+        current_base_block->instructions.push_back(reference_increment);
+    }
+
+    auto reference_decrement = current_base_block->instruction<HIRDecRefCounter>();
+    reference_decrement->address = hive.register_id;
+    reference_decrement->hive_definition = hive_definition;
+    current_base_block->instructions.push_back(reference_decrement);
+
+    push_reference(result_id);
 }
 
-void bonk::HIRGeneratorVisitor::visit(bonk::TreeNodeBonkStatement* node) {
+void bonk::HIREarlyGeneratorVisitor::visit(bonk::TreeNodeBonkStatement* node) {
     ASTVisitor::visit(node);
 
     auto instruction = current_base_block->instruction<HIRReturn>();
 
     if (node->expression) {
         Type* type = middle_end.type_table.get_type(node->expression.get());
-        int id = register_stack.back().register_id;
+        auto id = register_stack.back();
+        auto hir_type = convert_type_to_hir(type);
         register_stack.pop_back();
-        instruction->return_value = id;
-        instruction->return_type = convert_type_to_hir(type);
+        instruction->return_value = load_value(id, hir_type);
+        instruction->return_type = hir_type;
     }
+
+    kill_alive_variables(current_block_definition);
 
     current_base_block->instructions.push_back(instruction);
 }
 
-void bonk::HIRGeneratorVisitor::visit(bonk::TreeNodeLoopStatement* node) {
+void bonk::HIREarlyGeneratorVisitor::visit(bonk::TreeNodeLoopStatement* node) {
+    alive_scopes.emplace_back();
+    alive_scopes.back().block = node;
+
     auto old_loop_context = current_loop_context;
 
     if (node->loop_parameters) {
@@ -431,8 +533,10 @@ void bonk::HIRGeneratorVisitor::visit(bonk::TreeNodeLoopStatement* node) {
     int loop_start_id = middle_end.id_table.get_id(node);
     int loop_end_id = middle_end.id_table.get_unused_id();
 
-    current_loop_context =
-        HIRLoopContext{.loop_start_label = loop_start_id, .loop_end_label = loop_end_id};
+    current_loop_context = HIRLoopContext{};
+    current_loop_context->loop_start_label = loop_start_id;
+    current_loop_context->loop_end_label = loop_end_id;
+    current_loop_context->loop_block = node;
 
     // Insert loop start label
     auto loop_start_label = current_base_block->instruction<HIRLabel>(loop_start_id);
@@ -451,24 +555,30 @@ void bonk::HIRGeneratorVisitor::visit(bonk::TreeNodeLoopStatement* node) {
     current_base_block->instructions.push_back(loop_end_label);
 
     current_loop_context = old_loop_context;
+
+    alive_scopes.pop_back();
 }
 
-void bonk::HIRGeneratorVisitor::visit(bonk::TreeNodeBrekStatement* node) {
+void bonk::HIREarlyGeneratorVisitor::visit(bonk::TreeNodeBrekStatement* node) {
     assert(current_loop_context.has_value());
+
+    kill_alive_variables(current_loop_context->loop_block);
 
     auto instruction = current_base_block->instruction<HIRJump>();
     instruction->label_id = current_loop_context->loop_end_label;
     current_base_block->instructions.push_back(instruction);
 }
 
-void bonk::HIRGeneratorVisitor::visit(bonk::TreeNodeHiveDefinition* node) {
+void bonk::HIREarlyGeneratorVisitor::visit(bonk::TreeNodeHiveDefinition* node) {
     auto old_hive = current_hive_definition;
     current_hive_definition = node;
-    ASTVisitor::visit(node);
+    for (auto& child : node->body) {
+        child->accept(this);
+    }
     current_hive_definition = old_hive;
 }
 
-void bonk::HIRGeneratorVisitor::visit(bonk::TreeNodeCall* node) {
+void bonk::HIREarlyGeneratorVisitor::visit(bonk::TreeNodeCall* node) {
 
     auto callee = node->callee.get();
 
@@ -502,14 +612,27 @@ void bonk::HIRGeneratorVisitor::visit(bonk::TreeNodeCall* node) {
             if (parameter_value) {
                 parameter_value->accept(this);
             } else {
-                assert(parameter->variable_value);
-                parameter->variable_value->accept(this);
+                if (parameter->variable_value) {
+                    parameter->variable_value->accept(this);
+                } else {
+                    // TODO: move this check somewhere else
+                    middle_end.linked_compiler.error().at(node->source_position)
+                        << "Missing argument for parameter \"" << parameter_name->identifier_text
+                        << "\"";
+                }
             }
         }
+
+        if(middle_end.linked_compiler.state) {
+            return;
+        }
+
+        std::vector<RegisterStackItem> parameters;
 
         for (auto& argument : block_type->parameters) {
             auto argument_type = middle_end.type_table.get_type(argument);
             auto argument_id = register_stack.back();
+            parameters.push_back(argument_id);
             register_stack.pop_back();
 
             auto instruction = current_base_block->instruction<HIRParameter>();
@@ -525,6 +648,28 @@ void bonk::HIRGeneratorVisitor::visit(bonk::TreeNodeCall* node) {
         instruction->return_type = convert_type_to_hir(block_type->return_type.get());
         current_base_block->instructions.push_back(instruction);
 
+        // If some parameters were hive variables, we need to decrement their reference counters,
+        // because their temporary copies are no longer alive
+
+        int i = 0;
+        for (auto& parameter : block_type->parameters) {
+            auto& parameter_register = parameters[i++];
+
+            auto argument_type = middle_end.type_table.get_type(parameter);
+            if (argument_type->kind != TypeKind::hive)
+                continue;
+
+            auto hive_type = (HiveType*)argument_type;
+            auto hir_type = convert_type_to_hir(hive_type);
+
+            IRRegister hive_address = load_value(parameter_register, hir_type);
+
+            auto ref_dec_instruction = current_base_block->instruction<HIRDecRefCounter>();
+            ref_dec_instruction->address = hive_address;
+            ref_dec_instruction->hive_definition = hive_type->hive_definition;
+            current_base_block->instructions.push_back(ref_dec_instruction);
+        }
+
         push_value(return_register);
 
     } else {
@@ -532,7 +677,7 @@ void bonk::HIRGeneratorVisitor::visit(bonk::TreeNodeCall* node) {
     }
 }
 
-std::unique_ptr<bonk::IRProgram> bonk::HIRGeneratorVisitor::generate(bonk::TreeNode* ast) {
+std::unique_ptr<bonk::IRProgram> bonk::HIREarlyGeneratorVisitor::generate(bonk::TreeNode* ast) {
     auto program = std::make_unique<IRProgram>(middle_end.id_table, middle_end.symbol_table);
     current_program = program.get();
     ast->accept(this);
@@ -541,7 +686,7 @@ std::unique_ptr<bonk::IRProgram> bonk::HIRGeneratorVisitor::generate(bonk::TreeN
     return program;
 }
 
-bonk::HIROperationType bonk::HIRGeneratorVisitor::convert_operation_to_hir(OperatorType type) {
+bonk::HIROperationType bonk::HIREarlyGeneratorVisitor::convert_operation_to_hir(OperatorType type) {
     switch (type) {
     case OperatorType::o_plus:
         return HIROperationType::plus;
@@ -574,7 +719,7 @@ bonk::HIROperationType bonk::HIRGeneratorVisitor::convert_operation_to_hir(Opera
     }
 }
 
-bonk::HIRDataType bonk::HIRGeneratorVisitor::convert_type_to_hir(bonk::Type* type) {
+bonk::HIRDataType bonk::HIREarlyGeneratorVisitor::convert_type_to_hir(bonk::Type* type) {
     switch (type->kind) {
 
     case TypeKind::primitive: {
@@ -615,7 +760,7 @@ bonk::HIRDataType bonk::HIRGeneratorVisitor::convert_type_to_hir(bonk::Type* typ
     }
 }
 
-bool bonk::HIRGeneratorVisitor::is_comparison_operation(bonk::HIROperationType type) {
+bool bonk::HIREarlyGeneratorVisitor::is_comparison_operation(bonk::HIROperationType type) {
     switch (type) {
     case HIROperationType::equal:
     case HIROperationType::not_equal:
@@ -629,15 +774,16 @@ bool bonk::HIRGeneratorVisitor::is_comparison_operation(bonk::HIROperationType t
     }
 }
 
-void bonk::HIRGeneratorVisitor::push_value(bonk::IRRegister register_id) {
+void bonk::HIREarlyGeneratorVisitor::push_value(bonk::IRRegister register_id) {
     register_stack.push_back({register_id, false});
 }
 
-void bonk::HIRGeneratorVisitor::push_reference(bonk::IRRegister register_id) {
+void bonk::HIREarlyGeneratorVisitor::push_reference(bonk::IRRegister register_id) {
     register_stack.push_back({register_id, true});
 }
 
-bonk::IRRegister bonk::HIRGeneratorVisitor::load_value(RegisterStackItem item, HIRDataType type) {
+bonk::IRRegister bonk::HIREarlyGeneratorVisitor::load_value(RegisterStackItem item,
+                                                            HIRDataType type) {
     if (item.is_reference) {
         int value_register = middle_end.id_table.get_unused_id();
         auto instruction = current_base_block->instruction<HIRMemoryLoad>();
@@ -648,5 +794,31 @@ bonk::IRRegister bonk::HIRGeneratorVisitor::load_value(RegisterStackItem item, H
         return value_register;
     } else {
         return item.register_id;
+    }
+}
+
+void bonk::HIREarlyGeneratorVisitor::kill_alive_variables(TreeNode* until_scope) {
+    for (int i = alive_scopes.size() - 1; i >= 0; i--) {
+        auto scope = alive_scopes[i];
+        for (int j = scope.alive_variables.size() - 1; j >= 0; j--) {
+            handle_variable_death(scope.alive_variables[j]);
+        }
+        if (scope.block == until_scope)
+            break;
+    }
+}
+
+void bonk::HIREarlyGeneratorVisitor::handle_variable_death(
+    bonk::TreeNodeVariableDefinition* variable) {
+
+    // If the dead variable is a reference to a hive, we need to decrement the hive's reference
+    // count
+    auto type = middle_end.type_table.get_type(variable);
+    if (type->kind == TypeKind::hive) {
+        auto instruction = current_base_block->instruction<HIRDecRefCounter>();
+        int variable_register = middle_end.id_table.get_id(variable);
+        instruction->address = variable_register;
+        instruction->hive_definition = ((HiveType*)type)->hive_definition;
+        current_base_block->instructions.push_back(instruction);
     }
 }

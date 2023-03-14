@@ -9,8 +9,9 @@
 namespace bonk {
 
 struct HIRLoopContext {
-    int loop_start_label;
-    int loop_end_label;
+    TreeNode* loop_block = nullptr;
+    int loop_start_label = -1;
+    int loop_end_label = -1;
 };
 
 struct RegisterStackItem {
@@ -18,7 +19,12 @@ struct RegisterStackItem {
     bool is_reference;
 };
 
-class HIRGeneratorVisitor : ASTVisitor {
+struct AliveScope {
+    TreeNode* block = nullptr;
+    std::vector<TreeNodeVariableDefinition*> alive_variables;
+};
+
+class HIREarlyGeneratorVisitor : ASTVisitor {
 
     MiddleEnd& middle_end;
     IRProgram* current_program;
@@ -29,11 +35,11 @@ class HIRGeneratorVisitor : ASTVisitor {
     IRBaseBlock* current_base_block = nullptr;
 
     std::optional<HIRLoopContext> current_loop_context {};
-
     std::vector<RegisterStackItem> register_stack;
+    std::vector<AliveScope> alive_scopes;
 
   public:
-    HIRGeneratorVisitor(MiddleEnd& middle_end) : middle_end(middle_end) {
+    HIREarlyGeneratorVisitor(MiddleEnd& middle_end) : middle_end(middle_end) {
     }
 
     std::unique_ptr<IRProgram> generate(TreeNode* ast);
@@ -60,12 +66,16 @@ class HIRGeneratorVisitor : ASTVisitor {
     void visit(TreeNodeHiveDefinition* node) override;
     void visit(TreeNodeCall* node) override;
     void visit(TreeNodeBrekStatement* node) override;
+
     void compile_lazy_logic(TreeNodeBinaryOperation* node);
     bool is_comparison_operation(HIROperationType type);
 
     void push_value(IRRegister register_id);
     void push_reference(IRRegister register_id);
     IRRegister load_value(RegisterStackItem item, HIRDataType type);
+
+    void kill_alive_variables(TreeNode* until_scope = nullptr);
+    void handle_variable_death(TreeNodeVariableDefinition* variable);
 };
 
 } // namespace bonk

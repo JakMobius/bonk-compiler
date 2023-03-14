@@ -9,7 +9,7 @@ void bonk::qbe_backend::QBEBackend::compile_program(bonk::IRProgram& program) {
     current_program = &program;
 
     for (auto& procedure : program.procedures) {
-        compile_procedure(procedure);
+        compile_procedure(*procedure);
     }
 }
 
@@ -18,7 +18,7 @@ void bonk::qbe_backend::QBEBackend::compile_procedure(bonk::IRProcedure& procedu
     bool is_first = true;
 
     for (auto& block : procedure.base_blocks) {
-        for (auto& instruction : block.instructions) {
+        for (auto& instruction : block->instructions) {
             if (is_first) {
                 if (!compile_procedure_header(*instruction)) {
                     // Procedure is external
@@ -277,7 +277,7 @@ void bonk::qbe_backend::QBEBackend::compile_instruction(HIRMemoryLoad& instructi
         linked_compiler.config.output_file.get_stream() << "s";
     }
 
-    linked_compiler.config.output_file.get_stream() << "%r" << instruction.address << "\n";
+    linked_compiler.config.output_file.get_stream() << " %r" << instruction.address << "\n";
 }
 
 void bonk::qbe_backend::QBEBackend::compile_instruction(HIRMemoryStore& instruction) {

@@ -7,7 +7,8 @@
 #include "bonk/middleend/converters/hive_ctor_dtor_early_generator.hpp"
 #include "bonk/middleend/converters/hive_ctor_dtor_late_generator.hpp"
 #include "bonk/middleend/converters/stdlib_header_generator.hpp"
-#include "bonk/middleend/ir/hir_generator_visitor.hpp"
+#include "bonk/middleend/ir/hir_early_generator_visitor.hpp"
+#include "bonk/middleend/ir/hir_ref_count_replacer.hpp"
 
 bonk::MiddleEnd::MiddleEnd(bonk::Compiler& linked_compiler) : linked_compiler(linked_compiler) {
 }
@@ -15,34 +16,64 @@ bonk::MiddleEnd::MiddleEnd(bonk::Compiler& linked_compiler) : linked_compiler(li
 bool bonk::MiddleEnd::transform_ast(TreeNode* ast) {
 
     bonk::StdLibHeaderGenerator(*this).generate(ast);
+
     if (linked_compiler.state)
         return false;
+    if (linked_compiler.config.should_stop_after("midend-ast-stdlib-gen"))
+        return true;
 
     bonk::HiveConstructorDestructorEarlyGenerator(*this).generate(ast);
+
     if (linked_compiler.state)
         return false;
+    if (linked_compiler.config.should_stop_after("midend-ast-ctor-dtor-early"))
+        return true;
 
     bonk::BasicSymbolAnnotator(*this).annotate_program(ast);
+
     if (linked_compiler.state)
         return false;
+    if (linked_compiler.config.should_stop_after("midend-ast-symbol-annotate"))
+        return true;
 
     bonk::HiveConstructorCallReplacer(*this).replace(ast);
+
     if (linked_compiler.state)
         return false;
+    if (linked_compiler.config.should_stop_after("midend-ast-ctor-call-replace"))
+        return true;
 
     bonk::TypeAnnotator(*this).annotate_ast(ast);
+
     if (linked_compiler.state)
         return false;
+    if (linked_compiler.config.should_stop_after("midend-ast-type-annotate"))
+        return true;
 
     bonk::HiveConstructorDestructorLateGenerator(*this).generate(ast);
+
     if (linked_compiler.state)
         return false;
+    if (linked_compiler.config.should_stop_after("midend-ast-ctor-dtor-late"))
+        return true;
 
     return true;
 }
 
 std::unique_ptr<bonk::IRProgram> bonk::MiddleEnd::generate_hir(TreeNode* ast) {
-    return bonk::HIRGeneratorVisitor(*this).generate(ast);
+    std::unique_ptr<bonk::IRProgram> program;
+
+    program = bonk::HIREarlyGeneratorVisitor(*this).generate(ast);
+
+    if (linked_compiler.config.should_stop_after("midend-hir-early-gen"))
+        return program;
+
+    HIRRefCountReplacer(*this).replace_ref_counters(*program);
+
+    if (linked_compiler.config.should_stop_after("midend-hir-ref-count-replace"))
+        return program;
+
+    return program;
 }
 
 int bonk::MiddleEnd::get_hive_field_offset(bonk::TreeNodeHiveDefinition* hive_definition,

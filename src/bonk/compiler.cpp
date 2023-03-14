@@ -62,4 +62,21 @@ std::ostream& operator<<(std::ostream& ostream, const MessageStreamProxy& proxy)
     return ostream;
 }
 
+bool CompilerConfig::should_stop_after(std::string_view stage) const {
+    if (!stop_checkpoint.has_value())
+        return false;
+    auto& checkpoint = stop_checkpoint.value();
+
+    // Check if checkpoint has prefix of stage
+    if (stage.size() > checkpoint.size())
+        return false;
+
+    for (size_t i = 0; i < stage.size(); i++) {
+        if (stage[i] != checkpoint[i])
+            return false;
+    }
+
+    return true;
+}
+
 } // namespace bonk

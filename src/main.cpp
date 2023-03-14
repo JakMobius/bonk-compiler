@@ -52,14 +52,11 @@ int main(int argc, const char* argv[]) {
         .default_value(false)
         .implicit_value(true)
         .help("show this help message and exit");
-    program.add_argument("--ast").implicit_value(std::string("code")).help(
-        "output AST ('json' or 'code' - default) ");
-    program.add_argument("--ast-late")
-        .implicit_value(std::string("code"))
-        .help("output AST after middleend (outputs latest AST available, even after errors) "
-              "('json' or 'code' - default)");
-    program.add_argument("--hir").default_value(false).implicit_value(true).help(
-        "output intermediate representation");
+    program.add_argument("--ast-fmt")
+        .default_value(std::string("code")).help(
+        "output AST format ('json' or 'code' - default) ");
+    program.add_argument("--stop-checkpoint")
+        .help("output AST or HIR after the specified checkpoint");
     program.add_argument("-o", "--output-file")
         .default_value(std::string("out"))
         .nargs(1)
@@ -80,7 +77,7 @@ int main(int argc, const char* argv[]) {
 
     const auto input_file_path = program.get<std::string>("input");
     const auto help_flag = program.get<bool>("--help");
-    const auto hir_flag = program.get<bool>("--hir");
+    const auto ast_fmt_flag = program.get<std::string>("--ast-fmt");
     const auto output_file_path = program.get<std::string>("--output-file");
     const auto target_flag = program.get<std::string>("--target");
 
@@ -121,6 +118,10 @@ int main(int argc, const char* argv[]) {
         .output_file = *output_file,
     };
 
+    if(auto checkpoint = program.present("--stop-checkpoint")) {
+        config.stop_checkpoint = checkpoint.value();
+    }
+
     bonk::Compiler compiler(config);
     std::unique_ptr<bonk::Backend> backend;
 
@@ -150,8 +151,8 @@ int main(int argc, const char* argv[]) {
         return EXIT_FAILURE;
     }
 
-    if (auto ast_flag = program.present("--ast")) {
-        if (dump_ast(ast.get(), ast_flag.value(), *output_file)) {
+    if (compiler.config.should_stop_after("frontend")) {
+        if (dump_ast(ast.get(), ast_fmt_flag, *output_file)) {
             return EXIT_SUCCESS;
         }
         return EXIT_FAILURE;
@@ -161,8 +162,8 @@ int main(int argc, const char* argv[]) {
     bonk::MiddleEnd middle_end(compiler);
     middle_end.transform_ast(ast.get());
 
-    if (auto ast_flag = program.present("--ast-late")) {
-        if (dump_ast(ast.get(), ast_flag.value(), *output_file)) {
+    if (compiler.config.should_stop_after("midend-ast")) {
+        if (dump_ast(ast.get(), ast_fmt_flag, *output_file)) {
             return EXIT_SUCCESS;
         }
         return EXIT_FAILURE;
@@ -178,15 +179,16 @@ int main(int argc, const char* argv[]) {
         return EXIT_FAILURE;
     }
 
-    if (hir_flag) {
+    if(compiler.config.should_stop_after("midend-hir")) {
         bonk::HIRPrinter printer{*output_file};
         printer.print(*ir_program);
-    } else {
-        backend->compile_program(*ir_program);
+        return EXIT_SUCCESS;
+    }
 
-        if (chmod(output_file_path.c_str(), 511) < 0) {
-            compiler.warning() << "failed to add execution permissions to file";
-        }
+    backend->compile_program(*ir_program);
+
+    if (chmod(output_file_path.c_str(), 511) < 0) {
+        compiler.warning() << "failed to add execution permissions to file";
     }
 
     if (compiler.state) {

@@ -146,3 +146,135 @@ TEST(TestQBEFullCycle, TestFibonacci) {
     ASSERT_TRUE(run_bonk_with_counterpart(bonk_source, c_source, "test"));
     EXPECT_EQ(run_executable("test"), "1.000000 5.000000 55.000000");
 }
+
+TEST(TestQBEFullCycle, TestReferenceCounter1) {
+
+    // Check that reference counter is counted correctly when reference is
+    // returned from a function
+
+    const char* bonk_source = R"(
+        hive TestHive {}
+
+        blok get_hive_1 { bonk @TestHive; }
+        blok get_hive_2 { bonk @get_hive_1; }
+    )";
+
+    const char* c_source = R"(
+        #include <stdio.h>
+
+        long long* get_hive_1();
+        int main() { printf("%lld", get_hive_1()[-1]); }
+    )";
+
+    ASSERT_TRUE(run_bonk_with_counterpart(bonk_source, c_source, "test"));
+    EXPECT_EQ(run_executable("test"), "1");
+}
+
+TEST(TestQBEFullCycle, TestReferenceCounter2) {
+
+    const char* bonk_source = R"(
+        hive Hive1 {}
+        hive Hive2 {
+            bowl hive1: Hive1;
+        }
+
+        blok get_hive {
+            bowl hive2 = @Hive2[hive1 = @Hive1];
+            bonk hive1 of hive2;
+        }
+    )";
+
+    const char* c_source = R"(
+        #include <stdio.h>
+
+        long long* get_hive();
+        int main() { printf("%lld", get_hive()[-1]); }
+    )";
+
+    ASSERT_TRUE(run_bonk_with_counterpart(bonk_source, c_source, "test"));
+    EXPECT_EQ(run_executable("test"), "1");
+}
+
+TEST(TestQBEFullCycle, TestReferenceCounter3) {
+
+    const char* bonk_source = R"(
+        hive Hive1 {}
+
+        blok get_hive {
+            bowl hive1 = @Hive1;
+
+            loop[bowl counter = 10] {
+                bowl hive2 = hive1;
+                counter > 0 or { brek; };
+                counter = counter - 1;
+            }
+
+            bonk hive1;
+        }
+    )";
+
+    const char* c_source = R"(
+        #include <stdio.h>
+
+        long long* get_hive();
+        int main() { printf("%lld", get_hive()[-1]); }
+    )";
+
+    ASSERT_TRUE(run_bonk_with_counterpart(bonk_source, c_source, "test"));
+    EXPECT_EQ(run_executable("test"), "1");
+}
+
+TEST(TestQBEFullCycle, TestReferenceCounter4) {
+
+    const char* bonk_source = R"(
+        hive Hive1 {}
+
+        blok get_hive {
+            bowl hive1 = @Hive1;
+
+            loop[bowl counter = 10] {
+                bowl hive2 = hive1;
+                counter > 0 or { bonk hive1; };
+                counter = counter - 1;
+            }
+        }
+    )";
+
+    const char* c_source = R"(
+        #include <stdio.h>
+
+        long long* get_hive();
+        int main() { printf("%lld", get_hive()[-1]); }
+    )";
+
+    ASSERT_TRUE(run_bonk_with_counterpart(bonk_source, c_source, "test"));
+    EXPECT_EQ(run_executable("test"), "1");
+}
+
+TEST(TestQBEFullCycle, TestReferenceCounter5) {
+
+    const char* bonk_source = R"(
+        hive Hive1 {}
+
+        blok passthrough[bowl the_hive: Hive1] {
+            bowl tmp = the_hive;
+            the_hive = tmp;
+        }
+
+        blok get_hive {
+            bowl hive1 = @Hive1;
+            @passthrough[the_hive = hive1];
+            bonk hive1;
+        }
+    )";
+
+    const char* c_source = R"(
+        #include <stdio.h>
+
+        long long* get_hive();
+        int main() { printf("%lld", get_hive()[-1]); }
+    )";
+
+    ASSERT_TRUE(run_bonk_with_counterpart(bonk_source, c_source, "test"));
+    EXPECT_EQ(run_executable("test"), "1");
+}
