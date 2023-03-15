@@ -129,7 +129,7 @@ void bonk::HiveConstructorDestructorLateGenerator::fill_destructor(
             continue;
         auto variable = (TreeNodeVariableDefinition*)field.get();
 
-        auto type = middle_end.type_table.get_type(variable->variable_type.get());
+        auto type = middle_end.type_table.get_type(variable);
         if (type->kind != TypeKind::hive)
             continue;
 

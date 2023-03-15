@@ -1,6 +1,18 @@
 
 #include "utils.hpp"
 
+bool run_bonk(const char* bonk_source, const char* executable_name) {
+    if (!compile_bonk_source(bonk_source, "bonk.qbe"))
+            return false;
+    if (!compile_qbe("bonk.qbe", "bonk.s"))
+            return false;
+    if (!compile_gcc("bonk.s", "bonk.o"))
+            return false;
+    if (!link_executable({"bonk.o"}, executable_name))
+            return false;
+    return true;
+}
+
 bool run_bonk_with_counterpart(const char* bonk_source, const char* c_source,
                                const char* executable_name) {
     if (!compile_c_source(c_source, "c_counterpart.o"))
@@ -147,7 +159,17 @@ bool link_executable(const std::vector<std::filesystem::path>& object_files,
     return true;
 }
 
-std::string run_executable(std::filesystem::path executable_file) {
+int get_executable_return_code(std::filesystem::path executable_file) {
+    ensure_path(executable_file);
+
+    std::string command = executable_file.string();
+
+    int return_code = system(command.c_str());
+
+    return WEXITSTATUS(return_code);
+}
+
+std::string get_executable_output(std::filesystem::path executable_file) {
     ensure_path(executable_file);
 
     std::string command = executable_file.string();

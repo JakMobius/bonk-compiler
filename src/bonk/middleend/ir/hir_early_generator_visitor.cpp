@@ -434,6 +434,8 @@ void bonk::HIREarlyGeneratorVisitor::visit(bonk::TreeNodeHiveAccess* node) {
     node->hive->accept(this);
 
     auto hive = register_stack.back();
+    register_stack.pop_back();
+
     auto hive_type = middle_end.type_table.get_type(node->hive.get());
     assert(hive_type->kind == TypeKind::hive);
 

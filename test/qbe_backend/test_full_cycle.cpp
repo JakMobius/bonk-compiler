@@ -34,7 +34,7 @@ TEST(TestQBEFullCycle, TestHiveConstruct) {
     )";
 
     ASSERT_TRUE(run_bonk_with_counterpart(bonk_source, c_source, "test"));
-    EXPECT_EQ(run_executable("test"), "1.000000 300.000000");
+    EXPECT_EQ(get_executable_output("test"), "1.000000 300.000000");
 }
 
 TEST(TestQBEFullCycle, TestHiveAssign) {
@@ -71,7 +71,7 @@ TEST(TestQBEFullCycle, TestHiveAssign) {
     )";
 
     ASSERT_TRUE(run_bonk_with_counterpart(bonk_source, c_source, "test"));
-    EXPECT_EQ(run_executable("test"), "1.000000 2.000000");
+    EXPECT_EQ(get_executable_output("test"), "1.000000 2.000000");
 }
 
 TEST(TestQBEFullCycle, TestHiveComplex) {
@@ -120,7 +120,7 @@ TEST(TestQBEFullCycle, TestHiveComplex) {
     )";
 
     ASSERT_TRUE(run_bonk_with_counterpart(bonk_source, c_source, "test"));
-    EXPECT_EQ(run_executable("test"), "1.000000 300.000000 4.000000");
+    EXPECT_EQ(get_executable_output("test"), "1.000000 300.000000 4.000000");
 }
 
 TEST(TestQBEFullCycle, TestFibonacci) {
@@ -144,7 +144,7 @@ TEST(TestQBEFullCycle, TestFibonacci) {
     )";
 
     ASSERT_TRUE(run_bonk_with_counterpart(bonk_source, c_source, "test"));
-    EXPECT_EQ(run_executable("test"), "1.000000 5.000000 55.000000");
+    EXPECT_EQ(get_executable_output("test"), "1.000000 5.000000 55.000000");
 }
 
 TEST(TestQBEFullCycle, TestReferenceCounter1) {
@@ -167,7 +167,7 @@ TEST(TestQBEFullCycle, TestReferenceCounter1) {
     )";
 
     ASSERT_TRUE(run_bonk_with_counterpart(bonk_source, c_source, "test"));
-    EXPECT_EQ(run_executable("test"), "1");
+    EXPECT_EQ(get_executable_output("test"), "1");
 }
 
 TEST(TestQBEFullCycle, TestReferenceCounter2) {
@@ -192,7 +192,7 @@ TEST(TestQBEFullCycle, TestReferenceCounter2) {
     )";
 
     ASSERT_TRUE(run_bonk_with_counterpart(bonk_source, c_source, "test"));
-    EXPECT_EQ(run_executable("test"), "1");
+    EXPECT_EQ(get_executable_output("test"), "1");
 }
 
 TEST(TestQBEFullCycle, TestReferenceCounter3) {
@@ -221,7 +221,7 @@ TEST(TestQBEFullCycle, TestReferenceCounter3) {
     )";
 
     ASSERT_TRUE(run_bonk_with_counterpart(bonk_source, c_source, "test"));
-    EXPECT_EQ(run_executable("test"), "1");
+    EXPECT_EQ(get_executable_output("test"), "1");
 }
 
 TEST(TestQBEFullCycle, TestReferenceCounter4) {
@@ -248,7 +248,7 @@ TEST(TestQBEFullCycle, TestReferenceCounter4) {
     )";
 
     ASSERT_TRUE(run_bonk_with_counterpart(bonk_source, c_source, "test"));
-    EXPECT_EQ(run_executable("test"), "1");
+    EXPECT_EQ(get_executable_output("test"), "1");
 }
 
 TEST(TestQBEFullCycle, TestReferenceCounter5) {
@@ -276,5 +276,45 @@ TEST(TestQBEFullCycle, TestReferenceCounter5) {
     )";
 
     ASSERT_TRUE(run_bonk_with_counterpart(bonk_source, c_source, "test"));
-    EXPECT_EQ(run_executable("test"), "1");
+    EXPECT_EQ(get_executable_output("test"), "1");
 }
+
+TEST(TestQBEFullCycle, TestHive1) {
+
+    // This test used to cause a segfault in the hive_ctor_dtor_late_generator
+
+    const char* bonk_source = R"(
+        hive Person {
+            bowl happiness = 0;
+        }
+
+        blok main[bowl argc: nubr] {
+            bowl person = @Person;
+
+            bonk happiness of person;
+        }
+    )";
+
+    ASSERT_TRUE(run_bonk(bonk_source, "test"));
+    EXPECT_EQ(get_executable_return_code("test"), 0);
+}
+
+TEST(TestQBEFullCycle, TestHive2) {
+
+    // This program used to return 66
+
+    const char* bonk_source = R"(
+        hive Person {
+            bowl age: nubr;
+        }
+
+        blok main[bowl argc: nubr] {
+            bowl person = @Person[age = 10];
+            bonk 5 + age of person;
+        }
+    )";
+
+    ASSERT_TRUE(run_bonk(bonk_source, "test"));
+    EXPECT_EQ(get_executable_return_code("test"), 15);
+}
+
