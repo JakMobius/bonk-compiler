@@ -67,42 +67,63 @@ struct Parser {
     template <typename NextExpression>
     std::unique_ptr<TreeNode>
     parse_operator_expression(const NextExpression& next_expression_parser,
-                              const std::initializer_list<OperatorType>& operator_filter) {
-        // OperatorExpression<NextExpression, Operator>:
-        //  NextExpression |
-        //  NextExpression Operator OperatorExpression<NextExpression, Operator>
+                              const std::initializer_list<OperatorType>& operator_filter,
+                              bool right_associative = false) {
+        std::unique_ptr<TreeNode> result = next_expression_parser();
 
-        auto left_hand_expression = next_expression_parser();
-        if (!left_hand_expression)
+        if(!result) {
             return nullptr;
+        }
 
-        bool found_operator = false;
+        bool first_operation = true;
 
-        for (OperatorType operator_type : operator_filter) {
-            if(next_lexeme()->is(operator_type)) {
-                found_operator = true;
-                break;
+        while(true) {
+            bool found_operator = false;
+
+            for (OperatorType operator_type : operator_filter) {
+                if (next_lexeme()->is(operator_type)) {
+                    found_operator = true;
+                    break;
+                }
             }
-        }
 
-        if(!found_operator) {
-            return left_hand_expression;
-        }
+            if (!found_operator) {
+                return result;
+            }
 
-        OperatorType operator_type = std::get<OperatorLexeme>(next_lexeme()->data).type;
-        eat_lexeme();
+            OperatorType operator_type = std::get<OperatorLexeme>(next_lexeme()->data).type;
+            eat_lexeme();
 
-        auto right_hand_expression = parse_operator_expression<NextExpression>(
-            next_expression_parser, operator_filter);
-        if (!right_hand_expression)
-            return nullptr;
+            auto next_expression = next_expression_parser();
+            if (!next_expression)
+                return nullptr;
 
-        auto result = std::make_unique<TreeNodeBinaryOperation>();
-        result->left = std::move(left_hand_expression);
-        result->right = std::move(right_hand_expression);
-        result->operator_type = operator_type;
+            if(right_associative && !first_operation) {
+                auto* last_binary_op = (TreeNodeBinaryOperation*) result.get();
+
+                auto new_binary_op = std::make_unique<TreeNodeBinaryOperation>();
+                new_binary_op->operator_type = operator_type;
+                new_binary_op->left = std::move(last_binary_op->right);
+                new_binary_op->right = std::move(next_expression);
+                last_binary_op->right = std::move(new_binary_op);
+            } else {
+                auto binary_op = std::make_unique<TreeNodeBinaryOperation>();
+                binary_op->operator_type = operator_type;
+                binary_op->left = std::move(result);
+                binary_op->right = std::move(next_expression);
+                result = std::move(binary_op);
+            }
+
+            first_operation = false;
+        };
 
         return result;
+    }
+
+    template <typename NextExpression>
+    std::unique_ptr<TreeNode>
+    parse_left_associative_operator(const NextExpression& next_expression_parser,
+                                    const std::initializer_list<OperatorType>& operator_filter) {
     }
 };
 

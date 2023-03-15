@@ -494,7 +494,8 @@ std::unique_ptr<TreeNode> Parser::parse_expression_assignment() {
     return parse_operator_expression([this]() { return parse_expression_or(); },
                                      {OperatorType::o_assign, OperatorType::o_plus_assign,
                                       OperatorType::o_minus_assign, OperatorType::o_multiply_assign,
-                                      OperatorType::o_divide_assign});
+                                      OperatorType::o_divide_assign},
+                                     true);
 }
 
 std::unique_ptr<TreeNode> Parser::parse_expression_or() {

@@ -378,3 +378,66 @@ TEST(Parser, TestAndOrWithCodeBlock) {
     ASSERT_EQ(binary_op->left->type, bonk::TreeNodeType::n_binary_operation);
     ASSERT_EQ(binary_op->right->type, bonk::TreeNodeType::n_code_block);
 }
+
+TEST(Parser, TestAssociativeSide) {
+    auto error_stream = bonk::StdOutputStream(std::cout);
+
+    bonk::CompilerConfig config{.error_file = error_stream};
+    bonk::Compiler compiler(config);
+
+    const char* source = R"(
+            blok test {
+                bowl a: flot;
+                a = 1 - 2 + 3;
+                a = a = a;
+            }
+        )";
+
+    auto lexemes = bonk::LexicalAnalyzer(compiler).parse_file("test", source);
+    auto ast = bonk::Parser(compiler).parse_file(&lexemes);
+
+    ASSERT_TRUE(compiler.state == bonk::BONK_COMPILER_OK);
+    ASSERT_NE(ast, nullptr);
+
+    auto program = (bonk::TreeNodeProgram*)ast.get();
+    ASSERT_EQ(program->body.size(), 1);
+
+    auto blok_definition = (bonk::TreeNodeBlockDefinition*)program->body.front().get();
+    ASSERT_EQ(blok_definition->body->body.size(), 3);
+
+    std::vector<bonk::TreeNodeBinaryOperation*> binary_ops;
+
+    for (auto& statement : blok_definition->body->body) {
+        if (&statement == &blok_definition->body->body.front())
+            continue;
+        ASSERT_EQ(statement->type, bonk::TreeNodeType::n_binary_operation);
+        binary_ops.push_back((bonk::TreeNodeBinaryOperation*)statement.get());
+    }
+
+    // a = (1 - 2) + 3
+    auto binary_op = binary_ops[0];
+    ASSERT_EQ(binary_op->operator_type, bonk::OperatorType::o_assign);
+    ASSERT_EQ(binary_op->left->type, bonk::TreeNodeType::n_identifier);
+    ASSERT_EQ(binary_op->right->type, bonk::TreeNodeType::n_binary_operation);
+
+    binary_op = (bonk::TreeNodeBinaryOperation*)binary_op->right.get();
+    ASSERT_EQ(binary_op->operator_type, bonk::OperatorType::o_plus);
+    ASSERT_EQ(binary_op->left->type, bonk::TreeNodeType::n_binary_operation);
+    ASSERT_EQ(binary_op->right->type, bonk::TreeNodeType::n_number_constant);
+
+    binary_op = (bonk::TreeNodeBinaryOperation*)binary_op->left.get();
+    ASSERT_EQ(binary_op->operator_type, bonk::OperatorType::o_minus);
+    ASSERT_EQ(binary_op->left->type, bonk::TreeNodeType::n_number_constant);
+    ASSERT_EQ(binary_op->right->type, bonk::TreeNodeType::n_number_constant);
+
+    // a = (a = a)
+    binary_op = binary_ops[1];
+    ASSERT_EQ(binary_op->operator_type, bonk::OperatorType::o_assign);
+    ASSERT_EQ(binary_op->left->type, bonk::TreeNodeType::n_identifier);
+    ASSERT_EQ(binary_op->right->type, bonk::TreeNodeType::n_binary_operation);
+
+    binary_op = (bonk::TreeNodeBinaryOperation*)binary_op->right.get();
+    ASSERT_EQ(binary_op->operator_type, bonk::OperatorType::o_assign);
+    ASSERT_EQ(binary_op->left->type, bonk::TreeNodeType::n_identifier);
+    ASSERT_EQ(binary_op->right->type, bonk::TreeNodeType::n_identifier);
+}
