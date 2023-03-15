@@ -139,7 +139,7 @@ int main(int argc, const char* argv[]) {
                   std::istreambuf_iterator<char>());
 
     auto lexemes =
-        bonk::LexicalAnalyzer(compiler).parse_file(input_file_path.c_str(), source.c_str());
+        bonk::Lexer(compiler).parse_file(input_file_path.c_str(), source.c_str());
 
     if (compiler.state) {
         return EXIT_FAILURE;

@@ -34,7 +34,7 @@ static unsigned char char_to_digit_radix(char c, int radix) {
     return -1;
 }
 
-bool LexicalAnalyzer::parse_number_lexeme(Lexeme* target) {
+bool Lexer::parse_number_lexeme(Lexeme* target) {
     int fraction_digits = 0;
     long long integer_result = 0;
     double float_result = 0;
@@ -130,7 +130,7 @@ bool LexicalAnalyzer::parse_number_lexeme(Lexeme* target) {
     return true;
 }
 
-int LexicalAnalyzer::parse_digits_lexeme(int radix, long long* integer_value, double* float_value) {
+int Lexer::parse_digits_lexeme(int radix, long long* integer_value, double* float_value) {
     long long integer_result = 0;
     double float_result = 0;
     int digits = 0;

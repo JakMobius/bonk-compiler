@@ -25,7 +25,7 @@ TEST(QBEBackend, CodegenTest) {
         }
     )";
 
-    auto lexemes = bonk::LexicalAnalyzer(compiler).parse_file("test", source);
+    auto lexemes = bonk::Lexer(compiler).parse_file("test", source);
     auto ast = bonk::Parser(compiler).parse_file(&lexemes);
 
     ASSERT_NE(ast, nullptr);

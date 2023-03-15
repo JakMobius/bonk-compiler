@@ -50,7 +50,7 @@ bool compile_bonk_source(const char* source, std::filesystem::path output_file) 
     bonk::CompilerConfig config{.error_file = error_stream, .output_file = output_stream};
     bonk::Compiler compiler(config);
 
-    auto lexemes = bonk::LexicalAnalyzer(compiler).parse_file("test", source);
+    auto lexemes = bonk::Lexer(compiler).parse_file("test", source);
 
     if (compiler.state != bonk::BONK_COMPILER_OK) {
         return false;

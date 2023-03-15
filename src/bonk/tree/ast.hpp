@@ -58,7 +58,7 @@ extern const char* BONK_PRIMITIVE_TYPE_NAMES[];
 
 #include <list>
 #include <string>
-#include "bonk/parsing/lexic/lexical_analyzer.hpp"
+#include "bonk/parsing/lexic/lexer.hpp"
 #include "bonk/parsing/parser_position.hpp"
 
 namespace bonk {

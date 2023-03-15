@@ -1,6 +1,6 @@
 #pragma once
 
-#include "bonk/parsing/lexic/lexical_analyzer.hpp"
+#include "bonk/parsing/lexic/lexer.hpp"
 #include "bonk/tree/ast.hpp"
 
 namespace bonk {

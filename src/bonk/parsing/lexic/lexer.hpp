@@ -4,7 +4,7 @@
 namespace bonk {
 
 struct Lexeme;
-struct LexicalAnalyzer;
+struct Lexer;
 struct ParserPosition;
 struct Compiler;
 
@@ -21,16 +21,7 @@ enum class LexemeType {
     l_eof
 };
 
-enum class KeywordType {
-    k_buul,
-    k_shrt,
-    k_nubr,
-    k_long,
-    k_flot,
-    k_dabl,
-    k_strg,
-    k_many
-};
+enum class KeywordType { k_buul, k_shrt, k_nubr, k_long, k_flot, k_dabl, k_strg, k_many };
 
 enum class OperatorType {
     o_call,
@@ -63,19 +54,9 @@ enum class OperatorType {
     o_invalid
 };
 
-enum class BraceType {
-    l_cb = '{',
-    r_cb = '}',
-    l_rb = '(',
-    r_rb = ')',
-    l_sb = '[',
-    r_sb = ']'
-};
+enum class BraceType { l_cb = '{', r_cb = '}', l_rb = '(', r_rb = ')', l_sb = '[', r_sb = ']' };
 
-enum class QuoteType {
-    q_single = '\'',
-    q_double = '"'
-};
+enum class QuoteType { q_single = '\'', q_double = '"' };
 
 extern const char* BONK_OPERATOR_NAMES[];
 extern const char* BONK_KEYWORD_NAMES[];
@@ -133,14 +114,9 @@ struct Lexeme {
     ParserPosition end_position;
     LexemeType type;
 
-    std::variant<
-        KeywordLexeme,
-        IdentifierLexeme,
-        NumberLexeme,
-        OperatorLexeme,
-        BraceLexeme,
-        StringLexeme
-    > data;
+    std::variant<KeywordLexeme, IdentifierLexeme, NumberLexeme, OperatorLexeme, BraceLexeme,
+                 StringLexeme>
+        data;
 
     bool is(KeywordType keyword) const;
     bool is(OperatorType operator_type) const;
@@ -150,21 +126,31 @@ struct Lexeme {
     bool is_string(std::string_view exact) const;
 };
 
-struct LexicalAnalyzer {
+enum LexerSpecialWordType { t_operator, t_line_comment, t_multiline_comment };
+
+struct LexerSpecialWord {
+    std::string_view word;
+    LexerSpecialWordType type;
+    bool matched = false;
+
+    LexerSpecialWord(std::string_view word, LexerSpecialWordType type);
+};
+
+struct Lexer {
     std::string_view text{};
     Compiler& linked_compiler;
     ParserPosition current_position{};
     std::vector<Lexeme> lexemes{};
-    std::vector<bool> operator_match{};
+    std::vector<LexerSpecialWord> special_words{};
 
-    LexicalAnalyzer(Compiler& compiler);
+    Lexer(Compiler& compiler);
 
     std::vector<bonk::Lexeme> parse_file(const char* filename, std::string_view text);
 
     void next();
     char next_char() const;
     void eat_char();
-    int next_operator();
+    int next_special_word();
     std::string_view next_word();
 
     int parse_digits_lexeme(int radix, long long int* integer_value, double* float_value);
@@ -174,6 +160,8 @@ struct LexicalAnalyzer {
     bool parse_string_lexeme(Lexeme* target);
 
     KeywordType keyword_from_string(std::string_view string);
+    void parse_line_comment();
+    void parse_multiline_comment();
 };
 
 } // namespace bonk

@@ -17,11 +17,11 @@ enum class CompilerMessageType { fatal_error, error, warning, note };
 } // namespace bonk
 
 #include <cstdio>
-#include <sstream>
 #include <ostream>
+#include <sstream>
 #include "backend/backend.hpp"
+#include "bonk/parsing/lexic/lexer.hpp"
 #include "parsing/parser.hpp"
-#include "parsing/lexic/lexical_analyzer.hpp"
 #include "tree/ast.hpp"
 #include "utils/streams.hpp"
 

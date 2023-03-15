@@ -8,7 +8,7 @@
 
 namespace bonk {
 
-bool LexicalAnalyzer::parse_identifier_lexeme(Lexeme* target) {
+bool Lexer::parse_identifier_lexeme(Lexeme* target) {
     const char* name_start = text.data() + current_position.index;
 
     ParserPosition identifier_position = current_position;
@@ -43,7 +43,7 @@ bool LexicalAnalyzer::parse_identifier_lexeme(Lexeme* target) {
     return true;
 }
 
-KeywordType LexicalAnalyzer::keyword_from_string(std::string_view string) {
+KeywordType Lexer::keyword_from_string(std::string_view string) {
     for (int keyword = 0; BONK_KEYWORD_NAMES[keyword]; keyword++) {
         if (strncmp(string.data(), BONK_KEYWORD_NAMES[keyword], string.size()) == 0) {
             if (BONK_KEYWORD_NAMES[keyword][string.size()] == '\0')

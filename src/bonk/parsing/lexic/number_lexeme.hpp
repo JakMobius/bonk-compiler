@@ -1,6 +1,6 @@
 
 #pragma once
 
-#include "./lexical_analyzer.hpp"
+#include "./lexer.hpp"
 
 namespace bonk {}

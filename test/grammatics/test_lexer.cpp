@@ -16,7 +16,7 @@ TEST(Lexer, TestHive) {
         }
     )";
 
-    auto lexemes = bonk::LexicalAnalyzer(compiler).parse_file("test", source);
+    auto lexemes = bonk::Lexer(compiler).parse_file("test", source);
 
     ASSERT_TRUE(compiler.state == bonk::BONK_COMPILER_OK);
     ASSERT_EQ(lexemes.size(), 26);
@@ -48,6 +48,27 @@ TEST(Lexer, TestHive) {
     EXPECT_TRUE(lexemes[25].type == bonk::LexemeType::l_eof);
 }
 
+TEST(Lexer, TestComment) {
+auto error_stream = bonk::StdOutputStream(std::cerr);
+    bonk::CompilerConfig config{.error_file = error_stream};
+    bonk::Compiler compiler(config);
+
+    const char* source = R"(
+        dogo: This is a comment
+        "string with dogo: inside"
+        -dogo-> This is a multiline comment <-dogo-
+        "string with -dogo-> inside"
+    )";
+
+    auto lexemes = bonk::Lexer(compiler).parse_file("test", source);
+
+    ASSERT_TRUE(compiler.state == bonk::BONK_COMPILER_OK);
+    ASSERT_EQ(lexemes.size(), 3);
+    EXPECT_TRUE(lexemes[0].type == bonk::LexemeType::l_string);
+    EXPECT_TRUE(lexemes[1].type == bonk::LexemeType::l_string);
+    EXPECT_TRUE(lexemes[2].type == bonk::LexemeType::l_eof);
+}
+
 TEST(Lexer, TestStrings) {
     auto error_stream = bonk::StdOutputStream(std::cerr);
     bonk::CompilerConfig config{.error_file = error_stream};
@@ -61,7 +82,7 @@ TEST(Lexer, TestStrings) {
         "test\\with\\backslashes"
     )";
 
-    auto lexemes = bonk::LexicalAnalyzer(compiler).parse_file("test", source);
+    auto lexemes = bonk::Lexer(compiler).parse_file("test", source);
 
     ASSERT_TRUE(compiler.state == bonk::BONK_COMPILER_OK);
     ASSERT_EQ(lexemes.size(), 6);
@@ -95,7 +116,7 @@ TEST(Lexer, TestNumbers) {
         0b101010
     )";
 
-    auto lexemes = bonk::LexicalAnalyzer(compiler).parse_file("test", source);
+    auto lexemes = bonk::Lexer(compiler).parse_file("test", source);
 
     ASSERT_TRUE(compiler.state == bonk::BONK_COMPILER_OK);
     ASSERT_EQ(lexemes.size(), 15);
@@ -161,7 +182,7 @@ TEST(Lexer, TestGlobal) {
         }
     )";
 
-    auto lexemes = bonk::LexicalAnalyzer(compiler).parse_file("test", source);
+    auto lexemes = bonk::Lexer(compiler).parse_file("test", source);
 
     ASSERT_FALSE(lexemes.empty());
     ASSERT_TRUE(compiler.state == bonk::BONK_COMPILER_OK);
@@ -180,7 +201,7 @@ TEST(Lexer, TestOperators) {
 
     std::string source = source_stream.str();
 
-    auto lexemes = bonk::LexicalAnalyzer(compiler).parse_file("test", source);
+    auto lexemes = bonk::Lexer(compiler).parse_file("test", source);
 
     ASSERT_FALSE(lexemes.empty());
     ASSERT_TRUE(compiler.state == bonk::BONK_COMPILER_OK);

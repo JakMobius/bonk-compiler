@@ -19,7 +19,7 @@ TEST(Parser, TestHiveBowls) {
         }
     )";
 
-    auto lexemes = bonk::LexicalAnalyzer(compiler).parse_file("test", source);
+    auto lexemes = bonk::Lexer(compiler).parse_file("test", source);
     auto ast = bonk::Parser(compiler).parse_file(&lexemes);
 
     ASSERT_TRUE(compiler.state == bonk::BONK_COMPILER_OK);
@@ -98,7 +98,7 @@ TEST(Parser, TestHiveBloks) {
         }
     )";
 
-    auto lexemes = bonk::LexicalAnalyzer(compiler).parse_file("test", source);
+    auto lexemes = bonk::Lexer(compiler).parse_file("test", source);
     auto ast = bonk::Parser(compiler).parse_file(&lexemes);
 
     ASSERT_TRUE(compiler.state == bonk::BONK_COMPILER_OK);
@@ -175,7 +175,7 @@ TEST(Parser, TestHiveCalls) {
         }
     )";
 
-    auto lexemes = bonk::LexicalAnalyzer(compiler).parse_file("test", source);
+    auto lexemes = bonk::Lexer(compiler).parse_file("test", source);
     auto ast = bonk::Parser(compiler).parse_file(&lexemes);
 
     ASSERT_TRUE(compiler.state == bonk::BONK_COMPILER_OK);
@@ -249,7 +249,7 @@ TEST(Parser, TestOperatorPrecedence) {
             }
         )";
 
-    auto lexemes = bonk::LexicalAnalyzer(compiler).parse_file("test", source);
+    auto lexemes = bonk::Lexer(compiler).parse_file("test", source);
     auto ast = bonk::Parser(compiler).parse_file(&lexemes);
 
     ASSERT_TRUE(compiler.state == bonk::BONK_COMPILER_OK);
@@ -353,7 +353,7 @@ TEST(Parser, TestAndOrWithCodeBlock) {
             }
         )";
 
-    auto lexemes = bonk::LexicalAnalyzer(compiler).parse_file("test", source);
+    auto lexemes = bonk::Lexer(compiler).parse_file("test", source);
     auto ast = bonk::Parser(compiler).parse_file(&lexemes);
 
     ASSERT_TRUE(compiler.state == bonk::BONK_COMPILER_OK);
@@ -393,7 +393,7 @@ TEST(Parser, TestAssociativeSide) {
             }
         )";
 
-    auto lexemes = bonk::LexicalAnalyzer(compiler).parse_file("test", source);
+    auto lexemes = bonk::Lexer(compiler).parse_file("test", source);
     auto ast = bonk::Parser(compiler).parse_file(&lexemes);
 
     ASSERT_TRUE(compiler.state == bonk::BONK_COMPILER_OK);

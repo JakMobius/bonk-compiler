@@ -28,7 +28,7 @@ TEST(MiddleEnd, TypecheckerTest1) {
         }
     )";
 
-    auto lexemes = bonk::LexicalAnalyzer(compiler).parse_file("test", source);
+    auto lexemes = bonk::Lexer(compiler).parse_file("test", source);
     auto ast = bonk::Parser(compiler).parse_file(&lexemes);
 
     ASSERT_NE(ast, nullptr);
@@ -38,7 +38,7 @@ TEST(MiddleEnd, TypecheckerTest1) {
     EXPECT_EQ(middle_end.transform_ast(ast.get()), false);
 
     EXPECT_EQ(error_stringstream.str(),
-              "test:4:17: error: Cannot perform '*=' between flot and strg\n");
+              "test:4:18: error: Cannot perform '*=' between flot and strg\n");
 }
 
 TEST(MiddleEnd, TypecheckerTest2) {
@@ -62,7 +62,7 @@ TEST(MiddleEnd, TypecheckerTest2) {
         }
     )";
 
-    auto lexemes = bonk::LexicalAnalyzer(compiler).parse_file("test", source);
+    auto lexemes = bonk::Lexer(compiler).parse_file("test", source);
     auto ast = bonk::Parser(compiler).parse_file(&lexemes);
 
     ASSERT_NE(ast, nullptr);
@@ -71,7 +71,7 @@ TEST(MiddleEnd, TypecheckerTest2) {
 
     EXPECT_EQ(middle_end.transform_ast(ast.get()), false);
     EXPECT_EQ(error_stringstream.str(),
-              "test:11:41: error: Cannot perform '+' between TestHive and nubr\n");
+              "test:11:42: error: Cannot perform '+' between TestHive and nubr\n");
 }
 
 TEST(MiddleEnd, TypecheckerFibonacciTest) {
@@ -94,7 +94,7 @@ TEST(MiddleEnd, TypecheckerFibonacciTest) {
         }
     )";
 
-    auto lexemes = bonk::LexicalAnalyzer(compiler).parse_file("test", source);
+    auto lexemes = bonk::Lexer(compiler).parse_file("test", source);
     auto ast = bonk::Parser(compiler).parse_file(&lexemes);
 
     ASSERT_NE(ast, nullptr);
@@ -129,7 +129,7 @@ TEST(MiddleEnd, TypecheckerRecursiveTest) {
         }
     )";
 
-    auto lexemes = bonk::LexicalAnalyzer(compiler).parse_file("test", source);
+    auto lexemes = bonk::Lexer(compiler).parse_file("test", source);
     auto ast = bonk::Parser(compiler).parse_file(&lexemes);
 
     ASSERT_NE(ast, nullptr);
@@ -171,7 +171,7 @@ TEST(MiddleEnd, TypecheckerRecursiveNeverTest) {
         }
     )";
 
-    auto lexemes = bonk::LexicalAnalyzer(compiler).parse_file("test", source);
+    auto lexemes = bonk::Lexer(compiler).parse_file("test", source);
     auto ast = bonk::Parser(compiler).parse_file(&lexemes);
 
     ASSERT_NE(ast, nullptr);
@@ -214,7 +214,7 @@ TEST(MiddleEnd, TypecheckerFallproofTest) {
         }
     )";
 
-    auto lexemes = bonk::LexicalAnalyzer(compiler).parse_file("test", source);
+    auto lexemes = bonk::Lexer(compiler).parse_file("test", source);
     auto ast = bonk::Parser(compiler).parse_file(&lexemes);
 
     ASSERT_NE(ast, nullptr);
@@ -245,7 +245,7 @@ TEST(MiddleEnd, CodegenTest) {
         }
     )";
 
-    auto lexemes = bonk::LexicalAnalyzer(compiler).parse_file("test", source);
+    auto lexemes = bonk::Lexer(compiler).parse_file("test", source);
     auto ast = bonk::Parser(compiler).parse_file(&lexemes);
 
     ASSERT_NE(ast, nullptr);
@@ -299,7 +299,7 @@ TEST(MiddleEnd, StdLibHeaderGenerator) {
         blok main {}
     )";
 
-    auto lexemes = bonk::LexicalAnalyzer(compiler).parse_file("test", source);
+    auto lexemes = bonk::Lexer(compiler).parse_file("test", source);
     auto ast = bonk::Parser(compiler).parse_file(&lexemes);
 
     ASSERT_NE(ast, nullptr);
@@ -341,7 +341,7 @@ TEST(MiddleEnd, ConstructorDestructorGeneratorTest) {
         }
     )";
 
-    auto lexemes = bonk::LexicalAnalyzer(compiler).parse_file("test", source);
+    auto lexemes = bonk::Lexer(compiler).parse_file("test", source);
     auto ast = bonk::Parser(compiler).parse_file(&lexemes);
 
     ASSERT_NE(ast, nullptr);
@@ -499,7 +499,7 @@ TEST(MiddleEnd, RefCountReplacementTest1) {
         blok main { @Dummy; }
     )";
 
-    auto lexemes = bonk::LexicalAnalyzer(compiler).parse_file("test", source);
+    auto lexemes = bonk::Lexer(compiler).parse_file("test", source);
     auto ast = bonk::Parser(compiler).parse_file(&lexemes);
 
     ASSERT_NE(ast, nullptr);
@@ -560,7 +560,7 @@ TEST(MiddleEnd, RefCountReplacementTest2) {
         }
     )";
 
-    auto lexemes = bonk::LexicalAnalyzer(compiler).parse_file("test", source);
+    auto lexemes = bonk::Lexer(compiler).parse_file("test", source);
     auto ast = bonk::Parser(compiler).parse_file(&lexemes);
 
     ASSERT_NE(ast, nullptr);
