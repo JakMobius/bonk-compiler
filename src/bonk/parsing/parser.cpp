@@ -86,7 +86,7 @@ std::unique_ptr<TreeNode> Parser::parse_definition() {
 }
 
 std::unique_ptr<TreeNodeBlockDefinition> Parser::parse_blok_definition() {
-    // BlokDefinition : blok Identifier ParameterListDefinition? CodeBlock
+    // BlokDefinition : blok Identifier ParameterListDefinition? BlokReturnType? CodeBlock
 
     auto start_position = next_lexeme()->start_position;
     eat_lexeme();
@@ -108,10 +108,18 @@ std::unique_ptr<TreeNodeBlockDefinition> Parser::parse_blok_definition() {
         blok->block_parameters = parse_parameter_list_definition();
     }
 
+    if(next_lexeme()->is(LexemeType::l_colon)) {
+        eat_lexeme();
+        blok->return_type = parse_type();
+    }
+
     if (next_lexeme()->is(BraceType('{'))) {
         blok->body = parse_code_block();
+    } else if(next_lexeme()->is(LexemeType::l_semicolon)) {
+        eat_lexeme();
+        return blok;
     } else {
-        linked_compiler.error().at(next_lexeme()->start_position) << "Expected blok body";
+        linked_compiler.error().at(next_lexeme()->start_position) << "Expected code block or a semicolon";
         return nullptr;
     }
 

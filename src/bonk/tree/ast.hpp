@@ -108,6 +108,7 @@ struct TreeNodeBlockDefinition : TreeNode {
     std::unique_ptr<TreeNodeIdentifier> block_name{};
     std::unique_ptr<TreeNodeParameterListDefinition> block_parameters{};
     std::unique_ptr<TreeNodeCodeBlock> body{};
+    std::unique_ptr<TreeNode> return_type{};
 
     TreeNodeBlockDefinition() {
         type = TreeNodeType::n_block_definition;

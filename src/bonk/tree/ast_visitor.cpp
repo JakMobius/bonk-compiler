@@ -23,6 +23,7 @@ void ASTVisitor::visit(TreeNodeIdentifier* node) {
 void ASTVisitor::visit(TreeNodeBlockDefinition* node) {
     if(node->block_name) node->block_name->accept(this);
     if(node->block_parameters) node->block_parameters->accept(this);
+    if(node->return_type) node->return_type->accept(this);
     if(node->body) node->body->accept(this);
 }
 void ASTVisitor::visit(TreeNodeVariableDefinition* node) {

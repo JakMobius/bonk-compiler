@@ -17,6 +17,7 @@ class HiveConstructorCallReplacer : ASTVisitor {
     void visit(TreeNodeHiveDefinition* node) override;
     void visit(TreeNodeIdentifier* node) override;
     void visit(TreeNodeVariableDefinition* node) override;
+    void visit(TreeNodeBlockDefinition* node) override;
 };
 
 } // namespace bonk

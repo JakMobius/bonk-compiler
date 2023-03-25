@@ -333,7 +333,9 @@ TEST(MiddleEnd, ConstructorDestructorGeneratorTest) {
             bowl x: flot = 1.5;
             bowl y: strg;
             bowl z: Dummy;
-        }
+        }gi
+
+        blok TestHiveGenerator: TestHive;
 
         blok main {
             bowl my_hive_type = TestHive;
@@ -454,8 +456,9 @@ TEST(MiddleEnd, ConstructorDestructorGeneratorTest) {
     // Make sure that the replacer didn't replace what it shouldn't have
     // <compiler-generated definition of TestHive$$destructor> <- 1 (has one in its prototype)
     // hive TestHive <- 2
-    // bowl hive_instance: TestHive = (...) <- 3
-    EXPECT_EQ(visitor.hive_reference_count, 3);
+    // blok TestHiveGenerator: TestHive <- 3
+    // bowl hive_instance: TestHive = (...) <- 4
+    EXPECT_EQ(visitor.hive_reference_count, 4);
 
     std::stringstream ast_stringstream;
     bonk::StdOutputStream stream{ast_stringstream};

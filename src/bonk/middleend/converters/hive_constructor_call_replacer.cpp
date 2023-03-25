@@ -55,7 +55,19 @@ void bonk::HiveConstructorCallReplacer::visit(bonk::TreeNodeHiveDefinition* node
     // Do not visit the hive name, as it's unnecessary to
     // change the name of the hive itself
 
-    for(auto& child : node->body) {
+    for (auto& child : node->body) {
         child->accept(this);
     }
+}
+
+void bonk::HiveConstructorCallReplacer::visit(bonk::TreeNodeBlockDefinition* node) {
+    // Do not visit the block return type, as we only want to replace
+    // hive identifiers that are used as values.
+
+    if (node->block_name)
+        node->block_name->accept(this);
+    if (node->block_parameters)
+        node->block_parameters->accept(this);
+    if (node->body)
+        node->body->accept(this);
 }
