@@ -48,7 +48,7 @@ std::unique_ptr<TreeNode> Parser::parse_program() {
 }
 
 std::unique_ptr<TreeNodeHelp> Parser::parse_help_statement() {
-    // HelpStatement : help Identifier
+    // HelpStatement : help StringConstant
 
     auto start_position = next_lexeme()->start_position;
     eat_lexeme();
@@ -63,9 +63,10 @@ std::unique_ptr<TreeNodeHelp> Parser::parse_help_statement() {
     std::unique_ptr<TreeNodeHelp> help = std::make_unique<TreeNodeHelp>();
     help->source_position = start_position;
 
-    help->identifier = std::make_unique<TreeNodeIdentifier>();
-    help->identifier->source_position = identifier->start_position;
-    help->identifier->identifier_text = std::get<IdentifierLexeme>(identifier->data).identifier;
+    help->string = std::make_unique<TreeNodeStringConstant>();
+    help->string->source_position = start_position;
+    help->string->string_value = std::get<StringLexeme>(next_lexeme()->data).string;
+    eat_lexeme();
 
     return help;
 }

@@ -85,7 +85,7 @@ struct TreeNodeProgram : TreeNode {
 };
 
 struct TreeNodeHelp : TreeNode {
-    std::unique_ptr<TreeNodeIdentifier> identifier{};
+    std::unique_ptr<TreeNodeStringConstant> string{};
 
     TreeNodeHelp() {
         type = TreeNodeType::n_help_statement;

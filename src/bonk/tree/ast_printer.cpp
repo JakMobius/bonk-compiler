@@ -3,7 +3,7 @@
 
 void bonk::ASTPrinter::visit(TreeNodeHelp* node) {
     stream.get_stream() << "help ";
-    node->identifier->accept(this);
+    node->string->accept(this);
     stream.get_stream() << "\n";
 }
 

@@ -22,7 +22,7 @@ void bonk::JsonDumpAstVisitor::visit(bonk::TreeNodeHelp* node) {
     dump_node_location(node);
     dump_type(node, "Help");
 
-    serializer.field("identifier").block_string_field() << node->identifier;
+    serializer.field("string").block_string_field() << node->string->string_value;
 }
 
 void bonk::JsonDumpAstVisitor::visit(bonk::TreeNodeIdentifier* node) {

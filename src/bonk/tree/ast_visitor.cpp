@@ -16,7 +16,7 @@ void ASTVisitor::visit(TreeNodeProgram* node) {
     }
 }
 void ASTVisitor::visit(TreeNodeHelp* node) {
-    if(node->identifier) node->identifier->accept(this);
+    if(node->string) node->string->accept(this);
 }
 void ASTVisitor::visit(TreeNodeIdentifier* node) {
 }

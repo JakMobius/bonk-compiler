@@ -20,7 +20,7 @@ void bonk::ASTCloneVisitor::visit(TreeNodeProgram* node) {
 void bonk::ASTCloneVisitor::visit(TreeNodeHelp* node) {
     auto copy = shallow_copy(node);
 
-    copy->identifier = clone(node->identifier.get());
+    copy->string = clone(node->string.get());
 
     result = std::move(copy);
 }
