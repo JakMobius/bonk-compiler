@@ -333,7 +333,7 @@ TEST(MiddleEnd, ConstructorDestructorGeneratorTest) {
             bowl x: flot = 1.5;
             bowl y: strg;
             bowl z: Dummy;
-        }gi
+        }
 
         blok TestHiveGenerator: TestHive;
 
