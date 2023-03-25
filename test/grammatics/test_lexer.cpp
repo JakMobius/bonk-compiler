@@ -69,6 +69,33 @@ auto error_stream = bonk::StdOutputStream(std::cerr);
     EXPECT_TRUE(lexemes[2].type == bonk::LexemeType::l_eof);
 }
 
+TEST(Lexer, TestComment2) {
+        auto error_stream = bonk::StdOutputStream(std::cerr);
+        bonk::CompilerConfig config{.error_file = error_stream};
+        bonk::Compiler compiler(config);
+
+        const char* source = R"(
+            hive Person {
+                bowl age -dogo-> how old   <-dogo- = 0;
+            }
+        )";
+
+        auto lexemes = bonk::Lexer(compiler).parse_file("test", source);
+
+        ASSERT_TRUE(compiler.state == bonk::BONK_COMPILER_OK);
+        ASSERT_EQ(lexemes.size(), 10);
+        EXPECT_EQ(lexemes[0].type, bonk::LexemeType::l_operator);
+        EXPECT_EQ(lexemes[1].type, bonk::LexemeType::l_identifier);
+        EXPECT_EQ(lexemes[2].type, bonk::LexemeType::l_brace);
+        EXPECT_EQ(lexemes[3].type, bonk::LexemeType::l_operator);
+        EXPECT_EQ(lexemes[4].type, bonk::LexemeType::l_identifier);
+        EXPECT_EQ(lexemes[5].type, bonk::LexemeType::l_operator);
+        EXPECT_EQ(lexemes[6].type, bonk::LexemeType::l_number);
+        EXPECT_EQ(lexemes[7].type, bonk::LexemeType::l_semicolon);
+        EXPECT_EQ(lexemes[8].type, bonk::LexemeType::l_brace);
+        EXPECT_EQ(lexemes[9].type, bonk::LexemeType::l_eof);
+}
+
 TEST(Lexer, TestStrings) {
     auto error_stream = bonk::StdOutputStream(std::cerr);
     bonk::CompilerConfig config{.error_file = error_stream};
