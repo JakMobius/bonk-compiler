@@ -19,6 +19,7 @@ enum class CompilerMessageType { fatal_error, error, warning, note };
 #include <cstdio>
 #include <ostream>
 #include <sstream>
+#include <unordered_set>
 #include "backend/backend.hpp"
 #include "bonk/parsing/lexic/lexer.hpp"
 #include "parsing/parser.hpp"
@@ -50,15 +51,14 @@ struct MessageStreamProxy {
 
 struct CompilerConfig {
     const OutputStream& error_file = NullOutputStream::instance;
-    const OutputStream& listing_file = NullOutputStream::instance;
-    const OutputStream& output_file = NullOutputStream::instance;
-    std::optional<std::string> stop_checkpoint;
-
-    bool should_stop_after(std::string_view stage) const;
 };
 
 struct Compiler {
     const CompilerConfig config;
+    Backend* backend = nullptr;
+
+    std::unordered_set<std::string> updated_files;
+    std::unordered_set<std::string> output_files;
 
     CompilerState state = BONK_COMPILER_OK;
     Compiler();
@@ -68,6 +68,9 @@ struct Compiler {
     MessageStreamProxy error();
     MessageStreamProxy warning() const;
     MessageStreamProxy fatal_error();
+
+    void report_file_updated(std::string_view path);
+    void report_project_file(std::string_view path);
 };
 
 } // namespace bonk

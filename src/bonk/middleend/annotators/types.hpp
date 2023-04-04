@@ -7,7 +7,7 @@ namespace bonk {
 
 class ConstTypeVisitor;
 
-enum class TypeKind { unset, primitive, hive, blok, many, nothing, never, error };
+enum class TypeKind { unset, primitive, hive, blok, many, error, external, null };
 
 class Type {
   public:
@@ -21,6 +21,9 @@ class Type {
     bool operator!=(const Type& other) const;
 
     friend std::ostream& operator<<(std::ostream& stream, const Type& type);
+
+    bool is(TypeKind kind) const;
+    bool is(TrivialTypeKind type) const;
 };
 
 class HiveType : public Type {
@@ -44,7 +47,7 @@ class BlokType : public Type {
 
 class TrivialType : public Type {
   public:
-    PrimitiveType primitive_type = PrimitiveType::t_unset;
+    TrivialTypeKind trivial_kind = TrivialTypeKind::t_unset;
     TrivialType();
     bool operator==(const Type& other) const override;
     bool allows_binary_operation(OperatorType operator_type, Type* other_type) const override;
@@ -61,20 +64,6 @@ class ManyType : public Type {
     void accept(ConstTypeVisitor* visitor) const override;
 };
 
-class NothingType : public Type {
-  public:
-    NothingType();
-    bool operator==(const Type& other) const override;
-    void accept(ConstTypeVisitor* visitor) const override;
-};
-
-class NeverType : public Type {
-  public:
-    NeverType();
-    bool operator==(const Type& other) const override;
-    void accept(ConstTypeVisitor* visitor) const override;
-};
-
 class ErrorType : public Type {
   public:
     ErrorType();
@@ -82,4 +71,32 @@ class ErrorType : public Type {
     void accept(ConstTypeVisitor* visitor) const override;
 };
 
+class ExternalTypeResolver {
+  public:
+    virtual ~ExternalTypeResolver() = default;
+    virtual std::unique_ptr<Type> resolve() = 0;
+    virtual std::unique_ptr<ExternalTypeResolver> clone() = 0;
+};
+
+class ExternalType : public Type {
+  public:
+    mutable std::unique_ptr<ExternalTypeResolver> resolver;
+    mutable std::unique_ptr<Type> resolved;
+
+    bonk::Type* get_resolved() const;
+
+    ExternalType();
+    bool operator==(const Type& other) const override;
+    bool allows_binary_operation(OperatorType operator_type, Type* other_type) const override;
+    bool allows_unary_operation(OperatorType operator_type) const override;
+    void accept(ConstTypeVisitor* visitor) const override;
+};
+
+class NullType : public Type {
+  public:
+    NullType();
+    bool operator==(const Type& other) const override;
+    bool allows_binary_operation(OperatorType operator_type, Type* other_type) const override;
+    void accept(ConstTypeVisitor* visitor) const override;
+};
 }

@@ -301,6 +301,12 @@ void bonk::HIRPrinter::print(const bonk::IRProgram& program,
     case HIRInstructionType::dec_ref_counter:
         print(program, static_cast<const HIRDecRefCounter&>(instruction));
         break;
+    case HIRInstructionType::file:
+        print(program, static_cast<const HIRFile&>(instruction));
+        break;
+    case HIRInstructionType::location:
+        print(program, static_cast<const HIRLocation&>(instruction));
+        break;
     default:
         assert(!"Unknown instruction type");
     }
@@ -321,6 +327,18 @@ void bonk::HIRPrinter::print(const bonk::IRProgram& program,
         }
     }
     stream.get_stream() << "}\n";
+}
+
+void bonk::HIRPrinter::print(const bonk::IRProgram& program,
+                             const bonk::HIRFile& instruction) const {
+    padding();
+    stream.get_stream() << "file " << instruction.file << "\n";
+}
+
+void bonk::HIRPrinter::print(const bonk::IRProgram& program,
+                             const bonk::HIRLocation& instruction) const {
+    padding();
+    stream.get_stream() << "loc " << instruction.line << ":" << instruction.column << "\n";
 }
 
 void bonk::HIRPrinter::print_label(const bonk::IRProgram& program, int label) const {

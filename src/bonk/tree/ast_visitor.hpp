@@ -28,6 +28,8 @@ class ASTVisitor {
     virtual void visit(TreeNodeLoopStatement* node);
     virtual void visit(TreeNodeHiveDefinition* node);
     virtual void visit(TreeNodeCall* node);
+    virtual void visit(TreeNodeCast* node);
+    virtual void visit(TreeNodeNull* node);
 };
 
 } // namespace bonk

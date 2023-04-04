@@ -10,7 +10,7 @@ const char* BONK_OPERATOR_NAMES[] = {
     "bonk", "loop", "of", "and", "or", "not", "help", nullptr};
 
 const char* BONK_KEYWORD_NAMES[] = {"buul", "shrt", "nubr", "long", "flot",
-                                    "dabl", "strg", "many", nullptr};
+                                    "dabl", "strg", "many", "nothing", "null", nullptr};
 
 const char* BONK_BRACE_NAMES[] = {"{", "}", "(", ")", "[", "]", nullptr};
 
@@ -185,9 +185,7 @@ bool Lexer::parse_string_lexeme(Lexeme* target) {
     return true;
 }
 
-std::vector<Lexeme> Lexer::parse_file(const char* filename, std::string_view source) {
-
-    filename = strdup(filename);
+std::vector<Lexeme> Lexer::parse_file(std::string_view filename, std::string_view source) {
 
     current_position.filename = filename;
     current_position.index = 0;

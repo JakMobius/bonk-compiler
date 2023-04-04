@@ -1,7 +1,7 @@
 
 #include <gtest/gtest.h>
 #include "bonk/parsing/parser.hpp"
-#include "bonk/tree/json_dump_ast_visitor.hpp"
+#include "bonk/tree/json_ast_serializer.hpp"
 
 TEST(Parser, TestHiveBowls) {
     auto error_stream = bonk::StdOutputStream(std::cout);
@@ -50,21 +50,21 @@ TEST(Parser, TestHiveBowls) {
     ASSERT_EQ(definition->variable_type->type, bonk::TreeNodeType::n_primitive_type);
     ASSERT_EQ(definition->variable_value, nullptr);
     primitive_type = (bonk::TreeNodePrimitiveType*)definition->variable_type.get();
-    ASSERT_EQ(primitive_type->primitive_type, bonk::PrimitiveType::t_flot);
+    ASSERT_EQ(primitive_type->primitive_type, bonk::TrivialTypeKind::t_flot);
 
     definition = variable_definitions[1];
     ASSERT_EQ(definition->variable_name->identifier_text, "test_bowl2");
     ASSERT_EQ(definition->variable_type->type, bonk::TreeNodeType::n_primitive_type);
     ASSERT_EQ(definition->variable_value, nullptr);
     primitive_type = (bonk::TreeNodePrimitiveType*)definition->variable_type.get();
-    ASSERT_EQ(primitive_type->primitive_type, bonk::PrimitiveType::t_nubr);
+    ASSERT_EQ(primitive_type->primitive_type, bonk::TrivialTypeKind::t_nubr);
 
     definition = variable_definitions[2];
     ASSERT_EQ(definition->variable_name->identifier_text, "test_bowl3");
     ASSERT_EQ(definition->variable_type->type, bonk::TreeNodeType::n_primitive_type);
     ASSERT_EQ(definition->variable_value, nullptr);
     primitive_type = (bonk::TreeNodePrimitiveType*)definition->variable_type.get();
-    ASSERT_EQ(primitive_type->primitive_type, bonk::PrimitiveType::t_strg);
+    ASSERT_EQ(primitive_type->primitive_type, bonk::TrivialTypeKind::t_strg);
 
     definition = variable_definitions[3];
     ASSERT_EQ(definition->variable_name->identifier_text, "test_bowl4");
@@ -73,7 +73,7 @@ TEST(Parser, TestHiveBowls) {
     many_type = (bonk::TreeNodeManyType*)definition->variable_type.get();
     ASSERT_EQ(many_type->parameter->type, bonk::TreeNodeType::n_primitive_type);
     primitive_type = (bonk::TreeNodePrimitiveType*)many_type->parameter.get();
-    ASSERT_EQ(primitive_type->primitive_type, bonk::PrimitiveType::t_strg);
+    ASSERT_EQ(primitive_type->primitive_type, bonk::TrivialTypeKind::t_strg);
 
     definition = variable_definitions[4];
     ASSERT_EQ(definition->variable_name->identifier_text, "test_bowl5");
@@ -127,7 +127,7 @@ TEST(Parser, TestHiveBloks) {
     ASSERT_EQ(variable_definition->variable_value, nullptr);
     ASSERT_EQ(
         ((bonk::TreeNodePrimitiveType*)variable_definition->variable_type.get())->primitive_type,
-        bonk::PrimitiveType::t_flot);
+        bonk::TrivialTypeKind::t_flot);
 
     ASSERT_EQ(blok_definition->block_name->identifier_text, "set_field");
     ASSERT_EQ(blok_definition->block_parameters->parameters.size(), 1);
@@ -138,7 +138,7 @@ TEST(Parser, TestHiveBloks) {
     ASSERT_EQ(parameters.front()->variable_value, nullptr);
     ASSERT_EQ(
         ((bonk::TreeNodePrimitiveType*)parameters.front()->variable_type.get())->primitive_type,
-        bonk::PrimitiveType::t_flot);
+        bonk::TrivialTypeKind::t_flot);
 
     ASSERT_EQ(blok_definition->body->body.size(), 1);
 

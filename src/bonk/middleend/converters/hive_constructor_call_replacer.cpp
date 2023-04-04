@@ -2,8 +2,10 @@
 #include "hive_constructor_call_replacer.hpp"
 #include "bonk/middleend/annotators/basic_symbol_annotator.hpp"
 
-void bonk::HiveConstructorCallReplacer::replace(bonk::TreeNode* ast) {
-    ast->accept(this);
+void bonk::HiveConstructorCallReplacer::replace(bonk::AST& ast) {
+    current_ast = &ast;
+    ast.root->accept(this);
+    current_ast = nullptr;
 }
 
 void bonk::HiveConstructorCallReplacer::visit(bonk::TreeNodeVariableDefinition* node) {
@@ -22,8 +24,14 @@ void bonk::HiveConstructorCallReplacer::visit(bonk::TreeNodeVariableDefinition* 
 void bonk::HiveConstructorCallReplacer::visit(bonk::TreeNodeIdentifier* node) {
     // Lookup the symbol table to see if this identifier is a hive
 
-    auto* definition = middle_end.symbol_table.symbol_definitions[node];
-    if (!definition || definition->type != TreeNodeType::n_hive_definition) {
+    auto definition = middle_end.symbol_table.symbol_definitions[node];
+    if (!definition.is_local()) {
+        return;
+    }
+
+    auto local_definition = definition.get_local().definition;
+
+    if(local_definition->type != TreeNodeType::n_hive_definition) {
         return;
     }
 
@@ -33,7 +41,7 @@ void bonk::HiveConstructorCallReplacer::visit(bonk::TreeNodeIdentifier* node) {
     std::string constructor_name{hive_name};
     constructor_name += "$$constructor";
 
-    std::string_view symbol = middle_end.hidden_text_storage.get_hidden_symbol(constructor_name);
+    std::string_view symbol = current_ast->buffer.get_symbol(constructor_name);
 
     node->identifier_text = symbol;
 
@@ -41,14 +49,14 @@ void bonk::HiveConstructorCallReplacer::visit(bonk::TreeNodeIdentifier* node) {
     // of the hive constructor call. Otherwise the compiler won't notice
     // the difference (or will crash)
 
-    auto identifier_scope = middle_end.symbol_table.symbol_scopes[node];
+    auto identifier_scope = middle_end.symbol_table.get_scope_for_node(node);
     ScopedNameResolver resolver;
     resolver.current_scope = identifier_scope;
 
     auto* constructor_definition = resolver.get_name_definition(constructor_name);
     assert(constructor_definition);
 
-    middle_end.symbol_table.symbol_definitions[node] = constructor_definition;
+    middle_end.symbol_table.symbol_definitions[node] = SymbolDefinition::local(constructor_definition);
 }
 
 void bonk::HiveConstructorCallReplacer::visit(bonk::TreeNodeHiveDefinition* node) {

@@ -7,12 +7,13 @@ namespace bonk {
 
 class HiveConstructorCallReplacer : ASTVisitor {
     MiddleEnd& middle_end;
+    AST* current_ast;
 
   public:
     explicit HiveConstructorCallReplacer(MiddleEnd& middle_end) : middle_end(middle_end) {
     }
 
-    void replace(TreeNode* ast);
+    void replace(AST& ast);
 
     void visit(TreeNodeHiveDefinition* node) override;
     void visit(TreeNodeIdentifier* node) override;

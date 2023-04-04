@@ -9,9 +9,9 @@ namespace bonk {
 
 struct ParserPosition {
     std::string_view filename;
-    unsigned long line;
-    unsigned long ch;
-    unsigned long index;
+    unsigned int line;
+    unsigned int ch;
+    unsigned int index;
 
     // To print position
     friend std::ostream& operator<<(std::ostream& stream, const ParserPosition& position) {

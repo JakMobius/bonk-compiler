@@ -2,17 +2,13 @@
 #include <sstream>
 #include <gtest/gtest.h>
 #include "bonk/middleend/annotators/basic_symbol_annotator.hpp"
-#include "bonk/middleend/converters/hive_constructor_call_replacer.hpp"
-#include "bonk/middleend/converters/hive_ctor_dtor_early_generator.hpp"
 #include "bonk/middleend/converters/stdlib_header_generator.hpp"
 #include "bonk/middleend/ir/hir.hpp"
 #include "bonk/middleend/ir/hir_early_generator_visitor.hpp"
-#include "bonk/middleend/ir/hir_printer.hpp"
 #include "bonk/middleend/ir/hir_ref_count_replacer.hpp"
 #include "bonk/middleend/middleend.hpp"
 #include "bonk/parsing/parser.hpp"
 #include "bonk/tree/ast_printer.hpp"
-#include "bonk/tree/json_dump_ast_visitor.hpp"
 
 TEST(MiddleEnd, TypecheckerTest1) {
     std::stringstream error_stringstream;
@@ -29,13 +25,15 @@ TEST(MiddleEnd, TypecheckerTest1) {
     )";
 
     auto lexemes = bonk::Lexer(compiler).parse_file("test", source);
-    auto ast = bonk::Parser(compiler).parse_file(&lexemes);
+    auto root = bonk::Parser(compiler).parse_file(&lexemes);
+    auto ast = bonk::AST();
+    ast.root = std::move(root);
 
-    ASSERT_NE(ast, nullptr);
+    ASSERT_NE(ast.root, nullptr);
 
     bonk::MiddleEnd middle_end(compiler);
 
-    EXPECT_EQ(middle_end.transform_ast(ast.get()), false);
+    EXPECT_EQ(middle_end.transform_ast(ast), false);
 
     EXPECT_EQ(error_stringstream.str(),
               "test:4:18: error: Cannot perform '*=' between flot and strg\n");
@@ -63,16 +61,42 @@ TEST(MiddleEnd, TypecheckerTest2) {
     )";
 
     auto lexemes = bonk::Lexer(compiler).parse_file("test", source);
-    auto ast = bonk::Parser(compiler).parse_file(&lexemes);
+    auto root = bonk::Parser(compiler).parse_file(&lexemes);
+    auto ast = bonk::AST();
+    ast.root = std::move(root);
 
-    ASSERT_NE(ast, nullptr);
+    ASSERT_NE(ast.root, nullptr);
 
     bonk::MiddleEnd middle_end(compiler);
 
-    EXPECT_EQ(middle_end.transform_ast(ast.get()), false);
+    EXPECT_EQ(middle_end.transform_ast(ast), false);
     EXPECT_EQ(error_stringstream.str(),
               "test:11:42: error: Cannot perform '+' between TestHive and nubr\n");
 }
+
+//TEST(MiddleEnd, TypecheckerTest3) {
+//    std::stringstream error_stringstream;
+//    auto error_stream = bonk::StdOutputStream(error_stringstream);
+//
+//    bonk::CompilerConfig config{.error_file = error_stream};
+//    bonk::Compiler compiler(config);
+//
+//    const char* source = R"(
+//        blok test: nubr {
+//            bonk;
+//        }
+//    )";
+//
+//    auto lexemes = bonk::Lexer(compiler).parse_file("test", source);
+//    auto ast = bonk::Parser(compiler).parse_file(&lexemes);
+//
+//    ASSERT_NE(ast, nullptr);
+//
+//    bonk::MiddleEnd middle_end(compiler);
+//
+//    EXPECT_EQ(middle_end.transform_ast(ast.get()), false);
+//    EXPECT_EQ(error_stringstream.str(), "<mismatch of return types>\n");
+//}
 
 TEST(MiddleEnd, TypecheckerFibonacciTest) {
     // This test is aimed at testing the type checker's ability to correctly
@@ -95,22 +119,24 @@ TEST(MiddleEnd, TypecheckerFibonacciTest) {
     )";
 
     auto lexemes = bonk::Lexer(compiler).parse_file("test", source);
-    auto ast = bonk::Parser(compiler).parse_file(&lexemes);
+    auto root = bonk::Parser(compiler).parse_file(&lexemes);
+    auto ast = bonk::AST();
+    ast.root = std::move(root);
 
-    ASSERT_NE(ast, nullptr);
+    ASSERT_NE(ast.root, nullptr);
 
     bonk::MiddleEnd middle_end(compiler);
-    EXPECT_EQ(middle_end.transform_ast(ast.get()), true);
+    EXPECT_EQ(middle_end.transform_ast(ast), true);
 
     // Get the global scope and find the fibonacci function definition
-    auto global_scope = middle_end.symbol_table.symbol_scopes[ast.get()];
+    auto global_scope = middle_end.symbol_table.global_scope;
     auto fibonacci_definition = global_scope->symbols["fibonacci"];
 
     auto fibonacci_block_type = middle_end.type_table.get_type(fibonacci_definition);
     auto fibonacci_return_type = ((bonk::BlokType*)fibonacci_block_type)->return_type.get();
 
     auto fibonacci_return_type_data = (bonk::TrivialType*)fibonacci_return_type;
-    ASSERT_EQ(fibonacci_return_type_data->primitive_type, bonk::PrimitiveType::t_nubr);
+    ASSERT_EQ(fibonacci_return_type_data->trivial_kind, bonk::TrivialTypeKind::t_nubr);
 }
 
 TEST(MiddleEnd, TypecheckerRecursiveTest) {
@@ -130,15 +156,17 @@ TEST(MiddleEnd, TypecheckerRecursiveTest) {
     )";
 
     auto lexemes = bonk::Lexer(compiler).parse_file("test", source);
-    auto ast = bonk::Parser(compiler).parse_file(&lexemes);
+    auto root = bonk::Parser(compiler).parse_file(&lexemes);
+    auto ast = bonk::AST();
+    ast.root = std::move(root);
 
-    ASSERT_NE(ast, nullptr);
+    ASSERT_NE(ast.root, nullptr);
 
     bonk::MiddleEnd middle_end(compiler);
-    EXPECT_EQ(middle_end.transform_ast(ast.get()), true);
+    EXPECT_EQ(middle_end.transform_ast(ast), true);
 
     // Get the global scope and find the recursive_a and recursive_b function definition
-    auto global_scope = middle_end.symbol_table.symbol_scopes[ast.get()];
+    auto global_scope = middle_end.symbol_table.global_scope;
     auto rec_a_definition = global_scope->symbols["recursive_a"];
     auto rec_b_definition = global_scope->symbols["recursive_b"];
 
@@ -151,8 +179,8 @@ TEST(MiddleEnd, TypecheckerRecursiveTest) {
     auto rec_a_return_type_data = (bonk::TrivialType*)rec_a_return_type;
     auto rec_b_return_type_data = (bonk::TrivialType*)rec_b_return_type;
 
-    ASSERT_EQ(rec_a_return_type_data->primitive_type, bonk::PrimitiveType::t_buul);
-    ASSERT_EQ(rec_b_return_type_data->primitive_type, bonk::PrimitiveType::t_buul);
+    ASSERT_EQ(rec_a_return_type_data->trivial_kind, bonk::TrivialTypeKind::t_buul);
+    ASSERT_EQ(rec_b_return_type_data->trivial_kind, bonk::TrivialTypeKind::t_buul);
 }
 
 TEST(MiddleEnd, TypecheckerRecursiveNeverTest) {
@@ -172,15 +200,17 @@ TEST(MiddleEnd, TypecheckerRecursiveNeverTest) {
     )";
 
     auto lexemes = bonk::Lexer(compiler).parse_file("test", source);
-    auto ast = bonk::Parser(compiler).parse_file(&lexemes);
+    auto root = bonk::Parser(compiler).parse_file(&lexemes);
+    auto ast = bonk::AST();
+    ast.root = std::move(root);
 
-    ASSERT_NE(ast, nullptr);
+    ASSERT_NE(ast.root, nullptr);
 
     bonk::MiddleEnd middle_end(compiler);
-    EXPECT_EQ(middle_end.transform_ast(ast.get()), true);
+    EXPECT_EQ(middle_end.transform_ast(ast), true);
 
     // Get the global scope and find the recursive_a and recursive_b function definition
-    auto global_scope = middle_end.symbol_table.symbol_scopes[ast.get()];
+    auto global_scope = middle_end.symbol_table.global_scope;
     auto rec_a_definition = global_scope->symbols["recursive_a"];
     auto rec_b_definition = global_scope->symbols["recursive_b"];
 
@@ -190,8 +220,8 @@ TEST(MiddleEnd, TypecheckerRecursiveNeverTest) {
     auto rec_a_return_type = ((bonk::BlokType*)rec_a_block_type)->return_type.get();
     auto rec_b_return_type = ((bonk::BlokType*)rec_b_block_type)->return_type.get();
 
-    ASSERT_EQ(rec_a_return_type->kind, bonk::TypeKind::never);
-    ASSERT_EQ(rec_b_return_type->kind, bonk::TypeKind::never);
+    ASSERT_TRUE(rec_a_return_type->is(bonk::TrivialTypeKind::t_never));
+    ASSERT_TRUE(rec_b_return_type->is(bonk::TrivialTypeKind::t_never));
 }
 
 TEST(MiddleEnd, TypecheckerFallproofTest) {
@@ -215,18 +245,30 @@ TEST(MiddleEnd, TypecheckerFallproofTest) {
     )";
 
     auto lexemes = bonk::Lexer(compiler).parse_file("test", source);
-    auto ast = bonk::Parser(compiler).parse_file(&lexemes);
+    auto root = bonk::Parser(compiler).parse_file(&lexemes);
+    auto ast = bonk::AST();
+    ast.root = std::move(root);
 
-    ASSERT_NE(ast, nullptr);
+    ASSERT_NE(ast.root, nullptr);
 
     bonk::MiddleEnd middle_end(compiler);
-    EXPECT_EQ(middle_end.transform_ast(ast.get()), false);
+    EXPECT_EQ(middle_end.transform_ast(ast), false);
 
     std::string error_string = error_stringstream.str();
 
     EXPECT_NE(error_string.find("Cannot perform '==' between flot and strg"), std::string::npos);
     EXPECT_NE(error_string.find("Cannot pass 'strg' to parameter 'x' of type 'flot'"),
               std::string::npos);
+}
+
+bonk::HIRProcedure* get_procedure_header(const bonk::IRProcedure* procedure) {
+    auto& block = procedure->base_blocks[0];
+    for(auto& instruction : block->instructions) {
+        if(static_cast<bonk::HIRInstruction*>(instruction)->type == bonk::HIRInstructionType::procedure) {
+            return static_cast<bonk::HIRProcedure*>(instruction);
+        }
+    }
+    return nullptr;
 }
 
 TEST(MiddleEnd, CodegenTest) {
@@ -246,14 +288,16 @@ TEST(MiddleEnd, CodegenTest) {
     )";
 
     auto lexemes = bonk::Lexer(compiler).parse_file("test", source);
-    auto ast = bonk::Parser(compiler).parse_file(&lexemes);
+    auto root = bonk::Parser(compiler).parse_file(&lexemes);
+    auto ast = bonk::AST();
+    ast.root = std::move(root);
 
-    ASSERT_NE(ast, nullptr);
+    ASSERT_NE(ast.root, nullptr);
 
     bonk::MiddleEnd middle_end(compiler);
 
-    ASSERT_EQ(middle_end.transform_ast(ast.get()), true);
-    auto ir_program = middle_end.generate_hir(ast.get());
+    ASSERT_EQ(middle_end.transform_ast(ast), true);
+    auto ir_program = middle_end.generate_hir(ast.root.get());
 
     ASSERT_NE(ir_program, nullptr);
 
@@ -263,9 +307,8 @@ TEST(MiddleEnd, CodegenTest) {
     };
 
     for (const auto& procedure : ir_program->procedures) {
-        auto procedure_header =
-            (bonk::HIRInstruction*)procedure->base_blocks[0]->instructions.front();
-        ASSERT_EQ(procedure_header->type, bonk::HIRInstructionType::procedure);
+        auto procedure_header = get_procedure_header(procedure.get());
+        ASSERT_NE(procedure_header, nullptr);
         auto procedure_id = ((bonk::HIRProcedure*)procedure_header)->procedure_id;
         auto procedure_definition = middle_end.id_table.get_node(procedure_id);
 
@@ -295,24 +338,15 @@ TEST(MiddleEnd, StdLibHeaderGenerator) {
     bonk::CompilerConfig config{.error_file = error_stream};
     bonk::Compiler compiler(config);
 
-    const char* source = R"(
-        blok main {}
-    )";
-
-    auto lexemes = bonk::Lexer(compiler).parse_file("test", source);
-    auto ast = bonk::Parser(compiler).parse_file(&lexemes);
-
-    ASSERT_NE(ast, nullptr);
-
     bonk::MiddleEnd middle_end(compiler);
     bonk::StdLibHeaderGenerator header_generator(middle_end);
 
-    header_generator.generate(ast.get());
+    auto stdlib_header = header_generator.generate();
 
     std::stringstream ast_stringstream;
     bonk::StdOutputStream stream{ast_stringstream};
     bonk::ASTPrinter printer{stream};
-    ast->accept(&printer);
+    stdlib_header.root->accept(&printer);
 
     std::string ast_string = ast_stringstream.str();
 
@@ -344,19 +378,18 @@ TEST(MiddleEnd, ConstructorDestructorGeneratorTest) {
     )";
 
     auto lexemes = bonk::Lexer(compiler).parse_file("test", source);
-    auto ast = bonk::Parser(compiler).parse_file(&lexemes);
+    auto root = bonk::Parser(compiler).parse_file(&lexemes);
+    auto ast = bonk::AST();
+    ast.root = std::move(root);
 
-    ASSERT_NE(ast, nullptr);
+    ASSERT_NE(ast.root, nullptr);
 
     bonk::MiddleEnd middle_end(compiler);
-    middle_end.transform_ast(ast.get());
+    middle_end.transform_ast(ast);
 
     ASSERT_EQ(compiler.state, bonk::BONK_COMPILER_OK);
 
-    // Make sure the constructor was generated
-    EXPECT_EQ(ast->type, bonk::TreeNodeType::n_program);
-
-    auto global_scope = middle_end.symbol_table.symbol_scopes[ast.get()];
+    auto global_scope = middle_end.symbol_table.global_scope;
     auto constructor =
         (bonk::TreeNodeBlockDefinition*)global_scope->symbols["TestHive$$constructor"];
     auto destructor = (bonk::TreeNodeBlockDefinition*)global_scope->symbols["TestHive$$destructor"];
@@ -369,7 +402,7 @@ TEST(MiddleEnd, ConstructorDestructorGeneratorTest) {
         EXPECT_EQ((*it)->variable_name->identifier_text, "x");
         EXPECT_EQ((*it)->variable_type->type, bonk::TreeNodeType::n_primitive_type);
         EXPECT_EQ(((bonk::TreeNodePrimitiveType*)(*it)->variable_type.get())->primitive_type,
-                  bonk::PrimitiveType::t_flot);
+                  bonk::TrivialTypeKind::t_flot);
         EXPECT_EQ((*it)->variable_value->type, bonk::TreeNodeType::n_number_constant);
         EXPECT_NEAR(
             ((bonk::TreeNodeNumberConstant*)(*it)->variable_value.get())->contents.double_value,
@@ -379,7 +412,7 @@ TEST(MiddleEnd, ConstructorDestructorGeneratorTest) {
         EXPECT_EQ((*it)->variable_name->identifier_text, "y");
         EXPECT_EQ((*it)->variable_type->type, bonk::TreeNodeType::n_primitive_type);
         EXPECT_EQ(((bonk::TreeNodePrimitiveType*)(*it)->variable_type.get())->primitive_type,
-                  bonk::PrimitiveType::t_strg);
+                  bonk::TrivialTypeKind::t_strg);
         EXPECT_EQ((*it)->variable_value, nullptr);
 
         it++;
@@ -402,10 +435,14 @@ TEST(MiddleEnd, ConstructorDestructorGeneratorTest) {
 
         auto variable_definition = (bonk::TreeNodeVariableDefinition*)(*it).get();
         EXPECT_EQ(variable_definition->variable_name->identifier_text, "object");
-        EXPECT_EQ(variable_definition->variable_value->type, bonk::TreeNodeType::n_call);
+        EXPECT_EQ(variable_definition->variable_value->type, bonk::TreeNodeType::n_cast);
 
-        auto call = (bonk::TreeNodeCall*)(variable_definition->variable_value.get());
-        EXPECT_EQ(middle_end.type_table.get_type(call)->kind, bonk::TypeKind::hive);
+        auto cast = (bonk::TreeNodeCast*)(variable_definition->variable_value.get());
+        EXPECT_EQ(cast->type, bonk::TreeNodeType::n_cast);
+        EXPECT_EQ(cast->operand->type, bonk::TreeNodeType::n_call);
+        EXPECT_EQ(cast->target_type->type, bonk::TreeNodeType::n_identifier);
+
+        auto call = (bonk::TreeNodeCall*)(cast->operand.get());
         EXPECT_EQ(call->callee->type, bonk::TreeNodeType::n_identifier);
         EXPECT_EQ(((bonk::TreeNodeIdentifier*)call->callee.get())->identifier_text,
                   "$$bonk_create_object");
@@ -443,7 +480,7 @@ TEST(MiddleEnd, ConstructorDestructorGeneratorTest) {
         }
     } visitor;
 
-    ast->accept(&visitor);
+    ast.root->accept(&visitor);
 
     // Make sure that the replacer replaced all the identifiers
     // used in value context.
@@ -455,25 +492,20 @@ TEST(MiddleEnd, ConstructorDestructorGeneratorTest) {
 
     // Make sure that the replacer didn't replace what it shouldn't have
     // <compiler-generated definition of TestHive$$destructor> <- 1 (has one in its prototype)
-    // hive TestHive <- 2
-    // blok TestHiveGenerator: TestHive <- 3
-    // bowl hive_instance: TestHive = (...) <- 4
-    EXPECT_EQ(visitor.hive_reference_count, 4);
-
-    std::stringstream ast_stringstream;
-    bonk::StdOutputStream stream{ast_stringstream};
-    bonk::ASTPrinter printer{stream};
-    ast->accept(&printer);
-    std::string ast_string = ast_stringstream.str();
-    std::cout << ast_string;
+    // <compiler-generated definition of TestHive$$constructor> <- 2 (has one in its prototype)
+    // <compiler-generated definition of TestHive$$constructor> <- 3 (has a cast to TestHive)
+    // hive TestHive <- 4
+    // blok TestHiveGenerator: TestHive <- 5
+    // bowl hive_instance: TestHive = (...) <- 6
+    EXPECT_EQ(visitor.hive_reference_count, 6);
 }
 
 bonk::IRProcedure* find_procedure(bonk::MiddleEnd& middle_end, bonk::IRProgram* program,
                                   std::string_view name) {
     for (auto& procedure : program->procedures) {
-        auto header = (bonk::HIRInstruction*)procedure->base_blocks[0]->instructions.front();
-        if (header->type != bonk::HIRInstructionType::procedure) {
-            ADD_FAILURE() << "Procedure header is not a 'procedure' command";
+        auto header = get_procedure_header(procedure.get());
+        if (!header) {
+            ADD_FAILURE() << "Could not get procedure header";
             continue;
         }
         auto procedure_header = (bonk::HIRProcedure*)header;
@@ -503,35 +535,36 @@ TEST(MiddleEnd, RefCountReplacementTest1) {
     )";
 
     auto lexemes = bonk::Lexer(compiler).parse_file("test", source);
-    auto ast = bonk::Parser(compiler).parse_file(&lexemes);
+    auto root = bonk::Parser(compiler).parse_file(&lexemes);
+    auto ast = bonk::AST();
+    ast.root = std::move(root);
 
-    ASSERT_NE(ast, nullptr);
+    ASSERT_NE(ast.root, nullptr);
 
     bonk::MiddleEnd middle_end(compiler);
-    middle_end.transform_ast(ast.get());
+    middle_end.transform_ast(ast);
 
     ASSERT_EQ(compiler.state, bonk::BONK_COMPILER_OK);
 
-    auto program = bonk::HIREarlyGeneratorVisitor(middle_end).generate(ast.get());
+    auto program = bonk::HIREarlyGeneratorVisitor(middle_end).generate(ast.root.get());
 
     // Find procedure called "main"
     bonk::IRProcedure* main_procedure = find_procedure(middle_end, program.get(), "main");
     ASSERT_NE(main_procedure, nullptr) << "Procedure 'main' not found";
 
-//    std::cout << "Before refcount replacement:" << std::endl;
-//    bonk::HIRPrinter printer(output_stream);
-//    printer.print(*program, *main_procedure);
+    //    std::cout << "Before refcount replacement:" << std::endl;
+    //    bonk::HIRPrinter printer(output_stream);
+    //    printer.print(*program, *main_procedure);
 
     bonk::HIRRefCountReplacer(middle_end).replace_ref_counters(*main_procedure);
 
-//    std::cout << "After refcount replacement:" << std::endl;
-//    printer.print(*program, *main_procedure);
+    //    std::cout << "After refcount replacement:" << std::endl;
+    //    printer.print(*program, *main_procedure);
 
     // Check that the procedure header is still a procedure header
-    auto first_instruction =
-        (bonk::HIRInstruction*)main_procedure->base_blocks[0]->instructions.front();
+    auto header = get_procedure_header(main_procedure);
 
-    EXPECT_EQ(first_instruction->type, bonk::HIRInstructionType::procedure)
+    EXPECT_EQ(header->type, bonk::HIRInstructionType::procedure)
         << "Procedure header is not a 'procedure' command";
 
     // Check that the procedure doesn't have dec_ref instruction
@@ -564,33 +597,33 @@ TEST(MiddleEnd, RefCountReplacementTest2) {
     )";
 
     auto lexemes = bonk::Lexer(compiler).parse_file("test", source);
-    auto ast = bonk::Parser(compiler).parse_file(&lexemes);
+    auto root = bonk::Parser(compiler).parse_file(&lexemes);
+    auto ast = bonk::AST();
+    ast.root = std::move(root);
 
-    ASSERT_NE(ast, nullptr);
+    ASSERT_NE(ast.root, nullptr);
 
     bonk::MiddleEnd middle_end(compiler);
-    middle_end.transform_ast(ast.get());
+    middle_end.transform_ast(ast);
 
     ASSERT_EQ(compiler.state, bonk::BONK_COMPILER_OK);
 
-    auto program = bonk::HIREarlyGeneratorVisitor(middle_end).generate(ast.get());
+    auto program = bonk::HIREarlyGeneratorVisitor(middle_end).generate(ast.root.get());
 
-//    std::cout << "Before refcount replacement:" << std::endl;
-//    bonk::HIRPrinter printer(output_stream);
-//    printer.print(*program);
+    //    std::cout << "Before refcount replacement:" << std::endl;
+    //    bonk::HIRPrinter printer(output_stream);
+    //    printer.print(*program);
 
     bonk::HIRRefCountReplacer(middle_end).replace_ref_counters(*program);
 
-//    std::cout << "After refcount replacement:" << std::endl;
-//    printer.print(*program);
+    //    std::cout << "After refcount replacement:" << std::endl;
+    //    printer.print(*program);
 
     // Check all the internal procedures
     for (auto& procedure : program->procedures) {
 
-        auto first_instruction =
-            (bonk::HIRInstruction*)procedure->base_blocks[0]->instructions.front();
-        EXPECT_EQ(first_instruction->type, bonk::HIRInstructionType::procedure)
-            << "Procedure header is not a 'procedure' command";
+        auto header = get_procedure_header(procedure.get());
+        EXPECT_NE(header, nullptr) << "Could not find procedure header";
 
         // Check that the procedure doesn't have dec_ref instruction
         for (auto& block : procedure->base_blocks) {
@@ -605,4 +638,29 @@ TEST(MiddleEnd, RefCountReplacementTest2) {
             }
         }
     }
+}
+
+TEST(MiddleEnd, TestMetadataExporter) {
+    auto output_stream = bonk::StdOutputStream(std::cout);
+    auto error_stream = bonk::StdOutputStream(std::cout);
+
+    bonk::CompilerConfig config{.error_file = error_stream};
+    bonk::Compiler compiler(config);
+
+    const char* source = R"(
+        hive TestHive {
+            bowl test_field1: flot = 100.0;
+            bowl test_field2: flot = 300.0;
+
+            blok method1[bowl a: many TestHive, bowl b: flot] {
+                bonk b;
+            }
+        }
+
+        blok bonk_main {
+            bonk @TestHive[test_field1 = 1.0];
+        }
+    )";
+
+    // TODO
 }

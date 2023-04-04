@@ -15,16 +15,16 @@ struct JsonSerializerState {
     bool field_name_set;
 };
 
-struct JsonSerializer {
+struct JSONSerializer {
     const OutputStream& output_stream;
     mutable std::stringstream ss;
     int depth;
     JsonSerializerState state{};
     std::vector<JsonSerializerState> states;
 
-    explicit JsonSerializer(const OutputStream& output_stream);
+    explicit JSONSerializer(const OutputStream& output_stream);
 
-    ~JsonSerializer();
+    ~JSONSerializer();
 
     JSONStringEscaperStream block_string_field();
 
@@ -54,14 +54,14 @@ struct JsonSerializer {
 
     void prepare_next_field();
 
-    JsonSerializer& field(std::string_view name);
+    JSONSerializer& field(std::string_view name);
 };
 
 class JSONStringEscaperStream {
   public:
-    JsonSerializer& serializer;
+    JSONSerializer& serializer;
 
-    explicit JSONStringEscaperStream(JsonSerializer& serializer);;
+    explicit JSONStringEscaperStream(JSONSerializer& serializer);;
 
     ~JSONStringEscaperStream();
 

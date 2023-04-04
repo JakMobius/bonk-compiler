@@ -9,6 +9,7 @@ class QBEBackend : public Backend {
 
     IRProgram* current_program = nullptr;
     std::vector<HIRProcedureParameter> call_parameters;
+    const bonk::OutputStream* output_stream = nullptr;
 
     void compile_procedure(IRProcedure& procedure);
     void compile_instruction(IRInstruction& instruction);
@@ -27,6 +28,8 @@ class QBEBackend : public Backend {
     void compile_instruction(HIRParameter& instruction);
     void compile_instruction(HIRMemoryLoad& instruction);
     void compile_instruction(HIRMemoryStore& instruction);
+    void compile_instruction(HIRFile& instruction);
+    void compile_instruction(HIRLocation& instruction);
 
     char get_hir_type(bonk::HIRDataType type, bool base_type = true);
     void print_comparison(HIROperationType type, HIRDataType operand_type);
@@ -34,9 +37,11 @@ class QBEBackend : public Backend {
     void padding();
 
   public:
-    void compile_program(IRProgram& program) override;
+    void compile_program(IRProgram& program, const bonk::OutputStream& output) override;
 
     QBEBackend(Compiler& linked_compiler): Backend(linked_compiler) {};
+
+    bool generate_debug_symbols = false;
 };
 
 }

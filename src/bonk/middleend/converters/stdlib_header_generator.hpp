@@ -4,23 +4,29 @@
 
 namespace bonk {
 
+class StdLibHeaderGenerator;
+
 struct StdlibFunction {
-    MiddleEnd& middle_end;
+    StdLibHeaderGenerator& generator;
     std::unique_ptr<TreeNodeBlockDefinition> function;
 
-    StdlibFunction& parameter(std::string_view name, PrimitiveType type);
-    StdlibFunction& return_type(PrimitiveType return_type);
+    StdlibFunction& parameter(std::string_view name, TrivialTypeKind type);
+    StdlibFunction& return_type(TrivialTypeKind return_type);
     void attach(TreeNodeProgram* program);
 };
 
 class StdLibHeaderGenerator {
+    friend class StdlibFunction;
+
     MiddleEnd& middle_end;
+    AST* current_ast = nullptr;
 
   public:
+
     explicit StdLibHeaderGenerator(MiddleEnd& middle_end) : middle_end(middle_end) {
     }
 
-    void generate(TreeNode* ast);
+    bonk::AST generate();
 
     StdlibFunction generate_stdlib_function(std::string_view name);
 

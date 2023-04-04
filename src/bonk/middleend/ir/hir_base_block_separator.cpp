@@ -23,7 +23,7 @@ void bonk::HIRBaseBlockSeparator::separate_blocks(bonk::IRProcedure& procedure) 
         auto hir_instruction = (HIRInstruction*)instruction;
 
         if (hir_instruction->type == HIRInstructionType::label) {
-            if(!is_first_instruction) {
+            if (!is_first_instruction) {
                 procedure.create_base_block();
                 current_block = procedure.base_blocks.back().get();
             }
@@ -44,5 +44,18 @@ void bonk::HIRBaseBlockSeparator::separate_blocks(bonk::IRProcedure& procedure) 
             current_block = procedure.base_blocks.back().get();
             is_first_instruction = true;
         }
+    }
+
+    // If last block is empty, remove it
+    if (current_block->instructions.empty()) {
+        procedure.base_blocks.pop_back();
+        current_block = procedure.base_blocks.back().get();
+    }
+
+    // If last block misses a return, add one
+    if (static_cast<HIRInstruction*>(current_block->instructions.back())->type !=
+        HIRInstructionType::return_op) {
+        auto return_op = procedure.instruction<HIRReturn>();
+        current_block->instructions.push_back(return_op);
     }
 }

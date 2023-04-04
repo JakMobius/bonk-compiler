@@ -12,7 +12,7 @@ TEST(QBEBackend, CodegenTest) {
     auto error_stream = bonk::StdOutputStream(std::cout);
     auto output_stream = bonk::StdOutputStream(result_stream);
 
-    bonk::CompilerConfig config{.error_file = error_stream, .output_file = output_stream};
+    bonk::CompilerConfig config{.error_file = error_stream };
     bonk::Compiler compiler(config);
 
     const char* source = R"(
@@ -26,17 +26,19 @@ TEST(QBEBackend, CodegenTest) {
     )";
 
     auto lexemes = bonk::Lexer(compiler).parse_file("test", source);
-    auto ast = bonk::Parser(compiler).parse_file(&lexemes);
+    auto root = bonk::Parser(compiler).parse_file(&lexemes);
+    auto ast = bonk::AST();
+    ast.root = std::move(root);
 
-    ASSERT_NE(ast, nullptr);
+    ASSERT_NE(ast.root, nullptr);
 
     bonk::MiddleEnd middle_end(compiler);
 
-    middle_end.transform_ast(ast.get());
-    auto ir_program = middle_end.generate_hir(ast.get());
+    middle_end.transform_ast(ast);
+    auto ir_program = middle_end.generate_hir(ast.root.get());
 
     bonk::qbe_backend::QBEBackend backend{compiler};
-    backend.compile_program(*ir_program);
+    backend.compile_program(*ir_program, output_stream);
     std::string result = result_stream.str();
 
     // add_one function definition

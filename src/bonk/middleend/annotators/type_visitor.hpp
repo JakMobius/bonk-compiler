@@ -1,5 +1,6 @@
 #pragma once
 
+#include "bonk/tree/ast_clone_visitor.hpp"
 #include "types.hpp"
 #include "utils/streams.hpp"
 namespace bonk {
@@ -10,9 +11,9 @@ class ConstTypeVisitor {
     virtual void visit(const BlokType* type);
     virtual void visit(const TrivialType* type);
     virtual void visit(const ManyType* type);
-    virtual void visit(const NothingType* type);
-    virtual void visit(const NeverType* type);
     virtual void visit(const ErrorType* type);
+    virtual void visit(const ExternalType* type);
+    virtual void visit(const NullType* type);
 };
 
 class TypeCloner : public ConstTypeVisitor {
@@ -22,9 +23,9 @@ class TypeCloner : public ConstTypeVisitor {
     void visit(const BlokType* type) override;
     void visit(const TrivialType* type) override;
     void visit(const ManyType* type) override;
-    void visit(const NothingType* type) override;
-    void visit(const NeverType* type) override;
     void visit(const ErrorType* type) override;
+    void visit(const ExternalType* type) override;
+    void visit(const NullType* type) override;
 
     template <typename T>
     std::unique_ptr<T> clone(T* type) {
@@ -44,9 +45,9 @@ class TypePrinter : public ConstTypeVisitor {
     void visit(const BlokType* type) override;
     void visit(const TrivialType* type) override;
     void visit(const ManyType* type) override;
-    void visit(const NothingType* type) override;
-    void visit(const NeverType* type) override;
     void visit(const ErrorType* type) override;
+    void visit(const ExternalType* type) override;
+    void visit(const NullType* type) override;
 };
 
 class FootprintCounter : public ConstTypeVisitor {
@@ -58,9 +59,9 @@ class FootprintCounter : public ConstTypeVisitor {
     void visit(const BlokType* type) override;
     void visit(const TrivialType* type) override;
     void visit(const ManyType* type) override;
-    void visit(const NothingType* type) override;
-    void visit(const NeverType* type) override;
     void visit(const ErrorType* type) override;
+    void visit(const ExternalType* type) override;
+    void visit(const NullType* type) override;
 
     int get_footprint(Type* type);
 };
@@ -73,11 +74,28 @@ class NeverSearchVisitor : public ConstTypeVisitor {
     void visit(const BlokType* type) override;
     void visit(const TrivialType* type) override;
     void visit(const ManyType* type) override;
-    void visit(const NothingType* type) override;
-    void visit(const NeverType* type) override;
     void visit(const ErrorType* type) override;
+    void visit(const ExternalType* type) override;
+    void visit(const NullType* type) override;
 
     bool search(Type* type);
+};
+
+class TypeToASTConvertVisitor : public ConstTypeVisitor {
+
+  public:
+    void visit(const HiveType* type) override;
+    void visit(const BlokType* type) override;
+    void visit(const TrivialType* type) override;
+    void visit(const ManyType* type) override;
+    void visit(const ErrorType* type) override;
+    void visit(const ExternalType* type) override;
+    void visit(const NullType* type) override;
+
+    std::unique_ptr<TreeNode> convert(Type* type);
+
+    std::unique_ptr<TreeNode> result;
+
 };
 
 } // namespace bonk

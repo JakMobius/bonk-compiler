@@ -156,7 +156,6 @@ TEST(TestQBEFullCycle, TestReferenceCounter1) {
         hive TestHive {}
 
         blok get_hive_1 { bonk @TestHive; }
-        blok get_hive_2 { bonk @get_hive_1; }
     )";
 
     const char* c_source = R"(
@@ -279,6 +278,70 @@ TEST(TestQBEFullCycle, TestReferenceCounter5) {
     EXPECT_EQ(get_executable_output("test"), "1");
 }
 
+TEST(TestQBEFullCycle, TestReferenceCounter6) {
+
+    const char* bonk_source = R"(
+        blok print_reference_count[bowl item: Test]: nothing;
+
+        hive Test {}
+
+        blok main {
+            bowl object = @Test;
+            bowl object2 = object;
+            @print_reference_count[item = object];
+            object2 = null;
+            @print_reference_count[item = object];
+        }
+    )";
+
+    const char* c_source = R"(
+        #include <stdio.h>
+
+        void print_reference_count(unsigned long long* ptr) { printf("%llu ", ptr[-1]); }
+    )";
+
+    ASSERT_TRUE(run_bonk_with_counterpart(bonk_source, c_source, "test"));
+    EXPECT_EQ(get_executable_output("test"), "3 2 ");
+}
+
+TEST(TestQBEFullCycle, TestReferenceCounter7) {
+
+    const char* bonk_source = R"(
+        blok print_ref_count[bowl item: Test]: nothing;
+
+        hive Test {
+            bowl next: Test = null;
+            bowl item = 0;
+        }
+
+        blok access[bowl item: Test] {
+            bowl ptr1 = next of item;
+            item of ptr1 = item of ptr1;
+        }
+
+        blok main {
+            bowl test = @Test[next = @Test];
+
+            @print_ref_count[item = test];
+            @print_ref_count[item = next of test];
+
+            @access[item = test];
+
+            @print_ref_count[item = test];
+            @print_ref_count[item = next of test];
+        }
+    )";
+
+    const char* c_source = R"(
+            #include <stdio.h>
+
+            void print_ref_count(unsigned long long* ptr) { printf("%llu ", ptr[-1]); }
+    )";
+
+    ASSERT_TRUE(run_bonk_with_counterpart(bonk_source, c_source, "test"));
+    EXPECT_EQ(get_executable_output("test"), "2 2 2 2 ");
+}
+
 TEST(TestQBEFullCycle, TestHive1) {
 
     // This test used to cause a segfault in the hive_ctor_dtor_late_generator
@@ -318,3 +381,127 @@ TEST(TestQBEFullCycle, TestHive2) {
     EXPECT_EQ(get_executable_return_code("test"), 15);
 }
 
+TEST(TestQBEFullCycle, TestHive3) {
+
+    const char* bonk_source = R"(
+        hive Hive1 {
+            bowl value: nubr = 10;
+        }
+
+        blok get_value {
+            bowl hive1 = @Hive1;
+            bowl value = value of hive1;
+            bonk value;
+        }
+    )";
+
+    const char* c_source = R"(
+        #include <stdio.h>
+
+        int get_value();
+        int main() { printf("%d", get_value()); }
+    )";
+
+    ASSERT_TRUE(run_bonk_with_counterpart(bonk_source, c_source, "test"));
+    EXPECT_EQ(get_executable_output("test"), "10");
+}
+
+TEST(TestQBEFullCycle, TestHive4) {
+
+    const char* bonk_source = R"(
+        hive Structure {
+          bowl next: Structure = null;
+          bowl num: nubr = 24;
+        }
+
+        blok make_it[bowl it: Structure] {
+          it = next of it;
+          bonk num of it;
+        }
+
+        blok main {
+         bonk @make_it[it = @Structure[next = @Structure[num = 42]]];
+        }
+    )";
+
+    ASSERT_TRUE(run_bonk(bonk_source, "test"));
+    EXPECT_EQ(get_executable_return_code("test"), 42);
+}
+
+TEST(TestQBEFullCycle, TestHive5) {
+
+    const char* bonk_source = R"(
+        hive Item {
+            bowl next: Item = null;
+            bowl num: nubr = 24;
+        }
+
+        blok access[bowl item: Item] {
+            bowl ptr1 = item;
+            ptr1 = next of item;
+        }
+
+        blok main {
+            bowl item = @Item[next = @Item[next = @Item[next = @Item[num = 100]]]];
+            @access[item = item];
+            bonk num of next of next of next of item;
+        }
+    )";
+
+    ASSERT_TRUE(run_bonk(bonk_source, "test"));
+    EXPECT_EQ(get_executable_return_code("test"), 100);
+}
+
+TEST(TestQBEFullCycle, TestHive6) {
+
+    const char* bonk_source = R"(
+        hive Test {
+            bowl next: Test = null;
+            bowl item = 0;
+        }
+
+        blok access_loop[bowl list: Test] {
+            loop[bowl next = next of list] {
+                brek;
+            }
+        }
+
+        blok main {
+            bowl test = @Test;
+
+            next of test = @Test;
+            next of next of test = @Test;
+            item of next of next of test = 38;
+
+            @access_loop[list = test];
+
+            bonk item of next of next of test;
+        }
+    )";
+
+    ASSERT_TRUE(run_bonk(bonk_source, "test"));
+    EXPECT_EQ(get_executable_return_code("test"), 38);
+}
+
+TEST(TestQBEFullCycle, TestArgumentAssign) {
+
+    const char* bonk_source = R"(
+        hive Test {
+            bowl num = 10;
+            bowl next: Test = null;
+        }
+
+        blok iterate[bowl test: Test] {
+            test = next of test;
+        }
+
+        blok main {
+            bowl test = @Test[next = @Test[num = 20]];
+            @iterate[test = test];
+            bonk num of next of test;
+        }
+    )";
+
+    ASSERT_TRUE(run_bonk(bonk_source, "test"));
+    EXPECT_EQ(get_executable_return_code("test"), 20);
+}

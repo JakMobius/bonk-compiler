@@ -1,14 +1,13 @@
 
 #include <fstream>
-#include <sys/stat.h>
 #include "argparse/argparse.hpp"
 #include "bonk/backend/qbe/qbe_backend.hpp"
-#include "bonk/backend/x86/x86_backend.hpp"
+//#include "bonk/backend/x86/x86_backend.hpp"
 #include "bonk/compiler.hpp"
-#include "bonk/middleend/ir/hir_printer.hpp"
+#include "bonk/help-resolver/help_resolver.hpp"
 #include "bonk/middleend/middleend.hpp"
 #include "bonk/tree/ast_printer.hpp"
-#include "bonk/tree/json_dump_ast_visitor.hpp"
+#include "bonk/tree/json_ast_serializer.hpp"
 
 struct InitErrorReporter {
 
@@ -29,9 +28,11 @@ struct InitErrorReporter {
 
 bool dump_ast(bonk::TreeNode* ast, std::string_view mode, bonk::OutputStream& output_file) {
     if (mode == "json") {
-        bonk::JsonSerializer serializer{output_file};
-        bonk::JsonDumpAstVisitor visitor{serializer};
-        ast->accept(&visitor);
+
+        bonk::JSONSerializer serializer{output_file};
+        bonk::JSONASTSerializer ast_serializer{serializer};
+        ast->accept(&ast_serializer);
+
     } else if (mode == "code") {
         bonk::ASTPrinter printer{output_file};
         ast->accept(&printer);
@@ -52,20 +53,14 @@ int main(int argc, const char* argv[]) {
         .default_value(false)
         .implicit_value(true)
         .help("show this help message and exit");
-    program.add_argument("--ast-fmt")
-        .default_value(std::string("code")).help(
-        "output AST format ('json' or 'code' - default) ");
-    program.add_argument("--stop-checkpoint")
-        .help("output AST or HIR after the specified checkpoint");
-    program.add_argument("-o", "--output-file")
-        .default_value(std::string("out"))
-        .nargs(1)
-        .help("path to the output file");
     program.add_argument("-t", "--target")
         .default_value(std::string("qbe"))
         .nargs(1)
         .help("compile target (qbe)");
-    program.add_argument("-l", "--listing-file").nargs(1).help("path to the listing file");
+    program.add_argument("-g", "--debug")
+            .default_value(false)
+            .implicit_value(true)
+            .help("generate debug symbols");
 
     try {
         program.parse_args(argc, argv);
@@ -75,10 +70,8 @@ int main(int argc, const char* argv[]) {
         return EXIT_FAILURE;
     }
 
-    const auto input_file_path = program.get<std::string>("input");
+    std::filesystem::path input_file_path = program.get<std::string>("input");
     const auto help_flag = program.get<bool>("--help");
-    const auto ast_fmt_flag = program.get<std::string>("--ast-fmt");
-    const auto output_file_path = program.get<std::string>("--output-file");
     const auto target_flag = program.get<std::string>("--target");
 
     if (help_flag || input_file_path.empty()) {
@@ -88,111 +81,52 @@ int main(int argc, const char* argv[]) {
 
     std::unique_ptr<bonk::OutputStream> error_file =
         std::make_unique<bonk::StdOutputStream>(std::cerr);
-    std::unique_ptr<bonk::OutputStream> output_file =
-        std::make_unique<bonk::FileOutputStream>(output_file_path);
-    std::unique_ptr<bonk::OutputStream> listing_file = std::make_unique<bonk::NullOutputStream>();
-    std::unique_ptr<bonk::InputStream> input_file;
-
-    if (!output_file->get_stream()) {
-        error_reporter.fatal_error() << "could not open output file '" << output_file_path << "'";
-        return EXIT_FAILURE;
-    }
-
-    input_file = std::make_unique<bonk::FileInputStream>(input_file_path);
-    if (!input_file->get_stream()) {
-        error_reporter.fatal_error() << "could not open input file '" << input_file_path << "'";
-        return EXIT_FAILURE;
-    }
-
-    if (auto log_file = program.present("--listing-file")) {
-        listing_file = std::make_unique<bonk::FileOutputStream>(log_file.value());
-        if (!listing_file->get_stream()) {
-            error_reporter.warning() << "could not open listing file '" << log_file.value() << "'";
-            listing_file = std::make_unique<bonk::NullOutputStream>();
-        }
-    }
 
     bonk::CompilerConfig config = {
-        .error_file = *error_file,
-        .listing_file = *listing_file,
-        .output_file = *output_file,
+        .error_file = *error_file
     };
-
-    if(auto checkpoint = program.present("--stop-checkpoint")) {
-        config.stop_checkpoint = checkpoint.value();
-    }
 
     bonk::Compiler compiler(config);
     std::unique_ptr<bonk::Backend> backend;
 
     if (target_flag == "x86") {
-        backend = std::make_unique<bonk::x86_backend::Backend>(compiler);
+//        backend = std::make_unique<bonk::x86_backend::Backend>(compiler);
     } else if (target_flag == "qbe") {
-        backend = std::make_unique<bonk::qbe_backend::QBEBackend>(compiler);
+        auto qbe_backend = std::make_unique<bonk::qbe_backend::QBEBackend>(compiler);
+        if(program.get<bool>("--debug")) {
+            qbe_backend->generate_debug_symbols = true;
+        }
+        backend = std::move(qbe_backend);
     } else {
         error_reporter.fatal_error() << "unknown compile target: '" << target_flag.c_str() << "'";
         return 1;
     }
 
-    std::string source;
-    source.assign((std::istreambuf_iterator<char>(input_file->get_stream())),
-                  std::istreambuf_iterator<char>());
+    compiler.backend = backend.get();
 
-    auto lexemes =
-        bonk::Lexer(compiler).parse_file(input_file_path.c_str(), source.c_str());
+    bonk::HelpResolver help_resolver{compiler};
 
-    if (compiler.state) {
-        return EXIT_FAILURE;
-    }
-
-    auto ast = bonk::Parser(compiler).parse_file(&lexemes);
-
-    if (compiler.state || !ast) {
-        return EXIT_FAILURE;
-    }
-
-    if (compiler.config.should_stop_after("frontend")) {
-        if (dump_ast(ast.get(), ast_fmt_flag, *output_file)) {
-            return EXIT_SUCCESS;
-        }
-        return EXIT_FAILURE;
-    }
-
-    // Run middle-end and back-end
-    bonk::MiddleEnd middle_end(compiler);
-    middle_end.transform_ast(ast.get());
-
-    if (compiler.config.should_stop_after("midend-ast")) {
-        if (dump_ast(ast.get(), ast_fmt_flag, *output_file)) {
-            return EXIT_SUCCESS;
-        }
-        return EXIT_FAILURE;
-    }
+    help_resolver.compile_file(input_file_path);
 
     if (compiler.state) {
         return EXIT_FAILURE;
     }
 
-    auto ir_program = middle_end.generate_hir(ast.get());
+    std::filesystem::path bs_cache_path = input_file_path.parent_path() /= ".bscache";
+    std::filesystem::path project_meta_path = bs_cache_path / input_file_path.stem() += ".project.meta";
+    std::filesystem::path project_delta_path = bs_cache_path / input_file_path.stem() += ".delta.meta";
 
-    if (!ir_program) {
-        return EXIT_FAILURE;
+    std::filesystem::create_directories(bs_cache_path);
+
+    bonk::FileOutputStream project_meta_file{project_meta_path.string()};
+    bonk::FileOutputStream project_delta_file{project_delta_path.string()};
+
+    for(auto& file : compiler.output_files) {
+        project_meta_file.get_stream() << file << "\n";
     }
 
-    if(compiler.config.should_stop_after("midend-hir")) {
-        bonk::HIRPrinter printer{*output_file};
-        printer.print(*ir_program);
-        return EXIT_SUCCESS;
-    }
-
-    backend->compile_program(*ir_program);
-
-    if (chmod(output_file_path.c_str(), 511) < 0) {
-        compiler.warning() << "failed to add execution permissions to file";
-    }
-
-    if (compiler.state) {
-        return EXIT_FAILURE;
+    for(auto& file : compiler.updated_files) {
+        project_delta_file.get_stream() << file << "\n";
     }
 
     return EXIT_SUCCESS;

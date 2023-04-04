@@ -145,7 +145,7 @@ void bonk::HIRRefCountReplacer::call_destructor(TreeNodeHiveDefinition* hive_def
         std::string(hive_definition->hive_name->identifier_text) + "$$destructor";
 
     // Find the destructor symbol
-    auto scope = middle_end.symbol_table.symbol_scopes[hive_definition]->parent_scope;
+    auto scope = middle_end.symbol_table.get_scope_for_node(hive_definition)->parent_scope;
     auto destructor_definition = ScopedNameResolver(scope).get_name_definition(destructor_name);
     auto destructor_definition_id = middle_end.id_table.get_id(destructor_definition);
 

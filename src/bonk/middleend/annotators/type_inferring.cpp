@@ -2,6 +2,7 @@
 #include "type_inferring.hpp"
 #include "../../compiler.hpp"
 #include "../middleend.hpp"
+#include "bonk/help-resolver/help_resolver.hpp"
 #include "type_visitor.hpp"
 
 void bonk::TypeInferringVisitor::visit(TreeNodeProgram* node) {
@@ -12,14 +13,72 @@ void bonk::TypeInferringVisitor::visit(TreeNodeHelp* node) {
     assert(!"Cannot infer type of help statement");
 }
 
+struct ExternalFileIdentifierResolver : bonk::ExternalTypeResolver {
+    bonk::MiddleEnd& middle_end;
+    std::string_view file;
+    std::string_view identifier;
+
+    ExternalFileIdentifierResolver(bonk::MiddleEnd& middle_end, std::string_view file,
+                                   std::string_view identifier)
+        : middle_end(middle_end), file(file), identifier(identifier) {
+    }
+
+    std::unique_ptr<bonk::Type> resolve() override {
+        if (!middle_end.module_path.has_value()) {
+            middle_end.linked_compiler.error()
+                << "External types cannot be resolved without a module path";
+            return nullptr;
+        }
+
+        auto dependency_path = middle_end.module_path->parent_path() /= file;
+        auto absolute_path = std::filesystem::absolute(dependency_path);
+        auto module = middle_end.get_external_module(dependency_path);
+        if (!module) {
+            bonk::HelpResolver resolver(middle_end.linked_compiler);
+            auto metadata = resolver.get_recent_metadata_for_source(absolute_path);
+
+            if (!metadata) {
+                return nullptr;
+            }
+
+            metadata->fill_external_symbol_table(middle_end);
+            auto ast = std::move(*metadata).to_ast();
+            module = middle_end.add_external_module(file, std::move(ast), false);
+        }
+
+        bonk::ScopedNameResolver name_resolver;
+        name_resolver.current_scope = module->scope;
+        auto definition = name_resolver.get_name_definition(identifier);
+
+        assert(definition);
+
+        auto type = middle_end.type_table.get_type(definition);
+        return bonk::TypeCloner().clone(type);
+    }
+
+    std::unique_ptr<ExternalTypeResolver> clone() override {
+        return std::make_unique<ExternalFileIdentifierResolver>(middle_end, file, identifier);
+    }
+};
+
 void bonk::TypeInferringVisitor::visit(TreeNodeIdentifier* node) {
     auto def = middle_end.symbol_table.get_definition(node);
-    if (def == nullptr) {
+    if (!def) {
         middle_end.linked_compiler.error().at(node->source_position)
             << "Identifier '" << node->identifier_text << "' is not defined";
         return;
     }
-    get_current_type_table().annotate(node, infer_type(def));
+    if (def.is_local()) {
+        get_current_type_table().annotate(node, infer_type(def.get_local().definition));
+    }
+    if (def.is_external()) {
+        auto type = get_current_type_table().create<bonk::ExternalType>();
+
+        type->resolver = std::make_unique<ExternalFileIdentifierResolver>(
+            middle_end, def.get_external().file, node->identifier_text);
+
+        get_current_type_table().annotate(node, type);
+    }
 }
 
 void bonk::TypeInferringVisitor::visit(TreeNodeBlockDefinition* node) {
@@ -46,15 +105,8 @@ void bonk::TypeInferringVisitor::visit(TreeNodeBlockDefinition* node) {
     get_current_type_table().annotate(node, blok_type);
 }
 
-std::unique_ptr<bonk::Type>
-bonk::TypeInferringVisitor::infer_block_return_type(bonk::TreeNodeBlockDefinition* node) {
-    if (std::find(block_stack.begin(), block_stack.end(), node) != block_stack.end()) {
-        // If there is a loop in the block graph, there is no way to return
-        // from these blocks, so their return type is "never"
-        return std::make_unique<NeverType>();
-    }
-
-    // Find all bonk statements in the block
+std::vector<bonk::TreeNodeBonkStatement*>
+bonk::TypeInferringVisitor::get_bonk_statements_in_block(TreeNodeBlockDefinition* node) {
 
     std::vector<TreeNodeBonkStatement*> bonk_statements;
 
@@ -74,8 +126,48 @@ bonk::TypeInferringVisitor::infer_block_return_type(bonk::TreeNodeBlockDefinitio
 
     node->accept(&bonk_visitor);
 
-    if (bonk_statements.empty()) {
-        return std::make_unique<NothingType>();
+    return bonk_statements;
+}
+
+std::unique_ptr<bonk::Type>
+bonk::TypeInferringVisitor::infer_block_return_type(bonk::TreeNodeBlockDefinition* node) {
+    if (std::find(block_stack.begin(), block_stack.end(), node) != block_stack.end()) {
+        // If there is a loop in the block graph, there is no way to return
+        // from these blocks, so their return type is "never"
+        auto result = std::make_unique<TrivialType>();
+        result->trivial_kind = TrivialTypeKind::t_never;
+        return result;
+    }
+
+    // Find all bonk statements in the block
+
+    std::vector<TreeNodeBonkStatement*> bonk_statements = get_bonk_statements_in_block(node);
+
+    Type* return_type_annotation =
+        node->return_type ? infer_type(node->return_type.get()) : nullptr;
+
+    if (!node->body) {
+        if (!return_type_annotation) {
+            middle_end.linked_compiler.error().at(node->source_position)
+                << "Blok should either have a return type annotation or a body";
+            return std::make_unique<ErrorType>();
+        }
+    }
+
+    if (node->body && bonk_statements.empty()) {
+        if (return_type_annotation && return_type_annotation->is(TrivialTypeKind::t_nothing) &&
+            return_type_annotation->is(TypeKind::error)) {
+            middle_end.linked_compiler.error().at(node->source_position)
+                << "Blok has no bonk statements, but return type is " << *return_type_annotation;
+            return TypeCloner().clone(return_type_annotation);
+        }
+        auto type = std::make_unique<TrivialType>();
+        type->trivial_kind = TrivialTypeKind::t_nothing;
+        return type;
+    }
+
+    if (return_type_annotation) {
+        return TypeCloner().clone(return_type_annotation);
     }
 
     // Infer type of each bonk statement, assuming that the block never returns
@@ -88,7 +180,7 @@ bonk::TypeInferringVisitor::infer_block_return_type(bonk::TreeNodeBlockDefinitio
     block_stack.push_back(node);
 
     Type* return_type = nullptr;
-    NeverType* never_found = nullptr;
+    TrivialType* never_found = nullptr;
 
     for (auto& bonk_statement : bonk_statements) {
         auto bonk_type = infer_type(bonk_statement);
@@ -96,8 +188,8 @@ bonk::TypeInferringVisitor::infer_block_return_type(bonk::TreeNodeBlockDefinitio
         if (!bonk_type || bonk_type->kind == TypeKind::error)
             continue;
 
-        if (bonk_type->kind == TypeKind::never) {
-            never_found = (NeverType*)bonk_type;
+        if (bonk_type->is(TrivialTypeKind::t_never)) {
+            never_found = (TrivialType*)bonk_type;
             continue;
         }
 
@@ -114,7 +206,7 @@ bonk::TypeInferringVisitor::infer_block_return_type(bonk::TreeNodeBlockDefinitio
 
     block_stack.pop_back();
 
-    if(return_type == nullptr && never_found) {
+    if (return_type == nullptr && never_found) {
         return_type = never_found;
     }
 
@@ -126,7 +218,7 @@ bonk::TypeInferringVisitor::infer_block_return_type(bonk::TreeNodeBlockDefinitio
     // contains semantic errors. If that's the case, the
     // sink_types_to_parent_table is going to crash the compiler.
 
-    if(result == nullptr) {
+    if (result == nullptr) {
         result = std::make_unique<ErrorType>();
     }
 
@@ -147,8 +239,33 @@ void bonk::TypeInferringVisitor::visit(TreeNodeBonkStatement* node) {
     if (node->expression) {
         get_current_type_table().annotate(node, infer_type(node->expression.get()));
     } else {
-        get_current_type_table().annotate<NothingType>(node);
+        get_current_type_table().annotate<TrivialType>(node)->trivial_kind =
+            TrivialTypeKind::t_nothing;
     }
+
+    // TODO: Check if the bonk statement returns the same type as the blok definition
+
+    // Find the nearest blok definition
+    //    auto top_block = ...
+
+    // If the blok definition has a return type annotation, check if the bonk statement
+    // returns the same type
+    //    if (top_block->return_type) {
+    //        auto return_type = infer_type(top_block->return_type.get());
+    //        auto bonk_type = get_current_type_table().get_type(node);
+    //
+    //        if (!bonk_type || bonk_type->kind == TypeKind::error)
+    //            return;
+    //
+    //        if (!return_type || return_type->kind == TypeKind::error)
+    //            return;
+    //
+    //        if (*return_type != *bonk_type) {
+    //            middle_end.linked_compiler.error().at(node->source_position)
+    //                << "bonk statement returns type " << *bonk_type
+    //                << ", but blok definition returns type " << *return_type;
+    //        }
+    //    }
 }
 
 void bonk::TypeInferringVisitor::visit(TreeNodeVariableDefinition* node) {
@@ -175,7 +292,7 @@ void bonk::TypeInferringVisitor::visit(TreeNodeParameterListItem* node) {
 }
 
 void bonk::TypeInferringVisitor::visit(TreeNodeCodeBlock* node) {
-    get_current_type_table().annotate<NothingType>(node);
+    get_current_type_table().annotate<TrivialType>(node)->trivial_kind = TrivialTypeKind::t_nothing;
 }
 
 void bonk::TypeInferringVisitor::visit(TreeNodeArrayConstant* node) {
@@ -210,18 +327,18 @@ void bonk::TypeInferringVisitor::visit(TreeNodeArrayConstant* node) {
 void bonk::TypeInferringVisitor::visit(TreeNodeNumberConstant* node) {
     auto trivial = get_current_type_table().annotate<TrivialType>(node);
 
-    if(node->contents.kind == NumberConstantKind::rather_double) {
-        trivial->primitive_type = bonk::PrimitiveType::t_flot;
-    } else if(node->contents.kind == NumberConstantKind::rather_integer) {
-        trivial->primitive_type = bonk::PrimitiveType::t_nubr;
+    if (node->contents.kind == NumberConstantKind::rather_double) {
+        trivial->trivial_kind = bonk::TrivialTypeKind::t_flot;
+    } else if (node->contents.kind == NumberConstantKind::rather_integer) {
+        trivial->trivial_kind = bonk::TrivialTypeKind::t_nubr;
     } else {
         assert(!"Unknown number constant kind");
     }
 }
 
 void bonk::TypeInferringVisitor::visit(TreeNodeStringConstant* node) {
-    get_current_type_table().annotate<TrivialType>(node)->primitive_type =
-        bonk::PrimitiveType::t_strg;
+    get_current_type_table().annotate<TrivialType>(node)->trivial_kind =
+        bonk::TrivialTypeKind::t_strg;
 }
 
 void bonk::TypeInferringVisitor::visit(TreeNodeBinaryOperation* node) {
@@ -231,14 +348,14 @@ void bonk::TypeInferringVisitor::visit(TreeNodeBinaryOperation* node) {
     if (left_type->kind == TypeKind::error || right_type->kind == TypeKind::error)
         return;
 
-    if (left_type->kind == TypeKind::never) {
+    if (left_type->is(TrivialTypeKind::t_never)) {
         // There are no binary operations that can return if the left operand has type 'never'.
         // using left_type here to avoid allocating a new type.
         get_current_type_table().annotate(node, left_type);
         return;
     }
 
-    if (right_type->kind == TypeKind::never) {
+    if (right_type->is(TrivialTypeKind::t_never)) {
         if (node->operator_type == OperatorType::o_and ||
             node->operator_type == OperatorType::o_or) {
             // If operation is 'and' or 'or', then the operation can only
@@ -282,8 +399,8 @@ void bonk::TypeInferringVisitor::visit(TreeNodeBinaryOperation* node) {
     case OperatorType::o_less_equal:
     case OperatorType::o_greater_equal:
     case OperatorType::o_not_equal:
-        get_current_type_table().annotate<TrivialType>(node)->primitive_type =
-            bonk::PrimitiveType::t_buul;
+        get_current_type_table().annotate<TrivialType>(node)->trivial_kind =
+            bonk::TrivialTypeKind::t_buul;
         return;
     default:
         assert(!"Unsupported binary operator");
@@ -304,7 +421,7 @@ void bonk::TypeInferringVisitor::visit(TreeNodeUnaryOperation* node) {
 }
 
 void bonk::TypeInferringVisitor::visit(TreeNodePrimitiveType* node) {
-    get_current_type_table().annotate<TrivialType>(node)->primitive_type = node->primitive_type;
+    get_current_type_table().annotate<TrivialType>(node)->trivial_kind = node->primitive_type;
 }
 
 void bonk::TypeInferringVisitor::visit(TreeNodeManyType* node) {
@@ -315,6 +432,10 @@ void bonk::TypeInferringVisitor::visit(TreeNodeManyType* node) {
 void bonk::TypeInferringVisitor::visit(TreeNodeHiveAccess* node) {
     // Determine the type of the hive
     auto type = infer_type(node->hive.get());
+
+    if (type->kind == TypeKind::external) {
+        type = ((ExternalType*)type)->get_resolved();
+    }
 
     if (!type || type->kind == TypeKind::error)
         return;
@@ -390,7 +511,9 @@ void bonk::TypeInferringVisitor::visit(TreeNodeCall* node) {
             continue;
         }
 
-        middle_end.symbol_table.symbol_definitions[argument->parameter_name.get()] = definition;
+        auto parameter_name = argument->parameter_name.get();
+        middle_end.symbol_table.symbol_definitions[parameter_name] =
+            SymbolDefinition::local(definition);
 
         Type* valid_type = infer_type(definition);
 
@@ -405,6 +528,21 @@ void bonk::TypeInferringVisitor::visit(TreeNodeCall* node) {
     }
 }
 
+void bonk::TypeInferringVisitor::visit(TreeNodeCast* node) {
+    auto type = infer_type(node->target_type.get());
+
+    if (type->kind == TypeKind::error)
+        return;
+
+    if(node->operand) {
+        // TypeAnnotator might not be able to get there,
+        // as it could be an identifier.
+        infer_type(node->operand.get());
+    }
+
+    get_current_type_table().annotate(node, type);
+}
+
 bonk::Type* bonk::TypeInferringVisitor::infer_type(bonk::TreeNode* node) {
     // Note: when infer_type is called on a node, it is assumed
     // that the node parent has already been visited and its type
@@ -413,7 +551,7 @@ bonk::Type* bonk::TypeInferringVisitor::infer_type(bonk::TreeNode* node) {
     auto& type_table = get_current_type_table();
     auto type = type_table.get_type(node);
 
-    if(type) {
+    if (type) {
         return type;
     }
 
@@ -445,4 +583,8 @@ void bonk::TypeInferringVisitor::push_type_table() {
 void bonk::TypeInferringVisitor::pop_type_table() {
     assert(!type_table_stack.empty());
     type_table_stack.pop_back();
+}
+
+void bonk::TypeInferringVisitor::visit(bonk::TreeNodeNull* node) {
+    get_current_type_table().annotate<NullType>(node);
 }

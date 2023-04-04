@@ -23,6 +23,14 @@ MessageStreamProxy Compiler::fatal_error() {
     return {CompilerMessageType::fatal_error, config.error_file};
 }
 
+void Compiler::report_file_updated(std::string_view path) {
+    updated_files.insert(std::string(path));
+}
+
+void Compiler::report_project_file(std::string_view path) {
+    output_files.insert(std::string(path));
+}
+
 MessageStreamProxy::MessageStreamProxy(CompilerMessageType message_type, const OutputStream& stream)
     : message_type(message_type), stream(stream) {
 }
@@ -60,23 +68,6 @@ std::ostream& operator<<(std::ostream& ostream, const MessageStreamProxy& proxy)
 
     ostream << proxy.message.str() << std::endl;
     return ostream;
-}
-
-bool CompilerConfig::should_stop_after(std::string_view stage) const {
-    if (!stop_checkpoint.has_value())
-        return false;
-    auto& checkpoint = stop_checkpoint.value();
-
-    // Check if checkpoint has prefix of stage
-    if (stage.size() > checkpoint.size())
-        return false;
-
-    for (size_t i = 0; i < stage.size(); i++) {
-        if (stage[i] != checkpoint[i])
-            return false;
-    }
-
-    return true;
 }
 
 } // namespace bonk

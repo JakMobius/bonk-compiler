@@ -8,23 +8,71 @@
 
 namespace bonk {
 
+class HIREarlyGeneratorVisitor;
+struct HIRValue;
+
 struct HIRLoopContext {
     TreeNode* loop_block = nullptr;
     int loop_start_label = -1;
     int loop_end_label = -1;
 };
 
-struct RegisterStackItem {
+struct HIRValueRaw {
     IRRegister register_id;
-    bool is_reference;
+
+    // Type field is moved to these structures on purpose
+    // to make HIRValueRaw and HIRValueReference structures
+    // self-contained and not depend on HIRValue structure
+    Type* type = nullptr;
+};
+
+struct HIRValueReference {
+    IRRegister register_id;
+    HIRValueRaw reference_container;
+
+    // See note above
+    Type* type = nullptr;
+};
+
+struct HIRValue {
+    HIREarlyGeneratorVisitor& visitor;
+    std::variant<std::monostate, HIRValueReference, HIRValueRaw> value;
+
+    HIRValue(HIREarlyGeneratorVisitor& visitor) : visitor(visitor) {}
+
+    void set_reference(IRRegister register_id, HIRValueRaw reference_container, Type* type);
+
+    void set_value(IRRegister register_id, Type* type);
+
+    void release();
+
+    bool is_reference() const;
+
+    Type* get_type();
+
+    void increase_reference_counter();
+    void decrease_reference_count();
+
+    ~HIRValue() {
+        decrease_reference_count();
+    }
 };
 
 struct AliveScope {
     TreeNode* block = nullptr;
-    std::vector<TreeNodeVariableDefinition*> alive_variables;
+    std::vector<std::unique_ptr<HIRValue>> alive_values {};
+
+    AliveScope() = default;
+
+    AliveScope(const AliveScope&) = delete;
+    AliveScope& operator=(const AliveScope&) = delete;
+
+    AliveScope(AliveScope&&) = default;
+    AliveScope& operator=(AliveScope&&) = default;
 };
 
 class HIREarlyGeneratorVisitor : ASTVisitor {
+    friend struct HIRValue;
 
     MiddleEnd& middle_end;
     IRProgram* current_program;
@@ -34,9 +82,9 @@ class HIREarlyGeneratorVisitor : ASTVisitor {
     IRProcedure* current_procedure = nullptr;
     IRBaseBlock* current_base_block = nullptr;
 
-    std::optional<HIRLoopContext> current_loop_context {};
-    std::vector<RegisterStackItem> register_stack;
+    std::optional<HIRLoopContext> current_loop_context{};
     std::vector<AliveScope> alive_scopes;
+    std::unique_ptr<HIRValue> return_value;
 
   public:
     HIREarlyGeneratorVisitor(MiddleEnd& middle_end) : middle_end(middle_end) {
@@ -65,17 +113,21 @@ class HIREarlyGeneratorVisitor : ASTVisitor {
     void visit(TreeNodeLoopStatement* node) override;
     void visit(TreeNodeHiveDefinition* node) override;
     void visit(TreeNodeCall* node) override;
+    void visit(TreeNodeCast* node) override;
     void visit(TreeNodeBrekStatement* node) override;
+    void visit(TreeNodeNull* node) override;
 
     void compile_lazy_logic(TreeNodeBinaryOperation* node);
-    bool is_comparison_operation(HIROperationType type);
 
-    void push_value(IRRegister register_id);
-    void push_reference(IRRegister register_id);
-    IRRegister load_value(RegisterStackItem item, HIRDataType type);
+    std::unique_ptr<HIRValue> load_value(HIRValue* value);
+
+    std::unique_ptr<HIRValue> eval(TreeNode* node);
 
     void kill_alive_variables(TreeNode* until_scope = nullptr);
-    void handle_variable_death(TreeNodeVariableDefinition* variable);
+    std::unique_ptr<HIRValue> assign(HIRValue* left, HIRValue* right);
+
+    void write_file(TreeNode* operation);
+    void write_location(TreeNode* operation);
 };
 
 } // namespace bonk

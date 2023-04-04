@@ -41,6 +41,11 @@ void bonk::TypeAnnotator::visit(bonk::TreeNodeCall* node) {
     ASTVisitor::visit(node);
 }
 
+void bonk::TypeAnnotator::visit(bonk::TreeNodeCast* node) {
+    infer_type(node);
+    ASTVisitor::visit(node);
+}
+
 void bonk::TypeAnnotator::visit(bonk::TreeNodeParameterListItem* node) {
     if (node->parameter_value)
         node->parameter_value->accept(this);
@@ -89,8 +94,12 @@ void bonk::TypeAnnotator::visit(TreeNodeBonkStatement* node) {
     infer_type(node);
 }
 
-void bonk::TypeAnnotator::annotate_ast(bonk::TreeNode* ast) {
-    ast->accept(this);
+void bonk::TypeAnnotator::annotate_ast(bonk::AST& ast) {
+    ast.root->accept(this);
+}
+
+void bonk::TypeAnnotator::visit(bonk::TreeNodeNull* node) {
+    infer_type(node);
 }
 
 bonk::HiveFieldNameResolver::HiveFieldNameResolver(TreeNodeHiveDefinition* hive_definition)

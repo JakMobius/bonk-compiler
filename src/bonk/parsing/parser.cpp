@@ -7,7 +7,7 @@ namespace bonk {
 Parser::Parser(Compiler& compiler) : linked_compiler(compiler) {
 }
 
-std::unique_ptr<TreeNode> Parser::parse_file(std::vector<Lexeme>* lexemes) {
+std::unique_ptr<TreeNodeProgram> Parser::parse_file(std::vector<Lexeme>* lexemes) {
     input = lexemes;
     return parse_program();
 }
@@ -26,7 +26,7 @@ void Parser::eat_lexeme() {
     position++;
 }
 
-std::unique_ptr<TreeNode> Parser::parse_program() {
+std::unique_ptr<TreeNodeProgram> Parser::parse_program() {
     // Program : HelpStatement* Definition*
 
     std::unique_ptr<TreeNodeProgram> program = std::make_unique<TreeNodeProgram>();
@@ -54,9 +54,9 @@ std::unique_ptr<TreeNodeHelp> Parser::parse_help_statement() {
     eat_lexeme();
     Lexeme* identifier = next_lexeme();
     eat_lexeme();
-    if (!identifier->is(LexemeType::l_identifier)) {
+    if (!identifier->is(LexemeType::l_string)) {
         linked_compiler.error().at(identifier->start_position)
-            << "Expected identifier after help statement";
+            << "Expected string literal after help statement";
         return nullptr;
     }
 
@@ -65,8 +65,7 @@ std::unique_ptr<TreeNodeHelp> Parser::parse_help_statement() {
 
     help->string = std::make_unique<TreeNodeStringConstant>();
     help->string->source_position = start_position;
-    help->string->string_value = std::get<StringLexeme>(next_lexeme()->data).string;
-    eat_lexeme();
+    help->string->string_value = std::get<StringLexeme>(identifier->data).string;
 
     return help;
 }
@@ -402,7 +401,7 @@ std::unique_ptr<TreeNode> Parser::parse_type() {
         return identifier;
     }
 
-    PrimitiveType primitive_type{};
+    TrivialTypeKind primitive_type{};
 
     if (!next_lexeme()->is(LexemeType::l_keyword)) {
         linked_compiler.error().at(next_lexeme()->start_position)
@@ -412,15 +411,37 @@ std::unique_ptr<TreeNode> Parser::parse_type() {
 
     KeywordType keyword_type = std::get<KeywordLexeme>(next_lexeme()->data).type;
 
+    if(keyword_type == KeywordType::k_null) {
+        eat_lexeme();
+        auto result = std::make_unique<TreeNodeNull>();
+        result->source_position = start_position;
+        return result;
+    }
+
     switch (keyword_type) {
     case KeywordType::k_flot:
-        primitive_type = PrimitiveType::t_flot;
+        primitive_type = TrivialTypeKind::t_flot;
+        break;
+    case KeywordType::k_dabl:
+        primitive_type = TrivialTypeKind::t_dabl;
+        break;
+    case KeywordType::k_shrt:
+        primitive_type = TrivialTypeKind::t_shrt;
+        break;
+    case KeywordType::k_buul:
+        primitive_type = TrivialTypeKind::t_buul;
         break;
     case KeywordType::k_nubr:
-        primitive_type = PrimitiveType::t_nubr;
+        primitive_type = TrivialTypeKind::t_nubr;
+        break;
+    case KeywordType::k_long:
+        primitive_type = TrivialTypeKind::t_long;
         break;
     case KeywordType::k_strg:
-        primitive_type = PrimitiveType::t_strg;
+        primitive_type = TrivialTypeKind::t_strg;
+        break;
+    case KeywordType::k_nothing:
+        primitive_type = TrivialTypeKind::t_nothing;
         break;
     default:
         linked_compiler.error().at(next_lexeme()->start_position)
@@ -578,7 +599,7 @@ std::unique_ptr<TreeNode> Parser::parse_expression_unary() {
 
 std::unique_ptr<TreeNode> Parser::parse_expression_primary() {
     // ExpressionPrimary: HiveAccess | Identifier | NumberConstant | StringConstant | ArrayConstant
-    // | (Expression) | CodeBlock
+    // | (Expression) | CodeBlock | NullKeyword
 
     auto start_position = next_lexeme()->start_position;
 
@@ -616,6 +637,13 @@ std::unique_ptr<TreeNode> Parser::parse_expression_primary() {
         string_constant->string_value = std::get<StringLexeme>(next_lexeme()->data).string;
         eat_lexeme();
         return string_constant;
+    }
+
+    if (next_lexeme()->is(KeywordType::k_null)) {
+        auto null_constant = std::make_unique<TreeNodeNull>();
+        null_constant->source_position = start_position;
+        eat_lexeme();
+        return null_constant;
     }
 
     if (next_lexeme()->is(BraceType('['))) {

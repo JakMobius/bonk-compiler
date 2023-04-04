@@ -1,3 +1,4 @@
+
 #pragma once
 
 #include "bonk/middleend/middleend.hpp"
@@ -9,13 +10,14 @@ namespace bonk {
 
 class HiveConstructorDestructorEarlyGenerator {
     MiddleEnd& middle_end;
+    bonk::AST* current_ast = nullptr;
 
   public:
     explicit HiveConstructorDestructorEarlyGenerator(MiddleEnd& middle_end): middle_end(middle_end) {
 
     }
 
-    void generate(bonk::TreeNode* ast);
+    void generate(bonk::AST& ast);
 
 
   private:

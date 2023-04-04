@@ -20,6 +20,8 @@ enum class HIRInstructionType {
     memory_store,
     inc_ref_counter,
     dec_ref_counter,
+    file,
+    location
 };
 
 enum class HIROperationType {
@@ -53,6 +55,7 @@ enum class HIRDataType {
 } // namespace bonk
 
 #include <optional>
+#include <string>
 #include "ir.hpp"
 
 namespace bonk {
@@ -182,6 +185,19 @@ struct HIRDecRefCounter : HIRInstruction {
     TreeNodeHiveDefinition* hive_definition = nullptr;
 
     HIRDecRefCounter();
+};
+
+struct HIRFile: HIRInstruction {
+    std::string_view file {};
+
+    HIRFile();
+};
+
+struct HIRLocation : HIRInstruction {
+    unsigned int line = 0;
+    unsigned int column = 0;
+
+    HIRLocation();
 };
 
 } // namespace bonk

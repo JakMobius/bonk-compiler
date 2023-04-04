@@ -1,5 +1,6 @@
 
 #include "linear_allocator.hpp"
+#include <cstdlib>
 #include <cstring>
 
 LinearAllocator::LinearAllocator(unsigned long long the_page_capacity) {

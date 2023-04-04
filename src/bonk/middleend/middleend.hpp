@@ -6,6 +6,7 @@ class MiddleEnd;
 
 }
 
+#include <filesystem>
 #include <unordered_map>
 #include <unordered_set>
 #include "bonk/compiler.hpp"
@@ -18,15 +19,69 @@ struct SymbolScope {
     SymbolScope* parent_scope;
     TreeNode* definition;
     std::unordered_map<std::string_view, TreeNode*> symbols;
+
+    TreeNodeType get_type();
+};
+
+struct LocalDefinition {
+    TreeNode* definition;
+};
+
+struct ExternalDefinition {
+    std::string_view file;
+};
+
+struct NoDefinition {};
+
+struct SymbolDefinition {
+    std::variant<NoDefinition, LocalDefinition, ExternalDefinition> definition;
+
+    bool is_local() {
+        return std::holds_alternative<LocalDefinition>(definition);
+    }
+
+    bool is_external() {
+        return std::holds_alternative<ExternalDefinition>(definition);
+    }
+
+    LocalDefinition& get_local() {
+        return std::get<LocalDefinition>(definition);
+    }
+
+    ExternalDefinition& get_external() {
+        return std::get<ExternalDefinition>(definition);
+    }
+
+    static SymbolDefinition local(TreeNode* definition) {
+        return SymbolDefinition{LocalDefinition{definition}};
+    }
+
+    static SymbolDefinition external(std::string_view file) {
+        return SymbolDefinition{ExternalDefinition{file}};
+    }
+
+    static SymbolDefinition none() {
+        return SymbolDefinition{NoDefinition{}};
+    }
+
+    operator bool() {
+        return !std::holds_alternative<NoDefinition>(definition);
+    }
 };
 
 struct SymbolTable {
+    SymbolScope* global_scope;
     std::vector<std::unique_ptr<SymbolScope>> scopes;
     std::unordered_map<TreeNode*, SymbolScope*> symbol_scopes;
-    std::unordered_map<TreeNode*, TreeNode*> symbol_definitions;
+    std::unordered_map<TreeNode*, SymbolDefinition> symbol_definitions;
     std::unordered_map<TreeNode*, std::string> symbol_names;
 
-    TreeNode* get_definition(TreeNode* node);
+    SymbolTable();
+
+    SymbolScope* create_scope(bonk::TreeNode* ast_node, SymbolScope* parent_scope);
+    SymbolScope* get_scope_for_node(TreeNode* node);
+
+    SymbolDefinition get_definition(TreeNode* node);
 };
 
 struct TypeTable {
@@ -78,29 +133,56 @@ struct IDTable {
     TreeNode* get_node(long long id);
 };
 
-struct HiddenSymbolStorage {
-    std::unordered_set<std::string> hidden_symbols;
+struct ExternalSymbolTable {
+    // Defined to be a vector of chars instead of std::string
+    // to ensure that the data is not moved around in memory when
+    // vector is resized
+    std::vector<std::vector<char>> external_files;
+    std::unordered_map<std::string_view, unsigned long> external_file_map;
+    std::unordered_map<TreeNodeIdentifier*, unsigned long> external_symbol_def_files;
 
-    std::string_view get_hidden_symbol(const std::string& symbol);
+    std::string_view get_external_file(int index);
+    void register_symbol(TreeNodeIdentifier* node, std::string_view filename);
+};
+
+struct ExternalModule {
+    SymbolScope* scope;
+    bonk::AST module_ast;
+
+    ExternalModule(SymbolScope* scope, bonk::AST&& module)
+        : scope(scope), module_ast(std::move(module)) {
+    }
 };
 
 class MiddleEnd {
   public:
     Compiler& linked_compiler;
 
+    std::unordered_map<std::string, std::unique_ptr<ExternalModule>> external_modules;
+    std::optional<std::filesystem::path> module_path = std::nullopt;
+
     TypeTable type_table;
     SymbolTable symbol_table;
     IDTable id_table{*this};
-    HiddenSymbolStorage hidden_text_storage;
+    ExternalSymbolTable external_symbol_table;
 
     explicit MiddleEnd(Compiler& linked_compiler);
 
     ~MiddleEnd() = default;
 
-    bool transform_ast(TreeNode* ast);
+    // Used to transform ASTs, which are not yet transformed
+    // i.e the raw AST parsed from source files
+    bool transform_ast(bonk::AST& ast);
+
     std::unique_ptr<IRProgram> generate_hir(TreeNode* ast);
 
     int get_hive_field_offset(TreeNodeHiveDefinition* hive_definition, int field_index);
+
+    bool has_module(const std::string& name);
+    bool annotate_ast(AST& ast, SymbolScope* scope);
+    ExternalModule* add_external_module(const std::filesystem::path& path,
+                             bonk::AST module, bool disclose = true);
+    ExternalModule* get_external_module(const std::filesystem::path& path);
 };
 
 } // namespace bonk

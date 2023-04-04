@@ -1,5 +1,6 @@
 #pragma once
 
+#include <vector>
 #include "basic_symbol_annotator.hpp"
 #include "bonk/tree/ast_visitor.hpp"
 #include "type_annotator.hpp"
@@ -72,10 +73,13 @@ class TypeInferringVisitor : public ASTVisitor {
     void visit(TreeNodeLoopStatement* node) override;
     void visit(TreeNodeHiveDefinition* node) override;
     void visit(TreeNodeCall* node) override;
+    void visit(TreeNodeCast* node) override;
+    void visit(TreeNodeNull* node) override;
 
     TypeTable& get_current_type_table();
     void push_type_table();
     void pop_type_table();
     std::unique_ptr<bonk::Type> infer_block_return_type(TreeNodeBlockDefinition* node);
+    std::vector<TreeNodeBonkStatement*> get_bonk_statements_in_block(TreeNodeBlockDefinition* node);
 };
 } // namespace bonk

@@ -6,58 +6,85 @@
 #include "bonk/middleend/converters/hive_constructor_call_replacer.hpp"
 #include "bonk/middleend/converters/hive_ctor_dtor_early_generator.hpp"
 #include "bonk/middleend/converters/hive_ctor_dtor_late_generator.hpp"
+#include "bonk/middleend/converters/external_type_replacer.hpp"
 #include "bonk/middleend/converters/stdlib_header_generator.hpp"
 #include "bonk/middleend/ir/hir_early_generator_visitor.hpp"
 #include "bonk/middleend/ir/hir_ref_count_replacer.hpp"
 
 bonk::MiddleEnd::MiddleEnd(bonk::Compiler& linked_compiler) : linked_compiler(linked_compiler) {
+    add_external_module("$$stdlib", bonk::StdLibHeaderGenerator(*this).generate());
 }
 
-bool bonk::MiddleEnd::transform_ast(TreeNode* ast) {
-
-    bonk::StdLibHeaderGenerator(*this).generate(ast);
-
-    if (linked_compiler.state)
-        return false;
-    if (linked_compiler.config.should_stop_after("midend-ast-stdlib-gen"))
-        return true;
+bool bonk::MiddleEnd::transform_ast(bonk::AST& ast) {
 
     bonk::HiveConstructorDestructorEarlyGenerator(*this).generate(ast);
 
     if (linked_compiler.state)
         return false;
-    if (linked_compiler.config.should_stop_after("midend-ast-ctor-dtor-early"))
-        return true;
 
-    bonk::BasicSymbolAnnotator(*this).annotate_program(ast);
+    bonk::BasicSymbolAnnotator(*this).annotate_ast(ast);
 
     if (linked_compiler.state)
         return false;
-    if (linked_compiler.config.should_stop_after("midend-ast-symbol-annotate"))
-        return true;
 
     bonk::HiveConstructorCallReplacer(*this).replace(ast);
 
     if (linked_compiler.state)
         return false;
-    if (linked_compiler.config.should_stop_after("midend-ast-ctor-call-replace"))
-        return true;
 
     bonk::TypeAnnotator(*this).annotate_ast(ast);
 
     if (linked_compiler.state)
         return false;
-    if (linked_compiler.config.should_stop_after("midend-ast-type-annotate"))
-        return true;
 
     bonk::HiveConstructorDestructorLateGenerator(*this).generate(ast);
 
     if (linked_compiler.state)
         return false;
-    if (linked_compiler.config.should_stop_after("midend-ast-ctor-dtor-late"))
-        return true;
+
+    bonk::ExternalTypeReplacer(*this).replace(ast);
+
+    if (linked_compiler.state)
+        return false;
 
     return true;
+}
+
+bool bonk::MiddleEnd::annotate_ast(AST& ast, SymbolScope* scope) {
+    bonk::BasicSymbolAnnotator symbol_annotator(*this);
+
+    if (scope) {
+        symbol_annotator.scoped_name_resolver.current_scope = scope;
+    }
+
+    symbol_annotator.annotate_ast(ast);
+    bonk::TypeAnnotator(*this).annotate_ast(ast);
+
+    return !linked_compiler.state;
+}
+
+bonk::ExternalModule*
+bonk::MiddleEnd::add_external_module(const std::filesystem::path& path,
+                                     bonk::AST ast, bool disclose) {
+    auto scope = symbol_table.global_scope;
+
+    // If the module is imported from another module, we don't want to disclose its symbols,
+    // so we create a new anonymous scope for it
+
+    if (!disclose) {
+        scope = symbol_table.create_scope(nullptr, scope);
+    }
+
+    if (!annotate_ast(ast, scope)) {
+        return nullptr;
+    }
+
+    auto module = std::make_unique<ExternalModule>(scope, std::move(ast));
+    auto module_ptr = module.get();
+
+    external_modules.insert({path.string(), std::move(module)});
+
+    return module_ptr;
 }
 
 std::unique_ptr<bonk::IRProgram> bonk::MiddleEnd::generate_hir(TreeNode* ast) {
@@ -65,12 +92,12 @@ std::unique_ptr<bonk::IRProgram> bonk::MiddleEnd::generate_hir(TreeNode* ast) {
 
     program = bonk::HIREarlyGeneratorVisitor(*this).generate(ast);
 
-    if (linked_compiler.config.should_stop_after("midend-hir-early-gen"))
+    if (linked_compiler.state)
         return program;
 
     HIRRefCountReplacer(*this).replace_ref_counters(*program);
 
-    if (linked_compiler.config.should_stop_after("midend-hir-ref-count-replace"))
+    if (linked_compiler.state)
         return program;
 
     return program;
@@ -101,6 +128,17 @@ int bonk::MiddleEnd::get_hive_field_offset(bonk::TreeNodeHiveDefinition* hive_de
     return offset;
 }
 
+bool bonk::MiddleEnd::has_module(const std::string& name) {
+    return external_modules.find(name) != external_modules.end();
+}
+
+bonk::ExternalModule* bonk::MiddleEnd::get_external_module(const std::filesystem::path& path) {
+    auto it = external_modules.find(path.string());
+    if (it == external_modules.end())
+        return nullptr;
+    return it->second.get();
+}
+
 long long bonk::IDTable::get_unused_id() {
     return ids_used++;
 }
@@ -108,8 +146,9 @@ long long bonk::IDTable::get_unused_id() {
 long long bonk::IDTable::get_id(bonk::TreeNode* node) {
     auto def = middle_end.symbol_table.get_definition(node);
 
-    if (def) {
-        node = def;
+    if(def) {
+        // Definition must be local at this point, otherwise it's a bug
+        node = def.get_local().definition;
     }
 
     auto it = ids.find(node);
@@ -129,9 +168,36 @@ bonk::TreeNode* bonk::IDTable::get_node(long long id) {
     return it->second;
 }
 
-bonk::TreeNode* bonk::SymbolTable::get_definition(TreeNode* node) {
+bonk::SymbolDefinition bonk::SymbolTable::get_definition(TreeNode* node) {
     auto it = symbol_definitions.find(node);
     if (it == symbol_definitions.end())
+        return bonk::SymbolDefinition::none();
+    return it->second;
+}
+
+bonk::SymbolTable::SymbolTable() {
+    global_scope = create_scope(nullptr, nullptr);
+}
+
+bonk::SymbolScope* bonk::SymbolTable::create_scope(bonk::TreeNode* ast_node, SymbolScope* parent) {
+    auto new_scope = std::make_unique<SymbolScope>();
+    auto scope_ptr = new_scope.get();
+
+    new_scope->definition = ast_node;
+    scopes.push_back(std::move(new_scope));
+
+    if (ast_node) {
+        symbol_scopes[ast_node] = scope_ptr;
+    }
+
+    scope_ptr->parent_scope = parent;
+
+    return scope_ptr;
+}
+
+bonk::SymbolScope* bonk::SymbolTable::get_scope_for_node(bonk::TreeNode* node) {
+    auto it = symbol_scopes.find(node);
+    if (it == symbol_scopes.end())
         return nullptr;
     return it->second;
 }
@@ -152,8 +218,10 @@ bonk::Type* bonk::TypeTable::get_type(bonk::TreeNode* node) {
         }
         return nullptr;
     }
+
     return it->second;
 }
+
 void bonk::TypeTable::sink_types_to_parent_table() {
     // Moves all types from current table to the parent table, apart from 'never'
     // types. This allows to reduce complexity of type checking.
@@ -182,12 +250,32 @@ void bonk::TypeTable::sink_types_to_parent_table() {
     }
 }
 
-std::string_view bonk::HiddenSymbolStorage::get_hidden_symbol(const std::string& symbol) {
-    // Find the symbol in the set, if it's not there, insert it
-    auto it = hidden_symbols.find(symbol);
-    if (it == hidden_symbols.end()) {
-        it = hidden_symbols.insert(symbol).first;
-        return *it;
+bonk::TreeNodeType bonk::SymbolScope::get_type() {
+    if (!definition) {
+        return TreeNodeType::n_program;
+    } else {
+        return definition->type;
     }
-    return *it;
+}
+
+void bonk::ExternalSymbolTable::register_symbol(bonk::TreeNodeIdentifier* node,
+                                                std::string_view filename) {
+    auto it = external_file_map.find(filename);
+    unsigned long file_index = 0;
+    if (it == external_file_map.end()) {
+        file_index = external_files.size();
+        std::vector<char> filename_copy(filename.begin(), filename.end());
+        std::string_view safe_string_view(filename_copy.data(), filename_copy.size());
+        external_file_map.insert({safe_string_view, file_index});
+        external_files.push_back(std::move(filename_copy));
+    } else {
+        file_index = it->second;
+    }
+
+    external_symbol_def_files.insert({node, file_index});
+}
+
+std::string_view bonk::ExternalSymbolTable::get_external_file(int index) {
+    auto& storage = external_files[index];
+    return {storage.data(), storage.size()};
 }

@@ -47,7 +47,7 @@ bool compile_bonk_source(const char* source, std::filesystem::path output_file) 
     auto error_stream = bonk::StdOutputStream(std::cout);
     auto output_stream = bonk::FileOutputStream(output_file.string());
 
-    bonk::CompilerConfig config{.error_file = error_stream, .output_file = output_stream};
+    bonk::CompilerConfig config{.error_file = error_stream };
     bonk::Compiler compiler(config);
 
     auto lexemes = bonk::Lexer(compiler).parse_file("test", source);
@@ -56,25 +56,28 @@ bool compile_bonk_source(const char* source, std::filesystem::path output_file) 
         return false;
     }
 
-    auto ast = bonk::Parser(compiler).parse_file(&lexemes);
+    auto root = bonk::Parser(compiler).parse_file(&lexemes);
 
-    if (ast == nullptr) {
+    if (root == nullptr) {
         return false;
     }
+
+    auto ast = bonk::AST();
+    ast.root = std::move(root);
 
     bonk::MiddleEnd middle_end(compiler);
 
-    if (!middle_end.transform_ast(ast.get())) {
+    if (!middle_end.transform_ast(ast)) {
         return false;
     }
 
-    auto ir_program = middle_end.generate_hir(ast.get());
+    auto ir_program = middle_end.generate_hir(ast.root.get());
 
     if (ir_program == nullptr) {
         return false;
     }
 
-    bonk::qbe_backend::QBEBackend(compiler).compile_program(*ir_program);
+    bonk::qbe_backend::QBEBackend(compiler).compile_program(*ir_program, output_stream);
 
     return true;
 }

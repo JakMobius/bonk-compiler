@@ -1,53 +1,70 @@
 #pragma once
 
+#include <cassert>
+#include "ast_field_walker.hpp"
 #include "ast_visitor.hpp"
+
 namespace bonk {
 
-class ASTCloneVisitor : ASTVisitor {
+class ASTCloneVisitor : public TemplateVisitor<ASTCloneVisitor> {
   public:
+    ASTCloneVisitor() : TemplateVisitor(*this) {
+    }
+
     template <typename T> std::unique_ptr<T> clone(T* node) {
-        if(!node) return nullptr;
-        result = nullptr;
+        if (!node)
+            return nullptr;
+        auto old_cloned_node = cloned_node;
+        auto old_result = std::move(result);
         node->accept(this);
         assert(result != nullptr);
-        return std::unique_ptr<T>(static_cast<T*>(result.release()));
+        T* result_ptr = static_cast<T*>(result.release());
+        cloned_node = old_cloned_node;
+        result = std::move(old_result);
+        return std::unique_ptr<T>(result_ptr);
     }
 
     bool copy_source_positions = false;
 
-  private:
-    std::unique_ptr<TreeNode> result;
-
-    void visit(TreeNodeProgram* node) override;
-    void visit(TreeNodeHelp* node) override;
-    void visit(TreeNodeIdentifier* node) override;
-    void visit(TreeNodeBlockDefinition* node) override;
-    void visit(TreeNodeVariableDefinition* node) override;
-    void visit(TreeNodeParameterListDefinition* node) override;
-    void visit(TreeNodeParameterList* node) override;
-    void visit(TreeNodeParameterListItem* node) override;
-    void visit(TreeNodeCodeBlock* node) override;
-    void visit(TreeNodeArrayConstant* node) override;
-    void visit(TreeNodeNumberConstant* node) override;
-    void visit(TreeNodeStringConstant* node) override;
-    void visit(TreeNodeBinaryOperation* node) override;
-    void visit(TreeNodeUnaryOperation* node) override;
-    void visit(TreeNodePrimitiveType* node) override;
-    void visit(TreeNodeManyType* node) override;
-    void visit(TreeNodeHiveAccess* node) override;
-    void visit(TreeNodeBonkStatement* node) override;
-    void visit(TreeNodeBrekStatement* node) override;
-    void visit(TreeNodeLoopStatement* node) override;
-    void visit(TreeNodeHiveDefinition* node) override;
-    void visit(TreeNodeCall* node) override;
-
-    template <typename T> std::unique_ptr<T> shallow_copy(T* node) {
-        auto copy = std::make_unique<T>();
-        if (copy_source_positions) {
-            copy->source_position = node->source_position;
+    template <typename T> void clone(std::unique_ptr<T>& from, std::unique_ptr<T>& to) {
+        if (from) {
+            to = clone(from.get());
         }
-        return copy;
     }
+
+    void clone(bonk::ParserPosition& from, bonk::ParserPosition& to) {
+        if (copy_source_positions) {
+            to = from;
+        }
+    }
+
+    template <typename T>
+    void clone(std::list<std::unique_ptr<T>>& from, std::list<std::unique_ptr<T>>& to) {
+        for (auto& element : from) {
+            clone(element, to.emplace_back());
+        }
+    }
+
+    template <typename T> void clone(T& from, T& to) {
+        to = from;
+    }
+
+    template <typename T> void operator()(T& value, std::string_view name) {
+        T& result_value = *(T*)((char*)result.get() + ((char*)(&value) - (char*)cloned_node));
+
+        clone(value, result_value);
+    }
+
+    template <typename T> void operator()(T* node) {
+        cloned_node = node;
+        result = std::make_unique<T>();
+
+        node->fields(*this);
+    }
+
+  protected:
+    TreeNode* cloned_node = nullptr;
+    std::unique_ptr<TreeNode> result;
 };
 
 } // namespace bonk

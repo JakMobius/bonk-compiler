@@ -31,10 +31,10 @@ struct Parser {
 
     Parser(Compiler& compiler);
 
-    std::unique_ptr<TreeNode> parse_file(std::vector<Lexeme>* lexemes);
+    std::unique_ptr<TreeNodeProgram> parse_file(std::vector<Lexeme>* lexemes);
 
   private:
-    std::unique_ptr<TreeNode> parse_program();
+    std::unique_ptr<TreeNodeProgram> parse_program();
     std::unique_ptr<TreeNodeHelp> parse_help_statement();
     std::unique_ptr<TreeNode> parse_definition();
     std::unique_ptr<TreeNodeBlockDefinition> parse_blok_definition();
@@ -92,6 +92,7 @@ struct Parser {
             }
 
             OperatorType operator_type = std::get<OperatorLexeme>(next_lexeme()->data).type;
+            ParserPosition source_position = next_lexeme()->start_position;
             eat_lexeme();
 
             auto next_expression = next_expression_parser();
@@ -102,12 +103,14 @@ struct Parser {
                 auto* last_binary_op = (TreeNodeBinaryOperation*) result.get();
 
                 auto new_binary_op = std::make_unique<TreeNodeBinaryOperation>();
+                new_binary_op->source_position = source_position;
                 new_binary_op->operator_type = operator_type;
                 new_binary_op->left = std::move(last_binary_op->right);
                 new_binary_op->right = std::move(next_expression);
                 last_binary_op->right = std::move(new_binary_op);
             } else {
                 auto binary_op = std::make_unique<TreeNodeBinaryOperation>();
+                binary_op->source_position = source_position;
                 binary_op->operator_type = operator_type;
                 binary_op->left = std::move(result);
                 binary_op->right = std::move(next_expression);
@@ -118,12 +121,6 @@ struct Parser {
         };
 
         return result;
-    }
-
-    template <typename NextExpression>
-    std::unique_ptr<TreeNode>
-    parse_left_associative_operator(const NextExpression& next_expression_parser,
-                                    const std::initializer_list<OperatorType>& operator_filter) {
     }
 };
 

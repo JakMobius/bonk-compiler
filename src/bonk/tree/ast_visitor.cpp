@@ -105,4 +105,12 @@ void ASTVisitor::visit(TreeNodeCall* node) {
     if(node->arguments) node->arguments->accept(this);
 }
 
+void ASTVisitor::visit(TreeNodeCast* node) {
+    if(node->target_type) node->target_type->accept(this);
+    if(node->operand) node->operand->accept(this);
+}
+
+void ASTVisitor::visit(TreeNodeNull* node) {
+}
+
 } // namespace bonk

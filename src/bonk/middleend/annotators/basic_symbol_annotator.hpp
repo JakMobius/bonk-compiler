@@ -36,7 +36,7 @@ class BasicSymbolAnnotator : public ASTVisitor {
 
     BasicSymbolAnnotator(MiddleEnd& middleend);
 
-    void annotate_program(TreeNode* ast);
+    void annotate_ast(AST& ast);
 
     void visit(bonk::TreeNodeProgram* node) override;
     void visit(bonk::TreeNodeCodeBlock* node) override;

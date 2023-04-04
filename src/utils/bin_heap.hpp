@@ -2,6 +2,7 @@
 #pragma once
 
 #include <cstdlib>
+#include <cassert>
 #include <vector>
 
 template <typename T> struct bin_heap {

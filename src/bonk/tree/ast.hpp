@@ -2,7 +2,7 @@
 
 namespace bonk {
 
-enum class TreeNodeType {
+enum class TreeNodeType : char {
     n_unset,
     n_program,
     n_help_statement,
@@ -24,7 +24,9 @@ enum class TreeNodeType {
     n_binary_operation,
     n_unary_operation,
     n_many_type,
-    n_call
+    n_call,
+    n_cast,
+    n_null
 };
 
 struct ASTVisitor;
@@ -50,16 +52,30 @@ struct TreeNodeHiveAccess;
 struct TreeNodeBonkStatement;
 struct TreeNodeBrekStatement;
 struct TreeNodeLoopStatement;
+struct TreeNodeCall;
 
-enum class PrimitiveType { t_unset, t_buul, t_shrt, t_nubr, t_long, t_flot, t_dabl, t_strg };
-extern const char* BONK_PRIMITIVE_TYPE_NAMES[];
+enum class TrivialTypeKind : char {
+    t_unset,
+    t_buul,
+    t_shrt,
+    t_nubr,
+    t_long,
+    t_flot,
+    t_dabl,
+    t_strg,
+    t_never,
+    t_nothing
+};
+extern const char* BONK_TRIVIAL_TYPE_KIND_NAMES[];
 
 } // namespace bonk
 
+#include <memory>
 #include <list>
 #include <string>
 #include "bonk/parsing/lexic/lexer.hpp"
 #include "bonk/parsing/parser_position.hpp"
+#include "utils/buffer.hpp"
 
 namespace bonk {
 
@@ -71,6 +87,13 @@ struct TreeNode {
     virtual ~TreeNode() = default;
 
     virtual void accept(ASTVisitor* visitor) = 0;
+
+    template <typename T> void fields(T&& callback) {
+        callback(type, "type");
+        callback(source_position, "source_position");
+    };
+
+    static std::unique_ptr<TreeNode> create(TreeNodeType type);
 };
 
 struct TreeNodeProgram : TreeNode {
@@ -82,6 +105,12 @@ struct TreeNodeProgram : TreeNode {
     }
 
     void accept(ASTVisitor* visitor) override;
+
+    template <typename T> void fields(T&& callback) {
+        TreeNode::fields(callback);
+        callback(help_statements, "help_statements");
+        callback(body, "body");
+    }
 };
 
 struct TreeNodeHelp : TreeNode {
@@ -92,6 +121,11 @@ struct TreeNodeHelp : TreeNode {
     }
 
     void accept(ASTVisitor* visitor) override;
+
+    template <typename T> void fields(T&& callback) {
+        TreeNode::fields(callback);
+        callback(string, "string");
+    }
 };
 
 struct TreeNodeIdentifier : TreeNode {
@@ -102,6 +136,11 @@ struct TreeNodeIdentifier : TreeNode {
     }
 
     void accept(ASTVisitor* visitor) override;
+
+    template <typename T> void fields(T&& callback) {
+        TreeNode::fields(callback);
+        callback(identifier_text, "identifier_text");
+    }
 };
 
 struct TreeNodeBlockDefinition : TreeNode {
@@ -115,6 +154,14 @@ struct TreeNodeBlockDefinition : TreeNode {
     }
 
     void accept(ASTVisitor* visitor) override;
+
+    template <typename T> void fields(T&& callback) {
+        TreeNode::fields(callback);
+        callback(block_name, "block_name");
+        callback(block_parameters, "block_parameters");
+        callback(body, "body");
+        callback(return_type, "return_type");
+    }
 };
 
 struct TreeNodeHiveDefinition : TreeNode {
@@ -126,6 +173,12 @@ struct TreeNodeHiveDefinition : TreeNode {
     }
 
     void accept(ASTVisitor* visitor) override;
+
+    template <typename T> void fields(T&& callback) {
+        TreeNode::fields(callback);
+        callback(hive_name, "hive_name");
+        callback(body, "body");
+    }
 };
 
 struct TreeNodeVariableDefinition : TreeNode {
@@ -138,6 +191,13 @@ struct TreeNodeVariableDefinition : TreeNode {
     }
 
     void accept(ASTVisitor* visitor) override;
+
+    template <typename T> void fields(T&& callback) {
+        TreeNode::fields(callback);
+        callback(variable_name, "variable_name");
+        callback(variable_value, "variable_value");
+        callback(variable_type, "variable_type");
+    }
 };
 
 struct TreeNodeParameterListDefinition : TreeNode {
@@ -148,6 +208,11 @@ struct TreeNodeParameterListDefinition : TreeNode {
     }
 
     void accept(ASTVisitor* visitor) override;
+
+    template <typename T> void fields(T&& callback) {
+        TreeNode::fields(callback);
+        callback(parameters, "parameters");
+    }
 };
 
 struct TreeNodeParameterList : TreeNode {
@@ -158,6 +223,11 @@ struct TreeNodeParameterList : TreeNode {
     }
 
     void accept(ASTVisitor* visitor) override;
+
+    template <typename T> void fields(T&& callback) {
+        TreeNode::fields(callback);
+        callback(parameters, "parameters");
+    }
 };
 
 struct TreeNodeParameterListItem : TreeNode {
@@ -169,6 +239,12 @@ struct TreeNodeParameterListItem : TreeNode {
     }
 
     void accept(ASTVisitor* visitor) override;
+
+    template <typename T> void fields(T&& callback) {
+        TreeNode::fields(callback);
+        callback(parameter_name, "parameter_name");
+        callback(parameter_value, "parameter_value");
+    }
 };
 
 struct TreeNodeCodeBlock : TreeNode {
@@ -179,6 +255,11 @@ struct TreeNodeCodeBlock : TreeNode {
     }
 
     void accept(ASTVisitor* visitor) override;
+
+    template <typename T> void fields(T&& callback) {
+        TreeNode::fields(callback);
+        callback(body, "body");
+    }
 };
 
 struct TreeNodeBonkStatement : TreeNode {
@@ -189,6 +270,11 @@ struct TreeNodeBonkStatement : TreeNode {
     }
 
     void accept(ASTVisitor* visitor) override;
+
+    template <typename T> void fields(T&& callback) {
+        TreeNode::fields(callback);
+        callback(expression, "expression");
+    }
 };
 
 struct TreeNodeBrekStatement : TreeNode {
@@ -197,6 +283,10 @@ struct TreeNodeBrekStatement : TreeNode {
     }
 
     void accept(ASTVisitor* visitor) override;
+
+    template <typename T> void fields(T&& callback) {
+        TreeNode::fields(callback);
+    }
 };
 
 struct TreeNodeArrayConstant : TreeNode {
@@ -207,6 +297,11 @@ struct TreeNodeArrayConstant : TreeNode {
     }
 
     void accept(ASTVisitor* visitor) override;
+
+    template <typename T> void fields(T&& callback) {
+        TreeNode::fields(callback);
+        callback(elements, "elements");
+    }
 };
 
 struct TreeNodeNumberConstant : TreeNode {
@@ -217,16 +312,26 @@ struct TreeNodeNumberConstant : TreeNode {
     }
 
     void accept(ASTVisitor* visitor) override;
+
+    template <typename T> void fields(T&& callback) {
+        TreeNode::fields(callback);
+        callback(contents, "contents");
+    }
 };
 
 struct TreeNodeStringConstant : TreeNode {
-    std::string_view string_value{};
+    std::string string_value{};
 
     TreeNodeStringConstant() {
         type = TreeNodeType::n_string_constant;
     }
 
     void accept(ASTVisitor* visitor) override;
+
+    template <typename T> void fields(T&& callback) {
+        TreeNode::fields(callback);
+        callback(string_value, "string_value");
+    }
 };
 
 struct TreeNodeHiveAccess : TreeNode {
@@ -238,6 +343,12 @@ struct TreeNodeHiveAccess : TreeNode {
     }
 
     void accept(ASTVisitor* visitor) override;
+
+    template <typename T> void fields(T&& callback) {
+        TreeNode::fields(callback);
+        callback(hive, "hive");
+        callback(field, "field");
+    }
 };
 
 struct TreeNodeLoopStatement : TreeNode {
@@ -249,6 +360,24 @@ struct TreeNodeLoopStatement : TreeNode {
     }
 
     void accept(ASTVisitor* visitor) override;
+
+    template <typename T> void fields(T&& callback) {
+        TreeNode::fields(callback);
+        callback(loop_parameters, "loop_parameters");
+        callback(body, "body");
+    }
+};
+
+struct TreeNodeNull : TreeNode {
+    TreeNodeNull() {
+        type = TreeNodeType::n_null;
+    }
+
+    void accept(ASTVisitor* visitor) override;
+
+    template <typename T> void fields(T&& callback) {
+        TreeNode::fields(callback);
+    }
 };
 
 struct TreeNodeManyType : TreeNode {
@@ -259,16 +388,25 @@ struct TreeNodeManyType : TreeNode {
     }
 
     void accept(ASTVisitor* visitor) override;
+
+    template <typename T> void fields(T&& callback) {
+        TreeNode::fields(callback);
+    }
 };
 
 struct TreeNodePrimitiveType : TreeNode {
-    PrimitiveType primitive_type{};
+    TrivialTypeKind primitive_type{};
 
     TreeNodePrimitiveType() {
         type = TreeNodeType::n_primitive_type;
     }
 
     void accept(ASTVisitor* visitor) override;
+
+    template <typename T> void fields(T&& callback) {
+        TreeNode::fields(callback);
+        callback(primitive_type, "primitive_type");
+    }
 };
 
 struct TreeNodeBinaryOperation : TreeNode {
@@ -281,6 +419,13 @@ struct TreeNodeBinaryOperation : TreeNode {
     }
 
     void accept(ASTVisitor* visitor) override;
+
+    template <typename T> void fields(T&& callback) {
+        TreeNode::fields(callback);
+        callback(left, "left");
+        callback(right, "right");
+        callback(operator_type, "operator_type");
+    }
 };
 
 struct TreeNodeUnaryOperation : TreeNode {
@@ -292,6 +437,12 @@ struct TreeNodeUnaryOperation : TreeNode {
     }
 
     void accept(ASTVisitor* visitor) override;
+
+    template <typename T> void fields(T&& callback) {
+        TreeNode::fields(callback);
+        callback(operand, "operand");
+        callback(operator_type, "operator_type");
+    }
 };
 
 struct TreeNodeCall : TreeNode {
@@ -303,6 +454,40 @@ struct TreeNodeCall : TreeNode {
     }
 
     void accept(ASTVisitor* visitor) override;
+
+    template <typename T> void fields(T&& callback) {
+        TreeNode::fields(callback);
+        callback(callee, "callee");
+        callback(arguments, "arguments");
+    }
+};
+
+struct TreeNodeCast : TreeNode {
+    std::unique_ptr<TreeNode> operand{};
+    std::unique_ptr<TreeNode> target_type{};
+
+    TreeNodeCast() {
+        type = TreeNodeType::n_cast;
+    }
+
+    void accept(ASTVisitor* visitor) override;
+
+    template <typename T> void fields(T&& callback) {
+        TreeNode::fields(callback);
+        callback(operand, "operand");
+        callback(target_type, "target_type");
+    }
+};
+
+struct AST {
+    std::unique_ptr<TreeNodeProgram> root{};
+    bonk::Buffer buffer{};
+
+    AST() = default;
+    AST(const AST&) = delete;
+    AST& operator=(const AST&) = delete;
+    AST(AST&&) = default;
+    AST& operator=(AST&&) = default;
 };
 
 } // namespace bonk

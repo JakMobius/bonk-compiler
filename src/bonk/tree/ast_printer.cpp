@@ -17,10 +17,17 @@ void bonk::ASTPrinter::visit(TreeNodeBlockDefinition* node) {
     if (node->block_parameters) {
         node->block_parameters->accept(this);
     }
-    if(node->body) {
+    if (node->return_type) {
+        stream.get_stream() << ": ";
+        node->return_type->accept(this);
+        if (node->body) {
+            stream.get_stream() << " ";
+        }
+    }
+    if (node->body) {
         node->body->accept(this);
     } else {
-        stream.get_stream() << "\n";
+        stream.get_stream() << ";\n";
     }
 }
 
@@ -146,7 +153,7 @@ void bonk::ASTPrinter::visit(TreeNodeUnaryOperation* node) {
 }
 
 void bonk::ASTPrinter::visit(TreeNodePrimitiveType* node) {
-    stream.get_stream() << BONK_PRIMITIVE_TYPE_NAMES[(int)node->primitive_type];
+    stream.get_stream() << BONK_TRIVIAL_TYPE_KIND_NAMES[(int)node->primitive_type];
 }
 
 void bonk::ASTPrinter::visit(TreeNodeManyType* node) {
@@ -162,7 +169,7 @@ void bonk::ASTPrinter::visit(TreeNodeHiveAccess* node) {
 
 void bonk::ASTPrinter::visit(TreeNodeBonkStatement* node) {
     stream.get_stream() << "bonk";
-    if(node->expression) {
+    if (node->expression) {
         stream.get_stream() << " ";
         node->expression->accept(this);
     }
@@ -202,7 +209,7 @@ void bonk::ASTPrinter::visit(TreeNodeHiveDefinition* node) {
 void bonk::ASTPrinter::visit(TreeNodeCall* node) {
     stream.get_stream() << "@";
     node->callee->accept(this);
-    if(node->arguments) {
+    if (node->arguments) {
         node->arguments->accept(this);
     }
 }
@@ -211,4 +218,15 @@ void bonk::ASTPrinter::padding() {
     for (int i = 0; i < depth; i++) {
         stream.get_stream() << "  ";
     }
+}
+void bonk::ASTPrinter::visit(bonk::TreeNodeCast* node) {
+    stream.get_stream() << "cast<";
+    node->target_type->accept(this);
+    stream.get_stream() << ">(";
+    node->operand->accept(this);
+    stream.get_stream() << ")";
+}
+
+void bonk::ASTPrinter::visit(bonk::TreeNodeNull* node) {
+    stream.get_stream() << "null";
 }

@@ -19,7 +19,7 @@ struct Backend {
 
     virtual ~Backend() = default;
 
-    virtual void compile_program(IRProgram& program) = 0;
+    virtual void compile_program(IRProgram& program, const bonk::OutputStream& output) = 0;
 };
 
 } // namespace bonk

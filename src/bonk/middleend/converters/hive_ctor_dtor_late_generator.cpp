@@ -4,8 +4,10 @@
 #include "bonk/middleend/annotators/type_annotator.hpp"
 #include "bonk/tree/ast_clone_visitor.hpp"
 
-void bonk::HiveConstructorDestructorLateGenerator::generate(bonk::TreeNode* ast) {
-    ast->accept(this);
+void bonk::HiveConstructorDestructorLateGenerator::generate(bonk::AST& ast) {
+    current_ast = &ast;
+    ast.root->accept(this);
+    current_ast = nullptr;
 }
 
 void bonk::HiveConstructorDestructorLateGenerator::visit(bonk::TreeNodeHiveDefinition* node) {
@@ -17,7 +19,7 @@ void bonk::HiveConstructorDestructorLateGenerator::visit(bonk::TreeNodeHiveDefin
     std::string dtor_name = std::string(hive_name) + "$$destructor";
 
     // Get the hive scope
-    auto scope = middle_end.symbol_table.symbol_scopes[node];
+    auto scope = middle_end.symbol_table.get_scope_for_node(node);
 
     ScopedNameResolver resolver;
     resolver.current_scope = scope;
@@ -37,8 +39,7 @@ void bonk::HiveConstructorDestructorLateGenerator::visit(bonk::TreeNodeBlockDefi
 void bonk::HiveConstructorDestructorLateGenerator::fill_constructor(
     bonk::TreeNodeBlockDefinition* constructor, bonk::TreeNodeHiveDefinition* hive) {
 
-    // The only thing we need to do here is to find the size argument of $$bonk_create_object
-    // and replace it with the actual size of the hive
+    constructor->body = std::make_unique<TreeNodeCodeBlock>();
 
     // Generate 'bowl object = @$$bonk_create_object[size = ...]'
 
@@ -46,12 +47,12 @@ void bonk::HiveConstructorDestructorLateGenerator::fill_constructor(
     auto call = std::make_unique<TreeNodeCall>();
     auto callee_identifier = std::make_unique<TreeNodeIdentifier>();
     callee_identifier->identifier_text =
-        middle_end.hidden_text_storage.get_hidden_symbol("$$bonk_create_object");
+        current_ast->buffer.get_symbol("$$bonk_create_object");
     call->callee = std::move(callee_identifier);
     call->arguments = std::make_unique<TreeNodeParameterList>();
 
     auto size_parameter_name = std::make_unique<TreeNodeIdentifier>();
-    size_parameter_name->identifier_text = middle_end.hidden_text_storage.get_hidden_symbol("size");
+    size_parameter_name->identifier_text = current_ast->buffer.get_symbol("size");
 
     int hive_size = middle_end.get_hive_field_offset(hive, -1);
 
@@ -64,17 +65,21 @@ void bonk::HiveConstructorDestructorLateGenerator::fill_constructor(
 
     call->arguments->parameters.push_back(std::move(size_parameter));
 
-    // Annotate the call with the hive type to trick the type checker
-    // into thinking that the call returns the hive type instead of
-    // a number. This is kind of a hack, but it works.
-    middle_end.type_table.annotate<HiveType>(call.get())->hive_definition = hive;
+    // Cast the call to the hive type
+    auto cast = std::make_unique<TreeNodeCast>();
+    cast->operand = std::move(call);
 
-    auto object_name = middle_end.hidden_text_storage.get_hidden_symbol("object");
+    auto hive_type = std::make_unique<TreeNodeIdentifier>();
+    hive_type->identifier_text = hive->hive_name->identifier_text;
+
+    cast->target_type = std::move(hive_type);
+
+    auto object_name = current_ast->buffer.get_symbol("object");
 
     auto object_variable_definition = std::make_unique<TreeNodeVariableDefinition>();
     object_variable_definition->variable_name = std::make_unique<TreeNodeIdentifier>();
     object_variable_definition->variable_name->identifier_text = object_name;
-    object_variable_definition->variable_value = std::move(call);
+    object_variable_definition->variable_value = std::move(cast);
 
     constructor->body->body.push_back(std::move(object_variable_definition));
 
@@ -109,15 +114,17 @@ void bonk::HiveConstructorDestructorLateGenerator::fill_constructor(
 
     BasicSymbolAnnotator symbol_annotator{middle_end};
     symbol_annotator.scoped_name_resolver.current_scope =
-        middle_end.symbol_table.symbol_scopes[hive]->parent_scope;
+        middle_end.symbol_table.get_scope_for_node(hive)->parent_scope;
     constructor->accept(&symbol_annotator);
 
-    TypeAnnotator annotator{middle_end};
-    annotator.annotate_ast(constructor);
+    TypeAnnotator annotator(middle_end);
+    constructor->accept(&annotator);
 }
 
 void bonk::HiveConstructorDestructorLateGenerator::fill_destructor(
     bonk::TreeNodeBlockDefinition* destructor, bonk::TreeNodeHiveDefinition* hive) {
+
+    destructor->body = std::make_unique<TreeNodeCodeBlock>();
 
     // Find the hive fields that are hives and set their pointers to null
     // Since the language doesn't have null keyword, we will use the
@@ -133,14 +140,13 @@ void bonk::HiveConstructorDestructorLateGenerator::fill_destructor(
         if (type->kind != TypeKind::hive)
             continue;
 
-        // Generate 'field of object = 0'
+        // Generate 'field of object = null'
 
         auto field_identifier = std::make_unique<TreeNodeIdentifier>();
         field_identifier->identifier_text = variable->variable_name->identifier_text;
 
         auto object_identifier = std::make_unique<TreeNodeIdentifier>();
-        object_identifier->identifier_text =
-            middle_end.hidden_text_storage.get_hidden_symbol("object");
+        object_identifier->identifier_text = current_ast->buffer.get_symbol("object");
 
         auto object_access = std::make_unique<TreeNodeHiveAccess>();
         object_access->hive = std::move(object_identifier);
@@ -148,13 +154,10 @@ void bonk::HiveConstructorDestructorLateGenerator::fill_destructor(
 
         auto assignment = std::make_unique<TreeNodeBinaryOperation>();
         assignment->left = std::move(object_access);
-        assignment->right = std::make_unique<TreeNodeNumberConstant>();
+        assignment->right = std::make_unique<TreeNodeNull>();
         assignment->operator_type = OperatorType::o_assign;
 
-        // Cast the number constant to the hive type
-        auto hive_type = middle_end.type_table.annotate<HiveType>(assignment->right.get());
-        hive_type->hive_definition = ((HiveType*)type)->hive_definition;
-
+        auto cast = std::make_unique<TreeNodeCast>();
         destructor->body->body.push_back(std::move(assignment));
     }
 
@@ -164,11 +167,11 @@ void bonk::HiveConstructorDestructorLateGenerator::fill_destructor(
     auto call = std::make_unique<TreeNodeCall>();
     auto callee_identifier = std::make_unique<TreeNodeIdentifier>();
     callee_identifier->identifier_text =
-        middle_end.hidden_text_storage.get_hidden_symbol("$$bonk_object_free");
+        current_ast->buffer.get_symbol("$$bonk_object_free");
     call->callee = std::move(callee_identifier);
     call->arguments = std::make_unique<TreeNodeParameterList>();
 
-    auto object_text = middle_end.hidden_text_storage.get_hidden_symbol("object");
+    auto object_text = current_ast->buffer.get_symbol("object");
 
     auto object_parameter_name = std::make_unique<TreeNodeIdentifier>();
     object_parameter_name->identifier_text = object_text;
@@ -176,14 +179,16 @@ void bonk::HiveConstructorDestructorLateGenerator::fill_destructor(
     auto object_parameter_value = std::make_unique<TreeNodeIdentifier>();
     object_parameter_value->identifier_text = object_text;
 
-    // Annotate the object parameter with the long type, so that the
-    // type annotator will not raise an error
-    middle_end.type_table.annotate<TrivialType>(object_parameter_value.get())->primitive_type =
-        PrimitiveType::t_long;
+    // Cast the object to the long type
+    auto cast = std::make_unique<TreeNodeCast>();
+    auto long_type = std::make_unique<TreeNodePrimitiveType>();
+    long_type->primitive_type = TrivialTypeKind::t_long;
+    cast->target_type = std::move(long_type);
+    cast->operand = std::move(object_parameter_value);
 
     auto size_parameter = std::make_unique<TreeNodeParameterListItem>();
     size_parameter->parameter_name = std::move(object_parameter_name);
-    size_parameter->parameter_value = std::move(object_parameter_value);
+    size_parameter->parameter_value = std::move(cast);
 
     call->arguments->parameters.push_back(std::move(size_parameter));
 
@@ -193,9 +198,9 @@ void bonk::HiveConstructorDestructorLateGenerator::fill_destructor(
 
     BasicSymbolAnnotator symbol_annotator{middle_end};
     symbol_annotator.scoped_name_resolver.current_scope =
-        middle_end.symbol_table.symbol_scopes[hive]->parent_scope;
+        middle_end.symbol_table.get_scope_for_node(hive)->parent_scope;
     destructor->accept(&symbol_annotator);
 
     TypeAnnotator annotator{middle_end};
-    annotator.annotate_ast(destructor);
+    destructor->accept(&annotator);
 }

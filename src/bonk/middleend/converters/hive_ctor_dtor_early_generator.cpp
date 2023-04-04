@@ -2,10 +2,9 @@
 #include "hive_ctor_dtor_early_generator.hpp"
 #include "bonk/tree/ast_clone_visitor.hpp"
 
-void bonk::HiveConstructorDestructorEarlyGenerator::generate(bonk::TreeNode* ast) {
-    assert(ast->type == TreeNodeType::n_program);
-
-    auto program = (TreeNodeProgram*)ast;
+void bonk::HiveConstructorDestructorEarlyGenerator::generate(bonk::AST& ast) {
+    auto program = ast.root.get();
+    current_ast = &ast;
 
     for (auto it = program->body.begin(); it != program->body.end();) {
         if ((*it)->type != TreeNodeType::n_hive_definition) {
@@ -21,6 +20,8 @@ void bonk::HiveConstructorDestructorEarlyGenerator::generate(bonk::TreeNode* ast
         it = program->body.insert(it, std::move(destructor));
         it = program->body.insert(it, std::move(constructor));
     }
+
+    current_ast = nullptr;
 }
 
 std::unique_ptr<bonk::TreeNode>
@@ -43,29 +44,22 @@ bonk::HiveConstructorDestructorEarlyGenerator::generate_hive_constructor(
 
     // Generate a symbol for the constructor
     constructor->block_name = std::make_unique<TreeNodeIdentifier>();
-    constructor->block_name->identifier_text =
-        middle_end.hidden_text_storage.get_hidden_symbol(constructor_name);
-
-    // Trick the type-checker into thinking that the constructor is already checked
-    // and has the return type of hive
-
-    auto type = middle_end.type_table.annotate<BlokType>(constructor.get());
-    auto return_type = std::make_unique<HiveType>();
-    return_type->hive_definition = hive_definition;
-    type->return_type = std::move(return_type);
+    constructor->block_name->identifier_text = current_ast->buffer.get_symbol(constructor_name);
 
     // Generate the parameter list
     constructor->block_parameters = std::make_unique<TreeNodeParameterListDefinition>();
 
     for (auto& field : hive_fields) {
         constructor->block_parameters->parameters.push_back(ASTCloneVisitor().clone(field));
-        type->parameters.push_back(field);
     }
 
     hive_fields.clear();
 
-    // Generate the body
-    constructor->body = std::make_unique<TreeNodeCodeBlock>();
+    // Generate the return type
+    auto return_type_identifier = std::make_unique<TreeNodeIdentifier>();
+    return_type_identifier->identifier_text = hive_definition->hive_name->identifier_text;
+
+    constructor->return_type = std::move(return_type_identifier);
 
     return constructor;
 }
@@ -81,16 +75,14 @@ bonk::HiveConstructorDestructorEarlyGenerator::generate_hive_destructor(
 
     // Generate a symbol for the constructor
     destructor->block_name = std::make_unique<TreeNodeIdentifier>();
-    destructor->block_name->identifier_text =
-        middle_end.hidden_text_storage.get_hidden_symbol(destructor_name);
+    destructor->block_name->identifier_text = current_ast->buffer.get_symbol(destructor_name);
 
     // Generate the parameter list. The only parameter is the hive itself
     destructor->block_parameters = std::make_unique<TreeNodeParameterListDefinition>();
 
     auto hive_parameter = std::make_unique<TreeNodeVariableDefinition>();
     hive_parameter->variable_name = std::make_unique<TreeNodeIdentifier>();
-    hive_parameter->variable_name->identifier_text =
-        middle_end.hidden_text_storage.get_hidden_symbol("object");
+    hive_parameter->variable_name->identifier_text = current_ast->buffer.get_symbol("object");
 
     auto hive_type_identifier = std::make_unique<TreeNodeIdentifier>();
     hive_type_identifier->identifier_text = hive_definition->hive_name->identifier_text;
@@ -99,7 +91,11 @@ bonk::HiveConstructorDestructorEarlyGenerator::generate_hive_destructor(
 
     destructor->block_parameters->parameters.push_back(std::move(hive_parameter));
 
-    destructor->body = std::make_unique<TreeNodeCodeBlock>();
+    // Generate the return type
+    auto return_type = std::make_unique<TreeNodePrimitiveType>();
+    return_type->primitive_type = TrivialTypeKind::t_nothing;
+
+    destructor->return_type = std::move(return_type);
 
     return destructor;
 }

@@ -1,9 +1,10 @@
 
+#include <assert.h>
 #include "json_serializer.hpp"
 
 namespace bonk {
 
-JsonSerializer::JsonSerializer(const OutputStream& output_stream) : output_stream(output_stream) {
+JSONSerializer::JSONSerializer(const OutputStream& output_stream) : output_stream(output_stream) {
     state.is_first = true;
     state.is_array = false;
     state.field_name_set = false;
@@ -11,20 +12,20 @@ JsonSerializer::JsonSerializer(const OutputStream& output_stream) : output_strea
     depth = 1;
 }
 
-JSONStringEscaperStream JsonSerializer::block_string_field() {
+JSONStringEscaperStream JSONSerializer::block_string_field() {
     assert(state.field_name_set);
     state.field_name_set = false;
     output_stream.get_stream() << ": ";
     return JSONStringEscaperStream(*this);
 }
 
-void JsonSerializer::block_number_field(long double value) {
+void JSONSerializer::block_number_field(long double value) {
     assert(state.field_name_set);
     state.field_name_set = false;
     output_stream.get_stream() << ": " << value;
 }
 
-void JsonSerializer::block_start_block() {
+void JSONSerializer::block_start_block() {
     assert(state.field_name_set);
     state.field_name_set = false;
     output_stream.get_stream() << ": {";
@@ -35,13 +36,13 @@ void JsonSerializer::block_start_block() {
     depth++;
 }
 
-void JsonSerializer::block_add_null() {
+void JSONSerializer::block_add_null() {
     assert(state.field_name_set);
     state.field_name_set = false;
     output_stream.get_stream() << ": null";
 }
 
-void JsonSerializer::close_block() {
+void JSONSerializer::close_block() {
     assert(!state.field_name_set);
     depth--;
 
@@ -56,7 +57,7 @@ void JsonSerializer::close_block() {
     output_stream.get_stream() << '}';
 }
 
-void JsonSerializer::block_start_array() {
+void JSONSerializer::block_start_array() {
     assert(state.field_name_set);
     state.field_name_set = false;
     output_stream.get_stream() << ": [";
@@ -68,26 +69,26 @@ void JsonSerializer::block_start_array() {
     depth++;
 }
 
-JSONStringEscaperStream JsonSerializer::array_add_string() {
+JSONStringEscaperStream JSONSerializer::array_add_string() {
     assert(state.is_array);
     return JSONStringEscaperStream(*this);
 }
 
-void JsonSerializer::array_add_null() {
+void JSONSerializer::array_add_null() {
     assert(state.is_array);
     prepare_next_field();
     padding();
     output_stream.get_stream() << "null";
 }
 
-void JsonSerializer::array_add_number(long double value) {
+void JSONSerializer::array_add_number(long double value) {
     assert(state.is_array);
     prepare_next_field();
     padding();
     output_stream.get_stream() << value;
 }
 
-void JsonSerializer::array_add_block() {
+void JSONSerializer::array_add_block() {
     assert(state.is_array);
     prepare_next_field();
     output_stream.get_stream() << '{';
@@ -98,7 +99,7 @@ void JsonSerializer::array_add_block() {
     depth++;
 }
 
-void JsonSerializer::array_add_array() {
+void JSONSerializer::array_add_array() {
     assert(state.is_array);
     prepare_next_field();
     output_stream.get_stream() << '[';
@@ -109,7 +110,7 @@ void JsonSerializer::array_add_array() {
     depth++;
 }
 
-void JsonSerializer::close_array() {
+void JSONSerializer::close_array() {
     assert(state.is_array);
     depth--;
 
@@ -124,7 +125,7 @@ void JsonSerializer::close_array() {
     output_stream.get_stream() << ']';
 }
 
-void JsonSerializer::prepare_next_field() {
+void JSONSerializer::prepare_next_field() {
     assert(!state.field_name_set);
     if (!state.is_first)
         output_stream.get_stream() << ",\n";
@@ -135,17 +136,17 @@ void JsonSerializer::prepare_next_field() {
     state.is_first = false;
 }
 
-void JsonSerializer::padding() const {
+void JSONSerializer::padding() const {
     for (int i = 0; i < depth; i++) {
         output_stream.get_stream() << "  ";
     }
 }
 
-JsonSerializer::~JsonSerializer() {
+JSONSerializer::~JSONSerializer() {
     output_stream.get_stream() << '\n';
 }
 
-JsonSerializer& JsonSerializer::field(std::string_view name) {
+JSONSerializer& JSONSerializer::field(std::string_view name) {
     prepare_next_field();
     state.field_name_set = true;
     JSONStringEscaperStream(*this) << name;
@@ -167,7 +168,7 @@ void JSONStringEscaperStream::flush() const {
     serializer.ss.clear();
 }
 
-JSONStringEscaperStream::JSONStringEscaperStream(JsonSerializer& serializer)
+JSONStringEscaperStream::JSONStringEscaperStream(JSONSerializer& serializer)
     : serializer(serializer) {
     serializer.output_stream.get_stream() << '"';
 }

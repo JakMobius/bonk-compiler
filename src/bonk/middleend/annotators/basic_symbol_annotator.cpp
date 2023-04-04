@@ -4,17 +4,16 @@
 
 bonk::BasicSymbolAnnotator::BasicSymbolAnnotator(bonk::MiddleEnd& middleend)
     : middleend(middleend) {
+    scoped_name_resolver.current_scope = middleend.symbol_table.global_scope;
 }
 
-void bonk::BasicSymbolAnnotator::annotate_program(bonk::TreeNode* ast) {
-    ast->accept(this);
+void bonk::BasicSymbolAnnotator::annotate_ast(bonk::AST& ast) {
+    ast.root->accept(this);
 }
 
 void bonk::BasicSymbolAnnotator::visit(bonk::TreeNodeProgram* node) {
-    push_scope(node);
     ForwardDeclaringSymbolAnnotator(*this).visit(node);
     ASTVisitor::visit(node);
-    pop_scope();
 }
 
 void bonk::BasicSymbolAnnotator::visit(bonk::TreeNodeCodeBlock* node) {
@@ -33,7 +32,7 @@ void bonk::BasicSymbolAnnotator::visit(bonk::TreeNodeHiveDefinition* node) {
 void bonk::BasicSymbolAnnotator::visit(bonk::TreeNodeVariableDefinition* node) {
     // Only handle variable definitions that are not in a hive,
     // because others are handled by the ForwardDeclaringSymbolAnnotator
-    if (scoped_name_resolver.current_scope->definition->type != TreeNodeType::n_hive_definition) {
+    if (scoped_name_resolver.current_scope->get_type() != TreeNodeType::n_hive_definition) {
         handle_definition(node);
     }
 
@@ -50,18 +49,23 @@ void bonk::BasicSymbolAnnotator::visit(bonk::TreeNodeBlockDefinition* node) {
         for (auto& parameter : node->block_parameters->parameters) {
             scoped_name_resolver.define_variable(get_definition_identifier(parameter.get()),
                                                  parameter.get());
-            middleend.symbol_table.symbol_definitions[parameter.get()] = parameter.get();
+            middleend.symbol_table.symbol_definitions[parameter.get()] =
+                SymbolDefinition::local(parameter.get());
 
             // Visit the parameter type, if it exists
-            if(parameter->variable_type) {
+            if (parameter->variable_type) {
                 parameter->variable_type->accept(this);
             }
         }
     }
 
+    if (node->return_type) {
+        node->return_type->accept(this);
+    }
+
     // Do not use ASTVisitor::visit here, because we don't want to visit the parameters
     // again
-    if(node->body) {
+    if (node->body) {
         node->body->accept(this);
     }
     pop_scope();
@@ -75,7 +79,7 @@ void bonk::BasicSymbolAnnotator::visit(bonk::TreeNodeLoopStatement* node) {
         for (auto& parameter : node->loop_parameters->parameters) {
             scoped_name_resolver.define_variable(get_definition_identifier(parameter.get()),
                                                  parameter.get());
-            middleend.symbol_table.symbol_definitions[parameter.get()] = parameter.get();
+            middleend.symbol_table.symbol_definitions[parameter.get()] = SymbolDefinition::local(parameter.get());
         }
     }
     pop_scope();
@@ -91,14 +95,23 @@ void bonk::BasicSymbolAnnotator::visit(bonk::TreeNodeParameterListItem* node) {
 void bonk::BasicSymbolAnnotator::visit(bonk::TreeNodeIdentifier* node) {
     middleend.symbol_table.symbol_scopes[node] = scoped_name_resolver.current_scope;
     auto definition = scoped_name_resolver.get_name_definition(node->identifier_text);
-    if (!definition) {
-        middleend.linked_compiler.error().at(node->source_position)
-            << "Identifier '" << node->identifier_text << "' is not defined";
+
+    if (definition != nullptr) {
+        middleend.symbol_table.symbol_definitions[node] = SymbolDefinition::local(definition);
+        middleend.symbol_table.symbol_names[node] = name_for_def_in_current_scope(definition);
+        return;
+    }
+    auto external_symbol_table = middleend.external_symbol_table.external_symbol_def_files;
+    auto it = external_symbol_table.find(node);
+    if (it != external_symbol_table.end()) {
+        std::string_view file = middleend.external_symbol_table.get_external_file(it->second);
+        middleend.symbol_table.symbol_definitions[node] = SymbolDefinition::external(file);
+        middleend.symbol_table.symbol_names[node] = std::string(node->identifier_text);
         return;
     }
 
-    middleend.symbol_table.symbol_definitions[node] = definition;
-    middleend.symbol_table.symbol_names[node] = name_for_def_in_current_scope(definition);
+    middleend.linked_compiler.error().at(node->source_position)
+            << "Identifier '" << node->identifier_text << "' is not defined";
 }
 
 void bonk::BasicSymbolAnnotator::handle_definition(bonk::TreeNode* node) {
@@ -114,7 +127,7 @@ void bonk::BasicSymbolAnnotator::handle_definition(bonk::TreeNode* node) {
 
     scoped_name_resolver.define_variable(definition_identifier, node);
 
-    middleend.symbol_table.symbol_definitions[node] = node;
+    middleend.symbol_table.symbol_definitions[node] = SymbolDefinition::local(node);
     middleend.symbol_table.symbol_names[node] = name_for_def_in_current_scope(node);
 }
 
@@ -131,8 +144,8 @@ std::string bonk::BasicSymbolAnnotator::name_for_def_in_current_scope(bonk::Tree
     actual_name << identifier_text;
 
     for (auto scope = scoped_name_resolver.current_scope; scope; scope = scope->parent_scope) {
-        if (scope->definition->type != TreeNodeType::n_block_definition &&
-            scope->definition->type != TreeNodeType::n_hive_definition) {
+        if (scope->get_type() != TreeNodeType::n_block_definition &&
+            scope->get_type() != TreeNodeType::n_hive_definition) {
             continue;
         }
 
@@ -160,13 +173,8 @@ void bonk::BasicSymbolAnnotator::visit(bonk::TreeNodeHiveAccess* node) {
 }
 
 void bonk::BasicSymbolAnnotator::push_scope(bonk::TreeNode* ast_node) {
-    auto new_scope = std::make_unique<SymbolScope>();
-    auto scope_ptr = new_scope.get();
-    new_scope->definition = ast_node;
-    new_scope->parent_scope = scoped_name_resolver.current_scope;
-    middleend.symbol_table.scopes.push_back(std::move(new_scope));
-    middleend.symbol_table.symbol_scopes[ast_node] = scope_ptr;
-    scoped_name_resolver.current_scope = scope_ptr;
+    auto new_scope = middleend.symbol_table.create_scope(ast_node, scoped_name_resolver.current_scope);
+    scoped_name_resolver.current_scope = new_scope;
 }
 
 void bonk::BasicSymbolAnnotator::pop_scope() {

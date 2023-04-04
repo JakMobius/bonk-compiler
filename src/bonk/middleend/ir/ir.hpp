@@ -11,6 +11,7 @@ struct SymbolTable;
 
 } // namespace bonk
 
+#include <memory>
 #include <list>
 #include <vector>
 #include "utils/linear_allocator.hpp"

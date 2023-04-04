@@ -91,3 +91,8 @@ bonk::HIRIncRefCounter::HIRIncRefCounter() : HIRInstruction(HIRInstructionType::
 bonk::HIRDecRefCounter::HIRDecRefCounter() : HIRInstruction(HIRInstructionType::dec_ref_counter) {
 }
 
+bonk::HIRFile::HIRFile() : HIRInstruction(HIRInstructionType::file) {
+}
+
+bonk::HIRLocation::HIRLocation() : HIRInstruction(HIRInstructionType::location) {
+}

@@ -15,7 +15,7 @@ class MiddleEnd;
 
 namespace bonk {
 
-class TypeAnnotator : ASTVisitor {
+class TypeAnnotator : public ASTVisitor {
 
   public:
     MiddleEnd& middle_end;
@@ -30,6 +30,7 @@ class TypeAnnotator : ASTVisitor {
     void visit(TreeNodeBlockDefinition* node) override;
     void visit(TreeNodeHiveAccess* node) override;
     void visit(TreeNodeCall* node) override;
+    void visit(TreeNodeCast* node) override;
     void visit(TreeNodeParameterListItem* node) override;
 
     void visit(TreeNodeArrayConstant* node) override;
@@ -40,7 +41,8 @@ class TypeAnnotator : ASTVisitor {
     void visit(TreeNodePrimitiveType* node) override;
     void visit(TreeNodeManyType* node) override;
     void visit(TreeNodeBonkStatement* node) override;
-    void annotate_ast(TreeNode* ast);
+    void visit(TreeNodeNull* node) override;
+    void annotate_ast(AST& ast);
 };
 
 } // namespace bonk
