@@ -2,7 +2,7 @@
 #include "hive_ctor_dtor_early_generator.hpp"
 #include "bonk/tree/ast_clone_visitor.hpp"
 
-void bonk::HiveConstructorDestructorEarlyGenerator::generate(bonk::AST& ast) {
+bool bonk::HiveConstructorDestructorEarlyGenerator::generate(bonk::AST& ast) {
     auto program = ast.root.get();
     current_ast = &ast;
 
@@ -22,6 +22,7 @@ void bonk::HiveConstructorDestructorEarlyGenerator::generate(bonk::AST& ast) {
     }
 
     current_ast = nullptr;
+    return true;
 }
 
 std::unique_ptr<bonk::TreeNode>

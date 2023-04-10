@@ -52,7 +52,7 @@ bool compile_bonk_source(const char* source, std::filesystem::path output_file) 
 
     auto lexemes = bonk::Lexer(compiler).parse_file("test", source);
 
-    if (compiler.state != bonk::BONK_COMPILER_OK) {
+    if (lexemes.empty()) {
         return false;
     }
 

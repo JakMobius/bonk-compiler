@@ -17,8 +17,8 @@ TEST(Lexer, TestHive) {
     )";
 
     auto lexemes = bonk::Lexer(compiler).parse_file("test", source);
+    ASSERT_FALSE(lexemes.empty());
 
-    ASSERT_TRUE(compiler.state == bonk::BONK_COMPILER_OK);
     ASSERT_EQ(lexemes.size(), 26);
     EXPECT_TRUE(lexemes[0].is(bonk::OperatorType::o_hive));
     EXPECT_TRUE(lexemes[1].is_identifier("TestHive"));
@@ -61,8 +61,8 @@ auto error_stream = bonk::StdOutputStream(std::cerr);
     )";
 
     auto lexemes = bonk::Lexer(compiler).parse_file("test", source);
+    ASSERT_FALSE(lexemes.empty());
 
-    ASSERT_TRUE(compiler.state == bonk::BONK_COMPILER_OK);
     ASSERT_EQ(lexemes.size(), 3);
     EXPECT_TRUE(lexemes[0].type == bonk::LexemeType::l_string);
     EXPECT_TRUE(lexemes[1].type == bonk::LexemeType::l_string);
@@ -81,8 +81,8 @@ TEST(Lexer, TestComment2) {
         )";
 
         auto lexemes = bonk::Lexer(compiler).parse_file("test", source);
+        ASSERT_FALSE(lexemes.empty());
 
-        ASSERT_TRUE(compiler.state == bonk::BONK_COMPILER_OK);
         ASSERT_EQ(lexemes.size(), 10);
         EXPECT_EQ(lexemes[0].type, bonk::LexemeType::l_operator);
         EXPECT_EQ(lexemes[1].type, bonk::LexemeType::l_identifier);
@@ -110,8 +110,8 @@ TEST(Lexer, TestStrings) {
     )";
 
     auto lexemes = bonk::Lexer(compiler).parse_file("test", source);
+    ASSERT_FALSE(lexemes.empty());
 
-    ASSERT_TRUE(compiler.state == bonk::BONK_COMPILER_OK);
     ASSERT_EQ(lexemes.size(), 6);
     EXPECT_TRUE(lexemes[0].is_string("test"));
     EXPECT_TRUE(lexemes[1].is_string("test\twith\ttabs"));
@@ -144,8 +144,8 @@ TEST(Lexer, TestNumbers) {
     )";
 
     auto lexemes = bonk::Lexer(compiler).parse_file("test", source);
+    ASSERT_FALSE(lexemes.empty());
 
-    ASSERT_TRUE(compiler.state == bonk::BONK_COMPILER_OK);
     ASSERT_EQ(lexemes.size(), 15);
     for (int i = 0; i < 14; i++) {
         ASSERT_EQ(lexemes[i].type, bonk::LexemeType::l_number);
@@ -210,9 +210,7 @@ TEST(Lexer, TestGlobal) {
     )";
 
     auto lexemes = bonk::Lexer(compiler).parse_file("test", source);
-
     ASSERT_FALSE(lexemes.empty());
-    ASSERT_TRUE(compiler.state == bonk::BONK_COMPILER_OK);
 }
 
 TEST(Lexer, TestOperators) {
@@ -229,9 +227,7 @@ TEST(Lexer, TestOperators) {
     std::string source = source_stream.str();
 
     auto lexemes = bonk::Lexer(compiler).parse_file("test", source);
-
     ASSERT_FALSE(lexemes.empty());
-    ASSERT_TRUE(compiler.state == bonk::BONK_COMPILER_OK);
 
     for (int i = 0; i < lexemes.size() - 1; i++) {
         ASSERT_EQ(lexemes[i].type, bonk::LexemeType::l_operator);

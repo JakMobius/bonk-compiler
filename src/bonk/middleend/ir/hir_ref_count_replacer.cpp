@@ -2,13 +2,16 @@
 #include "hir_ref_count_replacer.hpp"
 #include "bonk/middleend/annotators/basic_symbol_annotator.hpp"
 
-void bonk::HIRRefCountReplacer::replace_ref_counters(bonk::IRProgram& program) {
+bool bonk::HIRRefCountReplacer::replace_ref_counters(bonk::IRProgram& program) {
     for (auto& procedure : program.procedures) {
-        replace_ref_counters(*procedure);
+        if(!replace_ref_counters(*procedure)) {
+            return false;
+        }
     }
+    return true;
 }
 
-void bonk::HIRRefCountReplacer::replace_ref_counters(bonk::IRProcedure& procedure) {
+bool bonk::HIRRefCountReplacer::replace_ref_counters(bonk::IRProcedure& procedure) {
     for (auto& block : procedure.base_blocks) {
         current_base_block = block.get();
         current_instruction_iterator = block->instructions.begin();
@@ -16,6 +19,7 @@ void bonk::HIRRefCountReplacer::replace_ref_counters(bonk::IRProcedure& procedur
             replace_ref_counters((HIRInstruction*)(*current_instruction_iterator));
         }
     }
+    return true;
 }
 
 void bonk::HIRRefCountReplacer::replace_ref_counters(HIRInstruction* instruction) {

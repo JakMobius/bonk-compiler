@@ -7,8 +7,10 @@ bonk::BasicSymbolAnnotator::BasicSymbolAnnotator(bonk::MiddleEnd& middleend)
     scoped_name_resolver.current_scope = middleend.symbol_table.global_scope;
 }
 
-void bonk::BasicSymbolAnnotator::annotate_ast(bonk::AST& ast) {
+bool bonk::BasicSymbolAnnotator::annotate_ast(bonk::AST& ast) {
+    errors_occurred = false;
     ast.root->accept(this);
+    return !errors_occurred;
 }
 
 void bonk::BasicSymbolAnnotator::visit(bonk::TreeNodeProgram* node) {
@@ -101,6 +103,7 @@ void bonk::BasicSymbolAnnotator::visit(bonk::TreeNodeIdentifier* node) {
         middleend.symbol_table.symbol_names[node] = name_for_def_in_current_scope(definition);
         return;
     }
+
     auto external_symbol_table = middleend.external_symbol_table.external_symbol_def_files;
     auto it = external_symbol_table.find(node);
     if (it != external_symbol_table.end()) {
@@ -110,7 +113,8 @@ void bonk::BasicSymbolAnnotator::visit(bonk::TreeNodeIdentifier* node) {
         return;
     }
 
-    middleend.linked_compiler.error().at(node->source_position)
+    errors_occurred = true;
+    middleend.compiler.error().at(node->source_position)
             << "Identifier '" << node->identifier_text << "' is not defined";
 }
 
@@ -120,7 +124,8 @@ void bonk::BasicSymbolAnnotator::handle_definition(bonk::TreeNode* node) {
     auto it = scoped_name_resolver.current_scope->symbols.find(definition_identifier);
 
     if (it != scoped_name_resolver.current_scope->symbols.end()) {
-        middleend.linked_compiler.error().at(node->source_position)
+        errors_occurred = true;
+        middleend.compiler.error().at(node->source_position)
             << "Identifier '" << definition_identifier << "' is already defined in this scope";
         return;
     }

@@ -20,9 +20,10 @@ TEST(Parser, TestHiveBowls) {
     )";
 
     auto lexemes = bonk::Lexer(compiler).parse_file("test", source);
+    ASSERT_FALSE(lexemes.empty());
+
     auto ast = bonk::Parser(compiler).parse_file(&lexemes);
 
-    ASSERT_TRUE(compiler.state == bonk::BONK_COMPILER_OK);
     ASSERT_NE(ast, nullptr);
     ASSERT_EQ(ast->type, bonk::TreeNodeType::n_program);
 
@@ -99,10 +100,11 @@ TEST(Parser, TestHiveBloks) {
     )";
 
     auto lexemes = bonk::Lexer(compiler).parse_file("test", source);
-    auto ast = bonk::Parser(compiler).parse_file(&lexemes);
+    ASSERT_FALSE(lexemes.empty());
 
-    ASSERT_TRUE(compiler.state == bonk::BONK_COMPILER_OK);
+    auto ast = bonk::Parser(compiler).parse_file(&lexemes);
     ASSERT_NE(ast, nullptr);
+
     ASSERT_EQ(ast->type, bonk::TreeNodeType::n_program);
 
     auto program = (bonk::TreeNodeProgram*)ast.get();
@@ -176,9 +178,9 @@ TEST(Parser, TestHiveCalls) {
     )";
 
     auto lexemes = bonk::Lexer(compiler).parse_file("test", source);
-    auto ast = bonk::Parser(compiler).parse_file(&lexemes);
+    ASSERT_FALSE(lexemes.empty());
 
-    ASSERT_TRUE(compiler.state == bonk::BONK_COMPILER_OK);
+    auto ast = bonk::Parser(compiler).parse_file(&lexemes);
     ASSERT_NE(ast, nullptr);
     ASSERT_EQ(ast->type, bonk::TreeNodeType::n_program);
 
@@ -250,9 +252,9 @@ TEST(Parser, TestOperatorPrecedence) {
         )";
 
     auto lexemes = bonk::Lexer(compiler).parse_file("test", source);
-    auto ast = bonk::Parser(compiler).parse_file(&lexemes);
+    ASSERT_FALSE(lexemes.empty());
 
-    ASSERT_TRUE(compiler.state == bonk::BONK_COMPILER_OK);
+    auto ast = bonk::Parser(compiler).parse_file(&lexemes);
     ASSERT_NE(ast, nullptr);
 
     auto program = (bonk::TreeNodeProgram*)ast.get();
@@ -354,9 +356,9 @@ TEST(Parser, TestAndOrWithCodeBlock) {
         )";
 
     auto lexemes = bonk::Lexer(compiler).parse_file("test", source);
-    auto ast = bonk::Parser(compiler).parse_file(&lexemes);
+    ASSERT_FALSE(lexemes.empty());
 
-    ASSERT_TRUE(compiler.state == bonk::BONK_COMPILER_OK);
+    auto ast = bonk::Parser(compiler).parse_file(&lexemes);
     ASSERT_NE(ast, nullptr);
 
     auto program = (bonk::TreeNodeProgram*)ast.get();
@@ -394,9 +396,9 @@ TEST(Parser, TestAssociativeSide) {
         )";
 
     auto lexemes = bonk::Lexer(compiler).parse_file("test", source);
-    auto ast = bonk::Parser(compiler).parse_file(&lexemes);
+    ASSERT_FALSE(lexemes.empty());
 
-    ASSERT_TRUE(compiler.state == bonk::BONK_COMPILER_OK);
+    auto ast = bonk::Parser(compiler).parse_file(&lexemes);
     ASSERT_NE(ast, nullptr);
 
     auto program = (bonk::TreeNodeProgram*)ast.get();

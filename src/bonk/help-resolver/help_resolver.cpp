@@ -36,6 +36,8 @@ bonk::HelpResolver::get_recent_metadata_for_source(const std::filesystem::path& 
     MiddleEnd nested_middle_end(compiler);
     nested_middle_end.module_path = path;
 
+    bool all_dependencies_are_good = true;
+
     auto metadata = std::make_unique<SourceMetadata>(nested_middle_end, path);
 
     bool should_update_metadata = !std::filesystem::exists(output_path);
@@ -51,16 +53,22 @@ bonk::HelpResolver::get_recent_metadata_for_source(const std::filesystem::path& 
         for (auto& statement : meta_ast_program->help_statements) {
 
             auto help_string = statement->string->string_value;
-            auto dependency_path = path.parent_path() /= help_string;
+            auto dependency_path = canonical(path.parent_path() /= help_string);
 
             if (!std::filesystem::exists(dependency_path)) {
                 file_not_found(statement.get(), help_string);
+                all_dependencies_are_good = false;
                 continue;
             }
 
             auto dependency_metadata = get_recent_metadata_for_source(dependency_path);
 
-            if (dependency_metadata && !metadata->is_up_to_date_for(*dependency_metadata)) {
+            if(!dependency_metadata) {
+                all_dependencies_are_good = false;
+                continue;
+            }
+
+            if (!metadata->is_up_to_date_for(*dependency_metadata)) {
                 should_update_metadata = true;
             }
         }
@@ -85,7 +93,17 @@ bonk::HelpResolver::get_recent_metadata_for_source(const std::filesystem::path& 
         return nullptr;
     }
 
-    metadata->rebuild_metadata_ast(ast->root.get());
+    // Could have checked it earlier, but it's better to also
+    // check some errors of this file as well, because otherwise
+    // an error in a dependency file will lead to ignoring all
+    // errors in dependent files
+    if(!all_dependencies_are_good) {
+        return nullptr;
+    }
+
+    if(!metadata->rebuild_metadata_ast(ast->root.get())) {
+        return nullptr;
+    }
 
     return metadata;
 }
@@ -102,14 +120,17 @@ std::optional<bonk::AST> bonk::HelpResolver::get_ast(const std::filesystem::path
 
     std::string_view filename_view = buffer.get_symbol(file_path.string());
 
-    compiler.state = BONK_COMPILER_OK;
     auto lexemes = bonk::Lexer(compiler).parse_file(filename_view, source.value());
 
-    if (compiler.state) {
+    if (lexemes.empty()) {
         return std::nullopt;
     }
 
     auto ast_root = bonk::Parser(compiler).parse_file(&lexemes);
+
+    if(!ast_root) {
+        return std::nullopt;
+    }
 
     return AST{.root = std::move(ast_root), .buffer = std::move(buffer)};
 }
@@ -153,9 +174,9 @@ std::optional<bonk::AST> bonk::HelpResolver::get_transformed_ast(bonk::MiddleEnd
     return ast;
 }
 
-void bonk::HelpResolver::compile_file(const std::filesystem::path& file_path) {
+bool bonk::HelpResolver::compile_file(const std::filesystem::path& file_path) {
     auto absolute_file_path = std::filesystem::absolute(file_path);
-    get_recent_metadata_for_source(absolute_file_path);
+    return get_recent_metadata_for_source(absolute_file_path) != nullptr;
 }
 
 void bonk::HelpResolver::recompile_file(bonk::MiddleEnd& middle_end,
@@ -167,7 +188,6 @@ void bonk::HelpResolver::recompile_file(bonk::MiddleEnd& middle_end,
         std::filesystem::create_directories(output_path.parent_path());
         bonk::FileOutputStream output_file(output_path.string());
         compiler.backend->compile_program(*hir, output_file);
-        compiler.report_file_updated(output_path.string());
     }
 }
 

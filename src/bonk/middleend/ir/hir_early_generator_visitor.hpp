@@ -76,6 +76,7 @@ class HIREarlyGeneratorVisitor : ASTVisitor {
 
     MiddleEnd& middle_end;
     IRProgram* current_program;
+    bool errors_occurred = false;
 
     TreeNodeHiveDefinition* current_hive_definition = nullptr;
     TreeNodeBlockDefinition* current_block_definition = nullptr;

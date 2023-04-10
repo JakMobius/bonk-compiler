@@ -85,6 +85,7 @@ struct SymbolTable {
 };
 
 struct TypeTable {
+    bool has_errors = false;
     TypeTable* parent_table = nullptr;
     std::unordered_map<TreeNode*, Type*> type_cache{};
     std::unordered_set<std::unique_ptr<Type>> type_storage{};
@@ -156,7 +157,7 @@ struct ExternalModule {
 
 class MiddleEnd {
   public:
-    Compiler& linked_compiler;
+    Compiler& compiler;
 
     std::unordered_map<std::string, std::unique_ptr<ExternalModule>> external_modules;
     std::optional<std::filesystem::path> module_path = std::nullopt;

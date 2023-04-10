@@ -3,48 +3,36 @@
 #include "bonk/middleend/annotators/basic_symbol_annotator.hpp"
 #include "bonk/middleend/annotators/type_annotator.hpp"
 #include "bonk/middleend/annotators/type_visitor.hpp"
+#include "bonk/middleend/converters/external_type_replacer.hpp"
 #include "bonk/middleend/converters/hive_constructor_call_replacer.hpp"
 #include "bonk/middleend/converters/hive_ctor_dtor_early_generator.hpp"
 #include "bonk/middleend/converters/hive_ctor_dtor_late_generator.hpp"
-#include "bonk/middleend/converters/external_type_replacer.hpp"
 #include "bonk/middleend/converters/stdlib_header_generator.hpp"
 #include "bonk/middleend/ir/hir_early_generator_visitor.hpp"
 #include "bonk/middleend/ir/hir_ref_count_replacer.hpp"
 
-bonk::MiddleEnd::MiddleEnd(bonk::Compiler& linked_compiler) : linked_compiler(linked_compiler) {
+bonk::MiddleEnd::MiddleEnd(bonk::Compiler& linked_compiler) : compiler(linked_compiler) {
     add_external_module("$$stdlib", bonk::StdLibHeaderGenerator(*this).generate());
 }
 
 bool bonk::MiddleEnd::transform_ast(bonk::AST& ast) {
 
-    bonk::HiveConstructorDestructorEarlyGenerator(*this).generate(ast);
-
-    if (linked_compiler.state)
+    if (!bonk::HiveConstructorDestructorEarlyGenerator(*this).generate(ast))
         return false;
 
-    bonk::BasicSymbolAnnotator(*this).annotate_ast(ast);
-
-    if (linked_compiler.state)
+    if (!bonk::BasicSymbolAnnotator(*this).annotate_ast(ast))
         return false;
 
-    bonk::HiveConstructorCallReplacer(*this).replace(ast);
-
-    if (linked_compiler.state)
+    if (!bonk::HiveConstructorCallReplacer(*this).replace(ast))
         return false;
 
-    bonk::TypeAnnotator(*this).annotate_ast(ast);
-
-    if (linked_compiler.state)
+    if (!bonk::TypeAnnotator(*this).annotate_ast(ast))
         return false;
 
-    bonk::HiveConstructorDestructorLateGenerator(*this).generate(ast);
-
-    if (linked_compiler.state)
+    if (!bonk::HiveConstructorDestructorLateGenerator(*this).generate(ast))
         return false;
 
-    bonk::ExternalTypeReplacer(*this).replace(ast);
-
-    if (linked_compiler.state)
+    if (!bonk::ExternalTypeReplacer(*this).replace(ast))
         return false;
 
     return true;
@@ -57,15 +45,14 @@ bool bonk::MiddleEnd::annotate_ast(AST& ast, SymbolScope* scope) {
         symbol_annotator.scoped_name_resolver.current_scope = scope;
     }
 
-    symbol_annotator.annotate_ast(ast);
-    bonk::TypeAnnotator(*this).annotate_ast(ast);
+    if (!symbol_annotator.annotate_ast(ast))
+        return false;
 
-    return !linked_compiler.state;
+    return bonk::TypeAnnotator(*this).annotate_ast(ast);
 }
 
-bonk::ExternalModule*
-bonk::MiddleEnd::add_external_module(const std::filesystem::path& path,
-                                     bonk::AST ast, bool disclose) {
+bonk::ExternalModule* bonk::MiddleEnd::add_external_module(const std::filesystem::path& path,
+                                                           bonk::AST ast, bool disclose) {
     auto scope = symbol_table.global_scope;
 
     // If the module is imported from another module, we don't want to disclose its symbols,
@@ -88,17 +75,13 @@ bonk::MiddleEnd::add_external_module(const std::filesystem::path& path,
 }
 
 std::unique_ptr<bonk::IRProgram> bonk::MiddleEnd::generate_hir(TreeNode* ast) {
-    std::unique_ptr<bonk::IRProgram> program;
+    auto program = bonk::HIREarlyGeneratorVisitor(*this).generate(ast);
 
-    program = bonk::HIREarlyGeneratorVisitor(*this).generate(ast);
+    if(!program)
+        return nullptr;
 
-    if (linked_compiler.state)
-        return program;
-
-    HIRRefCountReplacer(*this).replace_ref_counters(*program);
-
-    if (linked_compiler.state)
-        return program;
+    if(!HIRRefCountReplacer(*this).replace_ref_counters(*program))
+        return nullptr;
 
     return program;
 }
@@ -146,7 +129,7 @@ long long bonk::IDTable::get_unused_id() {
 long long bonk::IDTable::get_id(bonk::TreeNode* node) {
     auto def = middle_end.symbol_table.get_definition(node);
 
-    if(def) {
+    if (def) {
         // Definition must be local at this point, otherwise it's a bug
         node = def.get_local().definition;
     }
@@ -207,6 +190,7 @@ void bonk::TypeTable::write_to_cache(TreeNode* node, Type* type) {
 }
 
 void bonk::TypeTable::save_type(std::unique_ptr<Type> type) {
+
     type_storage.insert(std::move(type));
 }
 

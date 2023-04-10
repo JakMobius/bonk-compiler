@@ -68,7 +68,6 @@ extern const char* BONK_BRACE_NAMES[];
 #include <variant>
 #include <vector>
 #include "../parser_position.hpp"
-#include "identifier_lexeme.hpp"
 #include "number_lexeme.hpp"
 
 namespace bonk {
@@ -138,7 +137,7 @@ struct LexerSpecialWord {
 
 struct Lexer {
     std::string_view text{};
-    Compiler& linked_compiler;
+    Compiler& compiler;
     ParserPosition current_position{};
     std::vector<Lexeme> lexemes{};
     std::vector<LexerSpecialWord> special_words{};
@@ -147,7 +146,7 @@ struct Lexer {
 
     std::vector<bonk::Lexeme> parse_file(std::string_view filename, std::string_view text);
 
-    void next();
+    bool next();
     char next_char() const;
     void eat_char();
     int next_special_word();
@@ -155,7 +154,6 @@ struct Lexer {
 
     int parse_digits_lexeme(int radix, long long int* integer_value, double* float_value);
 
-    bool parse_identifier_lexeme(Lexeme* target);
     bool parse_number_lexeme(Lexeme* target);
     bool parse_string_lexeme(Lexeme* target);
 

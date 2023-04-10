@@ -1,0 +1,54 @@
+
+help "merge_sort.bs"
+help "bubble_sort.bs"
+help "linked_list.bs"
+help "print_num.bs"
+
+blok get_list {
+    bowl list = @LinkedList;
+
+    @linked_list_add[list = list, element = 422];
+    @linked_list_add[list = list, element = 5910];
+    @linked_list_add[list = list, element = 593];
+    @linked_list_add[list = list, element = 594];
+    @linked_list_add[list = list, element = 478];
+    @linked_list_add[list = list, element = 477];
+
+    bonk list;
+}
+
+blok print_list[bowl list: LinkedList] {
+    bowl ptr = start of list;
+
+    loop {
+        ptr == null and { bonk; };
+        @print_num[num = item of ptr];
+        ptr = next of ptr;
+    }
+}
+
+blok lists_equal[bowl list1: LinkedList, bowl list2: LinkedList] {
+    loop[bowl ptr1 = start of list1, bowl ptr2 = start of list2] {
+        ptr1 == null and { ptr2 == null and { bonk 1; }; };
+        ptr2 == null and { ptr1 == null and { bonk 1; }; };
+        ptr1 == null and { bonk 0; };
+        ptr2 == null and { bonk 0; };
+
+        item of ptr1 != item of ptr2 and { bonk 0; };
+
+        ptr1 = next of ptr1;
+        ptr2 = next of ptr2;
+    }
+
+    bonk 1;
+}
+
+blok main {
+    bowl list1 = @merge_sort[list = @get_list];
+    bowl list2 = @bubble_sort[list = @get_list];
+
+    @print_list[list = list1];
+    @print_list[list = list2];
+
+    @lists_equal[list1 = list1, list2 = list2] and { bonk 0; } or { bonk 1; };
+}

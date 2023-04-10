@@ -18,7 +18,12 @@ uint64_t $$bonk_create_object(uint32_t size) {
 
     // Return the pointer to the object
 
-//    printf("Allocated object of size %d at %p\n", size, ptr + sizeof(uint64_t));
+    // If environment variable BONK_DEBUG is set, print the address of the allocated object
+
+    if(getenv("BONK_DEBUG_ALLOC") != NULL) {
+        printf("Allocated object of size %d at %p\n", size, ptr + sizeof(uint64_t));
+        fflush(stdout);
+    }
 
     return (uint64_t) (ref_counter + 1);
 }
@@ -28,9 +33,11 @@ void $$bonk_object_free(uint64_t object) {
 
     uint64_t* ref_counter = (uint64_t*) object - 1;
 
-//    printf("Freed object at %p\n", object);
+    if(getenv("BONK_DEBUG_ALLOC") != NULL) {
+        printf("Freed object at %p\n", (void*)object);
+        fflush(stdout);
+    }
 
     // Free the object
-
     free(ref_counter);
 }

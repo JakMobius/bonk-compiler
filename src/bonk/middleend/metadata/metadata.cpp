@@ -129,11 +129,19 @@ void ASTCloneWithExternalSymbolsVisitor::visit(bonk::TreeNodeIdentifier* node) {
 }
 
 void MetadataASTBuilderVisitor::visit(bonk::TreeNodeBlockDefinition* node) {
+    // Remove the body from block definition to avoid cloning it in the meta AST
+    auto definition = std::move(node->body);
+    node->body = nullptr;
+
+    ASTCloneVisitor::visit(node);
+
+    // Move it back to keep the source AST unmodified
+    node->body = std::move(definition);
+
     // Block bodies are stripped from the meta AST, so in order for compiler
     // to determine the return type of the block, it should be stored explicitly
     // in the meta AST
 
-    ASTCloneVisitor::visit(node);
     auto copy = (bonk::TreeNodeBlockDefinition*)result.get();
 
     copy->block_name = clone(node->block_name.get());
@@ -180,7 +188,7 @@ bool bonk::SourceMetadata::is_up_to_date_for(const bonk::SourceMetadata& other) 
     return check_date > other.changed_date;
 }
 
-void bonk::SourceMetadata::rebuild_metadata_ast(bonk::TreeNodeProgram* ast) {
+bool bonk::SourceMetadata::rebuild_metadata_ast(bonk::TreeNodeProgram* ast) {
     metadata_rebuilt = true;
 
     // Create header AST and move all the identifier strings to its
@@ -192,7 +200,7 @@ void bonk::SourceMetadata::rebuild_metadata_ast(bonk::TreeNodeProgram* ast) {
     // so added explicit return types / variable types / etc. are annotated
 
     // Create a new MiddleEnd instance for the meta AST
-    MiddleEnd meta_middle_end(middle_end.linked_compiler);
+    MiddleEnd meta_middle_end(middle_end.compiler);
 
     // Modules should be cloned along with their external symbol table
     // TODO: maybe not to clone modules at all?
@@ -210,16 +218,22 @@ void bonk::SourceMetadata::rebuild_metadata_ast(bonk::TreeNodeProgram* ast) {
         meta_middle_end.add_external_module(path, std::move(copied_module));
     }
 
-    meta_middle_end.annotate_ast(meta_ast, nullptr);
+    if(!meta_middle_end.annotate_ast(meta_ast, nullptr)) {
+        meta_ast = {};
+        return false;
+    }
 
     TypeReferenceBuilderVisitor type_reference_builder(meta_middle_end, type_reference_metadata);
     meta_ast.root->accept(&type_reference_builder);
 
     write_metadata_if_needed();
+    return true;
 }
 
 bool bonk::SourceMetadata::metadata_is_newer_than_source() {
     if (!meta_ast.root)
+        return false;
+    if(!std::filesystem::exists(source_path))
         return false;
     return check_date > std::filesystem::last_write_time(source_path);
 }
@@ -380,11 +394,6 @@ void TypeReferenceBuilderVisitor::visit(bonk::TreeNodeIdentifier* node) {
         filename = definition.get_local().definition->source_position.filename;
     } else if (definition.is_external()) {
         filename = definition.get_external().file;
-    }
-
-    if (filename.empty()) {
-        metadata.identifier_files.push_back(0);
-        return;
     }
 
     auto id = get_id_for_filename(filename);

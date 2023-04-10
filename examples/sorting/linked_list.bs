@@ -1,0 +1,34 @@
+
+hive LinkedListItem {
+  bowl item: nubr;
+  bowl next: LinkedListItem = null;
+}
+
+hive LinkedList {
+  bowl start: LinkedListItem = null;
+  bowl end: LinkedListItem = null;
+}
+
+blok linked_list_add[bowl list: LinkedList, bowl element: nubr] {
+  (start of list != null) or {
+    start of list = @LinkedListItem[item = element];
+    end of list = start of list;
+    bonk;
+  };
+
+  bowl end = end of list;
+  next of end = @LinkedListItem[item = element];
+  end of list = next of end;
+}
+
+blok linked_list_size[bowl list: LinkedList] {
+  bowl size = 0;
+
+  loop[bowl ptr = start of list] {
+    ptr == null and { brek; };
+    size = size + 1;
+    ptr = next of ptr;
+  }
+
+  bonk size;
+}

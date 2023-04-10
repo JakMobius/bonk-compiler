@@ -70,13 +70,18 @@ class NeverSearchVisitor : public ConstTypeVisitor {
     public:
     bool result = false;
 
-    void visit(const HiveType* type) override;
-    void visit(const BlokType* type) override;
     void visit(const TrivialType* type) override;
-    void visit(const ManyType* type) override;
+    void visit(const ExternalType* type) override;
+
+    bool search(Type* type);
+};
+
+class ErrorSearchVisitor : public ConstTypeVisitor {
+  public:
+    bool result = false;
+
     void visit(const ErrorType* type) override;
     void visit(const ExternalType* type) override;
-    void visit(const NullType* type) override;
 
     bool search(Type* type);
 };

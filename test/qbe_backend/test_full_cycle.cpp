@@ -342,6 +342,24 @@ TEST(TestQBEFullCycle, TestReferenceCounter7) {
     EXPECT_EQ(get_executable_output("test"), "2 2 2 2 ");
 }
 
+TEST(TestQBEFullCycle, TestReferenceCounter8) {
+    const char* bonk_source = R"(
+        hive TestHive {}
+
+        blok main {
+            loop[bowl counter = 0] {
+                bowl a1 = @TestHive;
+                counter = counter + 1;
+                counter < 10 or { brek; };
+            }
+            bonk 43;
+        }
+    )";
+
+    ASSERT_TRUE(run_bonk(bonk_source, "test"));
+    EXPECT_EQ(get_executable_return_code("test"), 43);
+}
+
 TEST(TestQBEFullCycle, TestHive1) {
 
     // This test used to cause a segfault in the hive_ctor_dtor_late_generator
@@ -504,4 +522,53 @@ TEST(TestQBEFullCycle, TestArgumentAssign) {
 
     ASSERT_TRUE(run_bonk(bonk_source, "test"));
     EXPECT_EQ(get_executable_return_code("test"), 20);
+}
+
+TEST(TestQBEFullCycle, TestLogic) {
+
+    const char* bonk_source = R"(
+        blok main {
+            bowl ultimate_result = 0;
+
+            bowl lhs = 1;
+            bowl rhs = 1;
+
+            lhs == 0 and rhs == 0 or {
+                ultimate_result = ultimate_result + 1; dogo: true
+            };
+
+            lhs == 1 and rhs == 0 or {
+                ultimate_result = ultimate_result + 2; dogo: true
+            };
+
+            lhs == 0 and rhs == 1 or {
+                ultimate_result = ultimate_result + 4; dogo: true
+            };
+
+            lhs == 1 and rhs == 1 or {
+                ultimate_result = ultimate_result + 8; dogo: false
+            };
+
+            (lhs == 0 or rhs == 0) or {
+                ultimate_result = ultimate_result + 16; dogo: true
+            };
+
+            (lhs == 1 or rhs == 0) or {
+                ultimate_result = ultimate_result + 32; dogo: false
+            };
+
+            (lhs == 0 or rhs == 1) or {
+                ultimate_result = ultimate_result + 64; dogo: false
+            };
+
+            (lhs == 1 or rhs == 1) or {
+                ultimate_result = ultimate_result + 128; dogo: false
+            };
+
+            bonk ultimate_result;
+        }
+    )";
+
+    ASSERT_TRUE(run_bonk(bonk_source, "test"));
+    EXPECT_EQ(get_executable_return_code("test"), 23);
 }

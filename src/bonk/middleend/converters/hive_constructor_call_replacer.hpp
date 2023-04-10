@@ -13,7 +13,7 @@ class HiveConstructorCallReplacer : ASTVisitor {
     explicit HiveConstructorCallReplacer(MiddleEnd& middle_end) : middle_end(middle_end) {
     }
 
-    void replace(AST& ast);
+    bool replace(AST& ast);
 
     void visit(TreeNodeHiveDefinition* node) override;
     void visit(TreeNodeIdentifier* node) override;

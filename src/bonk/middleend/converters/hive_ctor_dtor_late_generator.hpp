@@ -14,7 +14,7 @@ class HiveConstructorDestructorLateGenerator : public ASTVisitor {
         : middle_end(middle_end) {
     }
 
-    void generate(bonk::AST& ast);
+    bool generate(bonk::AST& ast);
 
   private:
     void visit(TreeNodeHiveDefinition* node) override;

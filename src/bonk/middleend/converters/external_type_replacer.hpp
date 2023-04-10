@@ -18,7 +18,7 @@ class ExternalTypeReplacer : public TemplateVisitor<ExternalTypeReplacer> {
     }
 
     void replace_types(TreeNode* node);
-    void replace(bonk::AST& ast);
+    bool replace(bonk::AST& ast);
 };
 
 } // namespace bonk

@@ -2,10 +2,11 @@
 #include "hive_constructor_call_replacer.hpp"
 #include "bonk/middleend/annotators/basic_symbol_annotator.hpp"
 
-void bonk::HiveConstructorCallReplacer::replace(bonk::AST& ast) {
+bool bonk::HiveConstructorCallReplacer::replace(bonk::AST& ast) {
     current_ast = &ast;
     ast.root->accept(this);
     current_ast = nullptr;
+    return true;
 }
 
 void bonk::HiveConstructorCallReplacer::visit(bonk::TreeNodeVariableDefinition* node) {

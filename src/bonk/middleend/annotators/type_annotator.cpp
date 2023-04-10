@@ -1,15 +1,21 @@
 
 #include "type_annotator.hpp"
-#include "../../compiler.hpp"
 #include "../middleend.hpp"
 #include "type_inferring.hpp"
+#include "type_visitor.hpp"
 
 bonk::TypeAnnotator::TypeAnnotator(bonk::MiddleEnd& middle_end) : middle_end(middle_end) {
 }
 
 bonk::Type* bonk::TypeAnnotator::infer_type(bonk::TreeNode* node) {
     TypeInferringVisitor visitor{middle_end};
-    return visitor.infer_type(node);
+    auto result = visitor.infer_type(node);
+
+    if(visitor.had_errors_occurred()) {
+        errors_occurred = true;
+    }
+
+    return result;
 }
 
 void bonk::TypeAnnotator::visit(bonk::TreeNodeHiveDefinition* node) {
@@ -94,8 +100,10 @@ void bonk::TypeAnnotator::visit(TreeNodeBonkStatement* node) {
     infer_type(node);
 }
 
-void bonk::TypeAnnotator::annotate_ast(bonk::AST& ast) {
+bool bonk::TypeAnnotator::annotate_ast(bonk::AST& ast) {
+    errors_occurred = false;
     ast.root->accept(this);
+    return !errors_occurred;
 }
 
 void bonk::TypeAnnotator::visit(bonk::TreeNodeNull* node) {

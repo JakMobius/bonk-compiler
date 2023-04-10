@@ -35,8 +35,8 @@ class HIRRefCountReplacer : ASTVisitor {
     void remove_instruction();
 
   public:
-    void replace_ref_counters(IRProgram& program);
-    void replace_ref_counters(IRProcedure& procedure);
+    bool replace_ref_counters(IRProgram& program);
+    bool replace_ref_counters(IRProcedure& procedure);
 };
 
 } // namespace bonk

@@ -13,7 +13,7 @@ class HelpResolver {
   public:
     explicit HelpResolver(Compiler& compiler);
 
-    void compile_file(const std::filesystem::path& file_path);
+    bool compile_file(const std::filesystem::path& file_path);
 
     std::unique_ptr<SourceMetadata>
     get_recent_metadata_for_source(const std::filesystem::path& path);

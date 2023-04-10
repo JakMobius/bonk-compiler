@@ -25,11 +25,13 @@ TEST(MiddleEnd, TypecheckerTest1) {
     )";
 
     auto lexemes = bonk::Lexer(compiler).parse_file("test", source);
+    ASSERT_FALSE(lexemes.empty());
+
     auto root = bonk::Parser(compiler).parse_file(&lexemes);
+    ASSERT_NE(root, nullptr);
+
     auto ast = bonk::AST();
     ast.root = std::move(root);
-
-    ASSERT_NE(ast.root, nullptr);
 
     bonk::MiddleEnd middle_end(compiler);
 
@@ -61,11 +63,13 @@ TEST(MiddleEnd, TypecheckerTest2) {
     )";
 
     auto lexemes = bonk::Lexer(compiler).parse_file("test", source);
+    ASSERT_FALSE(lexemes.empty());
+
     auto root = bonk::Parser(compiler).parse_file(&lexemes);
+    ASSERT_NE(root, nullptr);
+
     auto ast = bonk::AST();
     ast.root = std::move(root);
-
-    ASSERT_NE(ast.root, nullptr);
 
     bonk::MiddleEnd middle_end(compiler);
 
@@ -119,11 +123,13 @@ TEST(MiddleEnd, TypecheckerFibonacciTest) {
     )";
 
     auto lexemes = bonk::Lexer(compiler).parse_file("test", source);
+    ASSERT_FALSE(lexemes.empty());
+
     auto root = bonk::Parser(compiler).parse_file(&lexemes);
+    ASSERT_NE(root, nullptr);
+
     auto ast = bonk::AST();
     ast.root = std::move(root);
-
-    ASSERT_NE(ast.root, nullptr);
 
     bonk::MiddleEnd middle_end(compiler);
     EXPECT_EQ(middle_end.transform_ast(ast), true);
@@ -156,6 +162,8 @@ TEST(MiddleEnd, TypecheckerRecursiveTest) {
     )";
 
     auto lexemes = bonk::Lexer(compiler).parse_file("test", source);
+    ASSERT_FALSE(lexemes.empty());
+
     auto root = bonk::Parser(compiler).parse_file(&lexemes);
     auto ast = bonk::AST();
     ast.root = std::move(root);
@@ -200,11 +208,13 @@ TEST(MiddleEnd, TypecheckerRecursiveNeverTest) {
     )";
 
     auto lexemes = bonk::Lexer(compiler).parse_file("test", source);
+    ASSERT_FALSE(lexemes.empty());
+
     auto root = bonk::Parser(compiler).parse_file(&lexemes);
+    ASSERT_NE(root, nullptr);
+
     auto ast = bonk::AST();
     ast.root = std::move(root);
-
-    ASSERT_NE(ast.root, nullptr);
 
     bonk::MiddleEnd middle_end(compiler);
     EXPECT_EQ(middle_end.transform_ast(ast), true);
@@ -226,7 +236,7 @@ TEST(MiddleEnd, TypecheckerRecursiveNeverTest) {
 
 TEST(MiddleEnd, TypecheckerFallproofTest) {
 
-    // This test checks that the type-checker doesn't crash if return type of a blok
+    // This test checks that the type-checker doesn't crash if return type of blok
     // cannot be inferred due to a semantic error
 
     std::stringstream error_stringstream;
@@ -245,11 +255,13 @@ TEST(MiddleEnd, TypecheckerFallproofTest) {
     )";
 
     auto lexemes = bonk::Lexer(compiler).parse_file("test", source);
+    ASSERT_FALSE(lexemes.empty());
+
     auto root = bonk::Parser(compiler).parse_file(&lexemes);
+    ASSERT_NE(root, nullptr);
+
     auto ast = bonk::AST();
     ast.root = std::move(root);
-
-    ASSERT_NE(ast.root, nullptr);
 
     bonk::MiddleEnd middle_end(compiler);
     EXPECT_EQ(middle_end.transform_ast(ast), false);
@@ -288,11 +300,13 @@ TEST(MiddleEnd, CodegenTest) {
     )";
 
     auto lexemes = bonk::Lexer(compiler).parse_file("test", source);
+    ASSERT_FALSE(lexemes.empty());
+
     auto root = bonk::Parser(compiler).parse_file(&lexemes);
+    ASSERT_NE(root, nullptr);
+
     auto ast = bonk::AST();
     ast.root = std::move(root);
-
-    ASSERT_NE(ast.root, nullptr);
 
     bonk::MiddleEnd middle_end(compiler);
 
@@ -378,16 +392,16 @@ TEST(MiddleEnd, ConstructorDestructorGeneratorTest) {
     )";
 
     auto lexemes = bonk::Lexer(compiler).parse_file("test", source);
+    ASSERT_FALSE(lexemes.empty());
+
     auto root = bonk::Parser(compiler).parse_file(&lexemes);
+    ASSERT_NE(root, nullptr);
+
     auto ast = bonk::AST();
     ast.root = std::move(root);
 
-    ASSERT_NE(ast.root, nullptr);
-
     bonk::MiddleEnd middle_end(compiler);
-    middle_end.transform_ast(ast);
-
-    ASSERT_EQ(compiler.state, bonk::BONK_COMPILER_OK);
+    ASSERT_TRUE(middle_end.transform_ast(ast));
 
     auto global_scope = middle_end.symbol_table.global_scope;
     auto constructor =
@@ -535,16 +549,16 @@ TEST(MiddleEnd, RefCountReplacementTest1) {
     )";
 
     auto lexemes = bonk::Lexer(compiler).parse_file("test", source);
+    ASSERT_FALSE(lexemes.empty());
+
     auto root = bonk::Parser(compiler).parse_file(&lexemes);
+    ASSERT_NE(root, nullptr);
+
     auto ast = bonk::AST();
     ast.root = std::move(root);
 
-    ASSERT_NE(ast.root, nullptr);
-
     bonk::MiddleEnd middle_end(compiler);
-    middle_end.transform_ast(ast);
-
-    ASSERT_EQ(compiler.state, bonk::BONK_COMPILER_OK);
+    ASSERT_TRUE(middle_end.transform_ast(ast));
 
     auto program = bonk::HIREarlyGeneratorVisitor(middle_end).generate(ast.root.get());
 
@@ -597,16 +611,16 @@ TEST(MiddleEnd, RefCountReplacementTest2) {
     )";
 
     auto lexemes = bonk::Lexer(compiler).parse_file("test", source);
+    ASSERT_FALSE(lexemes.empty());
+
     auto root = bonk::Parser(compiler).parse_file(&lexemes);
+    ASSERT_NE(root, nullptr);
+
     auto ast = bonk::AST();
     ast.root = std::move(root);
 
-    ASSERT_NE(ast.root, nullptr);
-
     bonk::MiddleEnd middle_end(compiler);
-    middle_end.transform_ast(ast);
-
-    ASSERT_EQ(compiler.state, bonk::BONK_COMPILER_OK);
+    ASSERT_TRUE(middle_end.transform_ast(ast));
 
     auto program = bonk::HIREarlyGeneratorVisitor(middle_end).generate(ast.root.get());
 

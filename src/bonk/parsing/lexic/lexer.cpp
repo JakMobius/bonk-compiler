@@ -9,8 +9,8 @@ const char* BONK_OPERATOR_NAMES[] = {
     "==",   "<",    ">",  "<=",  ">=", "!=",  "blok", "hive", "brek", "bowl",
     "bonk", "loop", "of", "and", "or", "not", "help", nullptr};
 
-const char* BONK_KEYWORD_NAMES[] = {"buul", "shrt", "nubr", "long", "flot",
-                                    "dabl", "strg", "many", "nothing", "null", nullptr};
+const char* BONK_KEYWORD_NAMES[] = {"buul", "shrt", "nubr",    "long", "flot", "dabl",
+                                    "strg", "many", "nothing", "null", nullptr};
 
 const char* BONK_BRACE_NAMES[] = {"{", "}", "(", ")", "[", "]", nullptr};
 
@@ -18,7 +18,7 @@ const char* COMMENT_START = "dogo:";
 const char* MULTILINE_COMMENT_START = "-dogo->";
 const char* MULTILINE_COMMENT_END = "<-dogo-";
 
-Lexer::Lexer(Compiler& compiler) : linked_compiler(compiler) {
+Lexer::Lexer(Compiler& compiler) : compiler(compiler) {
 
     for (int i = 0; BONK_OPERATOR_NAMES[i]; i++) {
         special_words.emplace_back(BONK_OPERATOR_NAMES[i], LexerSpecialWordType::t_operator);
@@ -28,7 +28,7 @@ Lexer::Lexer(Compiler& compiler) : linked_compiler(compiler) {
     special_words.emplace_back(MULTILINE_COMMENT_START, LexerSpecialWordType::t_multiline_comment);
 }
 
-void Lexer::next() {
+bool Lexer::next() {
     if (!lexemes.empty()) {
         lexemes.back().end_position = current_position;
     }
@@ -45,21 +45,21 @@ void Lexer::next() {
         next_lexeme.type = LexemeType::l_comma;
         lexemes.push_back(next_lexeme);
         eat_char();
-        return;
+        return true;
     case ':':
         next_lexeme.type = LexemeType::l_colon;
         lexemes.push_back(next_lexeme);
         eat_char();
-        return;
+        return true;
     case ';':
         next_lexeme.type = LexemeType::l_semicolon;
         lexemes.push_back(next_lexeme);
         eat_char();
-        return;
+        return true;
     case '\0':
         next_lexeme.type = LexemeType::l_eof;
         lexemes.push_back(next_lexeme);
-        return;
+        return true;
     case '{':
     case '}':
     case '(':
@@ -70,18 +70,22 @@ void Lexer::next() {
         next_lexeme.data = BraceLexeme{BraceType(next_char())};
         eat_char();
         lexemes.push_back(next_lexeme);
-        return;
+        return true;
     case '"':
     case '\'':
-        parse_string_lexeme(&next_lexeme);
+        if(!parse_string_lexeme(&next_lexeme)) {
+            return false;
+        }
         lexemes.push_back(next_lexeme);
-        return;
+        return true;
     }
 
     if (isdigit(next_char()) || next_char() == '.') {
-        parse_number_lexeme(&next_lexeme);
+        if(!parse_number_lexeme(&next_lexeme)) {
+            return false;
+        }
         lexemes.push_back(next_lexeme);
-        return;
+        return true;
     }
 
     // Try to match a special word
@@ -95,20 +99,20 @@ void Lexer::next() {
             lexemes.push_back(next_lexeme);
         } else if (type == LexerSpecialWordType::t_line_comment) {
             parse_line_comment();
-            return;
+            return true;
         } else if (type == LexerSpecialWordType::t_multiline_comment) {
             parse_multiline_comment();
-            return;
+            return true;
         }
-        return;
+        return true;
     }
 
     // Read next word
     std::string_view word = next_word();
     if (word.empty()) {
-        linked_compiler.error().at(current_position)
+        compiler.error().at(current_position)
             << "unexpected character '" << next_char() << "'\n";
-        return;
+        return false;
     }
 
     // Check if it's a keyword
@@ -117,7 +121,7 @@ void Lexer::next() {
             next_lexeme.type = LexemeType::l_keyword;
             next_lexeme.data = KeywordLexeme{KeywordType(i)};
             lexemes.push_back(next_lexeme);
-            return;
+            return true;
         }
     }
 
@@ -125,6 +129,8 @@ void Lexer::next() {
     next_lexeme.type = LexemeType::l_identifier;
     next_lexeme.data = IdentifierLexeme{word};
     lexemes.push_back(next_lexeme);
+
+    return true;
 }
 
 bool Lexer::parse_string_lexeme(Lexeme* target) {
@@ -137,7 +143,7 @@ bool Lexer::parse_string_lexeme(Lexeme* target) {
 
     while (next_char() != (char)quote_type) {
         if (next_char() == '\0') {
-            linked_compiler.error().at(current_position)
+            compiler.error().at(current_position)
                 << "unexpected end of file while parsing string\n";
             return false;
         }
@@ -167,7 +173,7 @@ bool Lexer::parse_string_lexeme(Lexeme* target) {
                 stream << '\'';
                 break;
             default:
-                linked_compiler.error().at(current_position)
+                compiler.error().at(current_position)
                     << "unexpected escape sequence '\\" << next_char() << "'\n";
                 return false;
             }
@@ -193,11 +199,13 @@ std::vector<Lexeme> Lexer::parse_file(std::string_view filename, std::string_vie
     current_position.line = 1;
     text = source;
 
-    while (!linked_compiler.state) {
-        next();
-        if (!lexemes.empty() && lexemes.back().type == LexemeType::l_eof)
-            break;
-    }
+    do {
+        if (!next()) {
+            // error
+            lexemes = {};
+            return {};
+        }
+    } while (lexemes.empty() || lexemes.back().type != LexemeType::l_eof);
 
     std::vector<Lexeme> result = std::move(lexemes);
     lexemes = {};

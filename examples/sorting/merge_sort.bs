@@ -1,0 +1,53 @@
+
+help "linked_list.bs"
+
+blok merge[bowl left_it: LinkedListItem, bowl right_it: LinkedListItem] {
+  bowl merged = @LinkedList;
+
+  loop {
+    left_it == null and right_it == null and { brek; };
+
+    bowl addLeft = left_it != null and (right_it == null or item of left_it >= item of right_it);
+
+    addLeft and {
+      @linked_list_add[list = merged, element = item of left_it];
+      left_it = next of left_it;
+    } or {
+      @linked_list_add[list = merged, element = item of right_it];
+      right_it = next of right_it;
+    };
+  }
+
+  bonk merged;
+}
+
+blok merge_sort[bowl list: LinkedList] {
+  bowl size = @linked_list_size[list = list];
+
+  size <= 1 and { bonk list; };
+
+  bowl middle = size / 2;
+  bowl left = @LinkedList;
+  bowl right = @LinkedList;
+
+  bowl index = 0;
+  loop[bowl ptr = start of list] {
+    ptr == null and { brek; };
+    
+    bowl current_item = @LinkedListItem[item = item of ptr];
+  
+    index < middle and {
+      @linked_list_add[list = left, element = item of ptr];
+    } or {
+      @linked_list_add[list = right, element = item of ptr];
+    };
+    
+    ptr = next of ptr;
+    index = index + 1;
+  }
+
+  left = @merge_sort[list = left];
+  right = @merge_sort[list = right];
+  
+  bonk @merge[left_it = start of left, right_it = start of right];
+}

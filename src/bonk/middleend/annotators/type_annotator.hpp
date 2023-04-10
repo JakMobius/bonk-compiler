@@ -18,12 +18,14 @@ namespace bonk {
 class TypeAnnotator : public ASTVisitor {
 
   public:
-    MiddleEnd& middle_end;
-
     explicit TypeAnnotator(MiddleEnd& middle_end);
     ~TypeAnnotator() = default;
 
-    Type* infer_type(TreeNode* node);
+    bool annotate_ast(AST& ast);
+
+  private:
+    bool errors_occurred = false;
+    MiddleEnd& middle_end;
 
     void visit(TreeNodeHiveDefinition* node) override;
     void visit(TreeNodeVariableDefinition* node) override;
@@ -42,7 +44,9 @@ class TypeAnnotator : public ASTVisitor {
     void visit(TreeNodeManyType* node) override;
     void visit(TreeNodeBonkStatement* node) override;
     void visit(TreeNodeNull* node) override;
-    void annotate_ast(AST& ast);
+
+    Type* infer_type(TreeNode* node);
+
 };
 
 } // namespace bonk

@@ -1,0 +1,3 @@
+
+dogo: Implemented in print_num.c
+blok print_num[bowl num: nubr]: nothing;

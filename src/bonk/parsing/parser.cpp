@@ -4,12 +4,17 @@
 
 namespace bonk {
 
-Parser::Parser(Compiler& compiler) : linked_compiler(compiler) {
+Parser::Parser(Compiler& compiler) : compiler(compiler) {
 }
 
 std::unique_ptr<TreeNodeProgram> Parser::parse_file(std::vector<Lexeme>* lexemes) {
+    errors_occurred = false;
     input = lexemes;
-    return parse_program();
+    auto result = parse_program();
+    if(errors_occurred) {
+        return nullptr;
+    }
+    return result;
 }
 
 void Parser::spit_lexeme() {
@@ -34,14 +39,16 @@ std::unique_ptr<TreeNodeProgram> Parser::parse_program() {
 
     while (next_lexeme()->is(OperatorType::o_help)) {
         program->help_statements.push_back(parse_help_statement());
-        if (linked_compiler.state)
-            return nullptr;
     }
 
     while (next_lexeme()->type != LexemeType::l_eof) {
-        program->body.push_back(parse_definition());
-        if (linked_compiler.state)
-            return nullptr;
+        auto definition = parse_definition();
+        if(definition) {
+            program->body.push_back(std::move(definition));
+        } else {
+            // Recover
+            eat_lexeme();
+        }
     }
 
     return program;
@@ -55,8 +62,7 @@ std::unique_ptr<TreeNodeHelp> Parser::parse_help_statement() {
     Lexeme* identifier = next_lexeme();
     eat_lexeme();
     if (!identifier->is(LexemeType::l_string)) {
-        linked_compiler.error().at(identifier->start_position)
-            << "Expected string literal after help statement";
+        error().at(identifier->start_position) << "Expected string literal after help statement";
         return nullptr;
     }
 
@@ -80,7 +86,7 @@ std::unique_ptr<TreeNode> Parser::parse_definition() {
     } else if (next_lexeme()->is(OperatorType::o_hive)) {
         return parse_hive_definition();
     } else {
-        linked_compiler.error().at(next_lexeme()->start_position) << "Expected definition";
+        error().at(next_lexeme()->start_position) << "Expected definition";
         return nullptr;
     }
 }
@@ -93,7 +99,7 @@ std::unique_ptr<TreeNodeBlockDefinition> Parser::parse_blok_definition() {
     Lexeme* identifier = next_lexeme();
     eat_lexeme();
     if (!identifier->is(LexemeType::l_identifier)) {
-        linked_compiler.error().at(identifier->start_position) << "Expected blok name";
+        error().at(identifier->start_position) << "Expected blok name";
         return nullptr;
     }
 
@@ -108,18 +114,18 @@ std::unique_ptr<TreeNodeBlockDefinition> Parser::parse_blok_definition() {
         blok->block_parameters = parse_parameter_list_definition();
     }
 
-    if(next_lexeme()->is(LexemeType::l_colon)) {
+    if (next_lexeme()->is(LexemeType::l_colon)) {
         eat_lexeme();
         blok->return_type = parse_type();
     }
 
     if (next_lexeme()->is(BraceType('{'))) {
         blok->body = parse_code_block();
-    } else if(next_lexeme()->is(LexemeType::l_semicolon)) {
+    } else if (next_lexeme()->is(LexemeType::l_semicolon)) {
         eat_lexeme();
         return blok;
     } else {
-        linked_compiler.error().at(next_lexeme()->start_position) << "Expected code block or a semicolon";
+        error().at(next_lexeme()->start_position) << "Expected code block or a semicolon";
         return nullptr;
     }
 
@@ -134,7 +140,7 @@ std::unique_ptr<TreeNodeVariableDefinition> Parser::parse_variable_definition() 
     Lexeme* identifier = next_lexeme();
     eat_lexeme();
     if (!identifier->is(LexemeType::l_identifier)) {
-        linked_compiler.error().at(identifier->start_position) << "Expected variable name";
+        error().at(identifier->start_position) << "Expected variable name";
         return nullptr;
     }
 
@@ -179,8 +185,7 @@ std::unique_ptr<TreeNodeParameterListDefinition> Parser::parse_parameter_list_de
     }
 
     if (!next_lexeme()->is(BraceType(']'))) {
-        linked_compiler.error().at(next_lexeme()->start_position)
-            << "Expected closing brace for parameter list";
+        error().at(next_lexeme()->start_position) << "Expected closing brace for parameter list";
         return nullptr;
     }
 
@@ -204,13 +209,18 @@ std::unique_ptr<TreeNodeCodeBlock> Parser::parse_code_block() {
         } else if (next_lexeme()->is(OperatorType::o_loop)) {
             code_block->body.push_back(parse_loop_statement());
         } else {
-            code_block->body.push_back(parse_statement());
+            auto statement = parse_statement();
+            if(!statement) {
+                // Recover: Eat lexeme and continue parsing
+                eat_lexeme();
+                continue;
+            }
+            code_block->body.push_back(std::move(statement));
             if (next_lexeme()->is(LexemeType::l_semicolon)) {
                 eat_lexeme();
             } else {
-                linked_compiler.error().at(next_lexeme()->start_position)
-                    << "Expected semicolon after statement";
-                return nullptr;
+                error().at(next_lexeme()->start_position) << "Expected semicolon after statement";
+                // Recover: assume semicolon is missing, continue parsing
             }
         }
     }
@@ -284,8 +294,7 @@ std::unique_ptr<TreeNodeArrayConstant> Parser::parse_array_constant() {
     }
 
     if (!next_lexeme()->is(BraceType(']'))) {
-        linked_compiler.error().at(next_lexeme()->start_position)
-            << "Expected closing brace for array constant";
+        error().at(next_lexeme()->start_position) << "Expected closing brace for array constant";
         return nullptr;
     }
 
@@ -317,8 +326,7 @@ std::unique_ptr<TreeNodeParameterList> Parser::parse_parameter_list() {
     }
 
     if (!next_lexeme()->is(BraceType(']'))) {
-        linked_compiler.error().at(next_lexeme()->start_position)
-            << "Expected closing brace for parameter list";
+        error().at(next_lexeme()->start_position) << "Expected closing brace for parameter list";
         return nullptr;
     }
 
@@ -333,8 +341,7 @@ std::unique_ptr<TreeNodeParameterListItem> Parser::parse_parameter_list_item() {
     auto start_position = next_lexeme()->start_position;
 
     if (!next_lexeme()->is(LexemeType::l_identifier)) {
-        linked_compiler.error().at(next_lexeme()->start_position)
-            << "Expected identifier for parameter list item";
+        error().at(next_lexeme()->start_position) << "Expected identifier for parameter list item";
         return nullptr;
     }
 
@@ -345,7 +352,7 @@ std::unique_ptr<TreeNodeParameterListItem> Parser::parse_parameter_list_item() {
     eat_lexeme();
 
     if (!next_lexeme()->is(OperatorType::o_assign)) {
-        linked_compiler.error().at(next_lexeme()->start_position)
+        error().at(next_lexeme()->start_position)
             << "Expected '=' after identifier for parameter list item";
         return nullptr;
     }
@@ -404,14 +411,14 @@ std::unique_ptr<TreeNode> Parser::parse_type() {
     TrivialTypeKind primitive_type{};
 
     if (!next_lexeme()->is(LexemeType::l_keyword)) {
-        linked_compiler.error().at(next_lexeme()->start_position)
+        error().at(next_lexeme()->start_position)
             << "Expected primitive type or identifier for type";
         return nullptr;
     }
 
     KeywordType keyword_type = std::get<KeywordLexeme>(next_lexeme()->data).type;
 
-    if(keyword_type == KeywordType::k_null) {
+    if (keyword_type == KeywordType::k_null) {
         eat_lexeme();
         auto result = std::make_unique<TreeNodeNull>();
         result->source_position = start_position;
@@ -444,7 +451,7 @@ std::unique_ptr<TreeNode> Parser::parse_type() {
         primitive_type = TrivialTypeKind::t_nothing;
         break;
     default:
-        linked_compiler.error().at(next_lexeme()->start_position)
+        error().at(next_lexeme()->start_position)
             << "Expected primitive type or identifier for type";
         return nullptr;
     }
@@ -469,8 +476,7 @@ std::unique_ptr<TreeNodeHiveDefinition> Parser::parse_hive_definition() {
     hive_definition->source_position = start_position;
 
     if (!next_lexeme()->is(LexemeType::l_identifier)) {
-        linked_compiler.error().at(next_lexeme()->start_position)
-            << "Expected identifier for hive definition";
+        error().at(next_lexeme()->start_position) << "Expected identifier for hive definition";
         return nullptr;
     }
 
@@ -482,8 +488,7 @@ std::unique_ptr<TreeNodeHiveDefinition> Parser::parse_hive_definition() {
     eat_lexeme();
 
     if (!next_lexeme()->is(BraceType('{'))) {
-        linked_compiler.error().at(next_lexeme()->start_position)
-            << "Expected opening brace for hive definition";
+        error().at(next_lexeme()->start_position) << "Expected opening brace for hive definition";
         return nullptr;
     }
 
@@ -495,13 +500,13 @@ std::unique_ptr<TreeNodeHiveDefinition> Parser::parse_hive_definition() {
         } else if (next_lexeme()->is(OperatorType::o_bowl)) {
             hive_definition->body.push_back(parse_variable_definition());
             if (!next_lexeme()->is(LexemeType::l_semicolon)) {
-                linked_compiler.error().at(next_lexeme()->start_position)
+                error().at(next_lexeme()->start_position)
                     << "Expected semicolon after variable definition";
                 return nullptr;
             }
             eat_lexeme();
         } else {
-            linked_compiler.error().at(next_lexeme()->start_position)
+            error().at(next_lexeme()->start_position)
                 << "Expected blok or variable definition in hive definition";
             return nullptr;
         }
@@ -654,8 +659,7 @@ std::unique_ptr<TreeNode> Parser::parse_expression_primary() {
         eat_lexeme();
         std::unique_ptr<TreeNode> expression = parse_expression();
         if (!next_lexeme()->is(BraceType(')'))) {
-            linked_compiler.error().at(next_lexeme()->start_position)
-                << "Expected closing brace after expression";
+            error().at(next_lexeme()->start_position) << "Expected closing brace after expression";
             return nullptr;
         }
         eat_lexeme();
@@ -666,7 +670,7 @@ std::unique_ptr<TreeNode> Parser::parse_expression_primary() {
         return parse_code_block();
     }
 
-    linked_compiler.error().at(next_lexeme()->start_position) << "Expected expression";
+    error().at(next_lexeme()->start_position) << "Expected expression";
 
     return nullptr;
 }
@@ -686,6 +690,16 @@ std::unique_ptr<TreeNode> Parser::parse_expression_call() {
     }
 
     return call;
+}
+
+MessageStreamProxy Parser::warning() const { return compiler.warning(); }
+MessageStreamProxy Parser::error() {
+    errors_occurred = true;
+    return compiler.error();
+}
+MessageStreamProxy Parser::fatal_error() {
+    errors_occurred = true;
+    return compiler.fatal_error();
 }
 
 } // namespace bonk

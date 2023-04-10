@@ -13,15 +13,15 @@ struct InitErrorReporter {
 
     bonk::StdOutputStream error_file{std::cerr};
 
-    bonk::MessageStreamProxy warning() const {
+    [[nodiscard]] bonk::MessageStreamProxy warning() const {
         return {bonk::CompilerMessageType::warning, error_file};
     }
 
-    bonk::MessageStreamProxy error() const {
+    [[nodiscard]] bonk::MessageStreamProxy error() const {
         return {bonk::CompilerMessageType::error, error_file};
     }
 
-    bonk::MessageStreamProxy fatal_error() const {
+    [[nodiscard]] bonk::MessageStreamProxy fatal_error() const {
         return {bonk::CompilerMessageType::fatal_error, error_file};
     }
 };
@@ -106,27 +106,19 @@ int main(int argc, const char* argv[]) {
 
     bonk::HelpResolver help_resolver{compiler};
 
-    help_resolver.compile_file(input_file_path);
-
-    if (compiler.state) {
-        return EXIT_FAILURE;
+    if(!help_resolver.compile_file(input_file_path)) {
+        return 1;
     }
 
     std::filesystem::path bs_cache_path = input_file_path.parent_path() /= ".bscache";
     std::filesystem::path project_meta_path = bs_cache_path / input_file_path.stem() += ".project.meta";
-    std::filesystem::path project_delta_path = bs_cache_path / input_file_path.stem() += ".delta.meta";
 
     std::filesystem::create_directories(bs_cache_path);
 
     bonk::FileOutputStream project_meta_file{project_meta_path.string()};
-    bonk::FileOutputStream project_delta_file{project_delta_path.string()};
 
     for(auto& file : compiler.output_files) {
         project_meta_file.get_stream() << file << "\n";
-    }
-
-    for(auto& file : compiler.updated_files) {
-        project_delta_file.get_stream() << file << "\n";
     }
 
     return EXIT_SUCCESS;

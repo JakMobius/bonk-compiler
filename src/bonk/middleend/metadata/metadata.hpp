@@ -27,7 +27,7 @@ class SourceMetadata {
     SourceMetadata(MiddleEnd& middle_end, const std::filesystem::path& source_path);
 
     bool is_up_to_date_for(const SourceMetadata& other);
-    void rebuild_metadata_ast(TreeNodeProgram* ast);
+    bool rebuild_metadata_ast(TreeNodeProgram* ast);
     bool metadata_is_newer_than_source();
 
     TreeNode* get_meta_ast();

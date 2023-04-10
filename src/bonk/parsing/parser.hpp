@@ -13,6 +13,7 @@ struct Compiler;
 #include <cstdlib>
 #include <optional>
 #include <vector>
+#include "../message_stream_proxy.hpp"
 #include "bonk/parsing/lexic/lexer.hpp"
 #include "bonk/tree/ast.hpp"
 
@@ -21,7 +22,9 @@ namespace bonk {
 struct Parser {
     unsigned long position = 0;
     std::vector<Lexeme>* input = nullptr;
-    Compiler& linked_compiler;
+    Compiler& compiler;
+
+    bool errors_occurred = false;
 
     Lexeme* next_lexeme();
 
@@ -63,6 +66,10 @@ struct Parser {
     std::unique_ptr<TreeNode> parse_expression_unary();
     std::unique_ptr<TreeNode> parse_expression_primary();
     std::unique_ptr<TreeNode> parse_expression_call();
+
+    MessageStreamProxy warning() const;
+    MessageStreamProxy error();
+    MessageStreamProxy fatal_error();
 
     template <typename NextExpression>
     std::unique_ptr<TreeNode>

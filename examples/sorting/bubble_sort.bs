@@ -1,0 +1,27 @@
+
+help "linked_list.bs"
+
+blok bubble_sort[bowl list: LinkedList] {
+    loop {
+        bowl swapped = 0;
+        
+        loop[bowl ptr2 = start of list] {
+            ptr2 != end of list or { brek; };
+            bowl next = next of ptr2;
+            
+            item of ptr2 >= item of next or {
+                bowl temp = item of ptr2;
+                item of ptr2 = item of next;
+                item of next = temp;
+                
+                swapped = 1;
+            };
+            
+            ptr2 = next;
+        }
+        
+        swapped or { brek; };
+    }
+    
+    bonk list;
+}

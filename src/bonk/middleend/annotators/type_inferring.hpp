@@ -30,28 +30,21 @@ class FunctionParameterNameResolver : public NameResolver {
  * type information. */
 
 class TypeInferringVisitor : public ASTVisitor {
-    MiddleEnd& middle_end;
-    std::vector<Type*> type_stack;
-
-    // This vector is used to resolve recursive function calls.
-    // Basically, type-checker assumes that blocks listed here
-    // never return.
-    std::vector<TreeNodeBlockDefinition*> block_stack;
-
-    // To resolve recursive function calls, it's mandatory
-    // to have a stack of type tables. They're used to
-    // resolve types in assumptions, for example:
-    // 'Assume function A never returns, what type should
-    // the '@B and @A expression have? The answer is -
-    // the return type of function B.
-    std::vector<std::unique_ptr<TypeTable>> type_table_stack;
-
   public:
     TypeInferringVisitor(MiddleEnd& middle_end) : middle_end(middle_end) {
     }
 
     Type* infer_type(TreeNode* node);
 
+    TypeTable& get_current_type_table();
+    void push_type_table();
+    void pop_type_table();
+    std::unique_ptr<bonk::Type> infer_block_return_type(TreeNodeBlockDefinition* node);
+    std::vector<TreeNodeBonkStatement*> get_bonk_statements_in_block(TreeNodeBlockDefinition* node);
+
+    bool had_errors_occurred() const;
+
+  private:
     void visit(TreeNodeProgram* node) override;
     void visit(TreeNodeHelp* node) override;
     void visit(TreeNodeIdentifier* node) override;
@@ -76,10 +69,26 @@ class TypeInferringVisitor : public ASTVisitor {
     void visit(TreeNodeCast* node) override;
     void visit(TreeNodeNull* node) override;
 
-    TypeTable& get_current_type_table();
-    void push_type_table();
-    void pop_type_table();
-    std::unique_ptr<bonk::Type> infer_block_return_type(TreeNodeBlockDefinition* node);
-    std::vector<TreeNodeBonkStatement*> get_bonk_statements_in_block(TreeNodeBlockDefinition* node);
+    MessageStreamProxy warning() const;
+    MessageStreamProxy error();
+    MessageStreamProxy fatal_error();
+
+    MiddleEnd& middle_end;
+    std::vector<Type*> type_stack;
+
+    // This vector is used to resolve recursive function calls.
+    // Basically, type-checker assumes that blocks listed here
+    // never return.
+    std::vector<TreeNodeBlockDefinition*> block_stack;
+
+    // To resolve recursive function calls, it's mandatory
+    // to have a stack of type tables. They're used to
+    // resolve types in assumptions, for example:
+    // 'Assume function A never returns, what type should
+    // the '@B and @A expression have? The answer is -
+    // the return type of function B.
+    std::vector<std::unique_ptr<TypeTable>> type_table_stack;
+
+    bool errors_occurred = false;
 };
 } // namespace bonk

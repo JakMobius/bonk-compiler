@@ -34,20 +34,17 @@ TEST(Export, TestJSONExport) {
     )";
 
     auto lexemes = bonk::Lexer(compiler).parse_file("test", source);
-
     ASSERT_FALSE(lexemes.empty());
 
     auto ast = bonk::Parser(compiler).parse_file(&lexemes);
-
     ASSERT_NE(ast, nullptr);
 
-    std::stringstream json_stream;
-    bonk::StdOutputStream json_output{json_stream};
-    bonk::JSONSerializer serializer{json_output};
-    bonk::JSONASTSerializer ast_serializer{serializer};
-    ast->accept(&ast_serializer);
-
-    std::cout << json_stream.str() << std::endl;
+//    std::stringstream json_stream;
+//    bonk::StdOutputStream json_output{json_stream};
+//    bonk::JSONSerializer serializer{json_output};
+//    bonk::JSONASTSerializer ast_serializer{serializer};
+//    ast->accept(&ast_serializer);
+//    std::cout << json_stream.str() << std::endl;
 }
 
 TEST(Export, TestBinaryExport) {
@@ -71,11 +68,9 @@ TEST(Export, TestBinaryExport) {
     )";
 
     auto lexemes = bonk::Lexer(compiler).parse_file("test", source);
-
     ASSERT_FALSE(lexemes.empty());
 
     auto ast = bonk::Parser(compiler).parse_file(&lexemes);
-
     ASSERT_NE(ast, nullptr);
 
     std::stringstream output_stream;

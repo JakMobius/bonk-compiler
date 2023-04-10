@@ -176,27 +176,27 @@ void bonk::FootprintCounter::visit(const bonk::NullType* type) {
     footprint = pointer_size;
 }
 
-void bonk::NeverSearchVisitor::visit(const bonk::HiveType* type) {
-    result = false;
-}
-
-void bonk::NeverSearchVisitor::visit(const bonk::BlokType* type) {
-    type->return_type->accept(this);
-}
-
 void bonk::NeverSearchVisitor::visit(const bonk::TrivialType* type) {
     result = type->trivial_kind == TrivialTypeKind::t_never;
 }
 
-void bonk::NeverSearchVisitor::visit(const bonk::ManyType* type) {
-    type->element_type->accept(this);
-}
-
-void bonk::NeverSearchVisitor::visit(const bonk::ErrorType* type) {
-    result = false;
-}
-
 bool bonk::NeverSearchVisitor::search(bonk::Type* type) {
+    result = false;
+    NeverSearchVisitor visitor;
+    type->accept(&visitor);
+    return visitor.result;
+}
+
+void bonk::ErrorSearchVisitor::visit(const bonk::ExternalType* type) {
+    type->get_resolved()->accept(this);
+}
+
+void bonk::ErrorSearchVisitor::visit(const bonk::ErrorType* type) {
+    result = true;
+}
+
+bool bonk::ErrorSearchVisitor::search(bonk::Type* type) {
+    result = false;
     NeverSearchVisitor visitor;
     type->accept(&visitor);
     return visitor.result;
@@ -204,10 +204,6 @@ bool bonk::NeverSearchVisitor::search(bonk::Type* type) {
 
 void bonk::NeverSearchVisitor::visit(const bonk::ExternalType* type) {
     type->get_resolved()->accept(this);
-}
-
-void bonk::NeverSearchVisitor::visit(const bonk::NullType* type) {
-    result = false;
 }
 
 void bonk::TypeToASTConvertVisitor::visit(const bonk::HiveType* type) {

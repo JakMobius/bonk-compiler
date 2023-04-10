@@ -19,6 +19,7 @@ void bonk::ExternalTypeReplacer::replace_types(bonk::TreeNode* node) {
     it->second = resolved_raw;
 }
 
-void bonk::ExternalTypeReplacer::replace(bonk::AST& ast) {
+bool bonk::ExternalTypeReplacer::replace(bonk::AST& ast) {
     ast.root->accept(this);
+    return true;
 }

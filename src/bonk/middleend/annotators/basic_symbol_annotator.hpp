@@ -33,10 +33,11 @@ class BasicSymbolAnnotator : public ASTVisitor {
   public:
     ScopedNameResolver scoped_name_resolver;
     MiddleEnd& middleend;
+    bool errors_occurred = false;
 
     BasicSymbolAnnotator(MiddleEnd& middleend);
 
-    void annotate_ast(AST& ast);
+    bool annotate_ast(AST& ast);
 
     void visit(bonk::TreeNodeProgram* node) override;
     void visit(bonk::TreeNodeCodeBlock* node) override;

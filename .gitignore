@@ -1,0 +1,4 @@
+.DS_Store
+.bscache
+cmake-build-*
+.idea

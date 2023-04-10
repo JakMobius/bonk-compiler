@@ -21,21 +21,14 @@ struct ExternalFileIdentifierResolver : bonk::ExternalTypeResolver {
     ExternalFileIdentifierResolver(bonk::MiddleEnd& middle_end, std::string_view file,
                                    std::string_view identifier)
         : middle_end(middle_end), file(file), identifier(identifier) {
+
     }
 
     std::unique_ptr<bonk::Type> resolve() override {
-        if (!middle_end.module_path.has_value()) {
-            middle_end.linked_compiler.error()
-                << "External types cannot be resolved without a module path";
-            return nullptr;
-        }
-
-        auto dependency_path = middle_end.module_path->parent_path() /= file;
-        auto absolute_path = std::filesystem::absolute(dependency_path);
-        auto module = middle_end.get_external_module(dependency_path);
+        auto module = middle_end.get_external_module(file);
         if (!module) {
-            bonk::HelpResolver resolver(middle_end.linked_compiler);
-            auto metadata = resolver.get_recent_metadata_for_source(absolute_path);
+            bonk::HelpResolver resolver(middle_end.compiler);
+            auto metadata = resolver.get_recent_metadata_for_source(file);
 
             if (!metadata) {
                 return nullptr;
@@ -64,7 +57,7 @@ struct ExternalFileIdentifierResolver : bonk::ExternalTypeResolver {
 void bonk::TypeInferringVisitor::visit(TreeNodeIdentifier* node) {
     auto def = middle_end.symbol_table.get_definition(node);
     if (!def) {
-        middle_end.linked_compiler.error().at(node->source_position)
+        error().at(node->source_position)
             << "Identifier '" << node->identifier_text << "' is not defined";
         return;
     }
@@ -148,7 +141,7 @@ bonk::TypeInferringVisitor::infer_block_return_type(bonk::TreeNodeBlockDefinitio
 
     if (!node->body) {
         if (!return_type_annotation) {
-            middle_end.linked_compiler.error().at(node->source_position)
+            error().at(node->source_position)
                 << "Blok should either have a return type annotation or a body";
             return std::make_unique<ErrorType>();
         }
@@ -157,7 +150,7 @@ bonk::TypeInferringVisitor::infer_block_return_type(bonk::TreeNodeBlockDefinitio
     if (node->body && bonk_statements.empty()) {
         if (return_type_annotation && return_type_annotation->is(TrivialTypeKind::t_nothing) &&
             return_type_annotation->is(TypeKind::error)) {
-            middle_end.linked_compiler.error().at(node->source_position)
+            error().at(node->source_position)
                 << "Blok has no bonk statements, but return type is " << *return_type_annotation;
             return TypeCloner().clone(return_type_annotation);
         }
@@ -197,7 +190,7 @@ bonk::TypeInferringVisitor::infer_block_return_type(bonk::TreeNodeBlockDefinitio
             return_type = bonk_type;
         } else {
             if (*return_type != *bonk_type) {
-                middle_end.linked_compiler.error().at(bonk_statement->source_position)
+                error().at(bonk_statement->source_position)
                     << "bonk statement returns type " << *bonk_type
                     << ", but first bonk statement returns type " << *return_type;
             }
@@ -274,7 +267,7 @@ void bonk::TypeInferringVisitor::visit(TreeNodeVariableDefinition* node) {
     } else if (node->variable_value) {
         get_current_type_table().annotate(node, infer_type(node->variable_value.get()));
     } else {
-        middle_end.linked_compiler.error().at(node->source_position)
+        error().at(node->source_position)
             << "Cannot infer type of variable definition without type or value";
     }
 }
@@ -306,7 +299,7 @@ void bonk::TypeInferringVisitor::visit(TreeNodeArrayConstant* node) {
                 element_type = type;
             } else {
                 if (*element_type != *type) {
-                    middle_end.linked_compiler.error().at(node->source_position)
+                    error().at(node->source_position)
                         << "Array elements must be of the same type";
                     return;
                 }
@@ -315,7 +308,7 @@ void bonk::TypeInferringVisitor::visit(TreeNodeArrayConstant* node) {
     }
 
     if (element_type == nullptr) {
-        middle_end.linked_compiler.error().at(node->source_position)
+        error().at(node->source_position)
             << "Array must have at least one element to infer type";
         return;
     }
@@ -372,7 +365,7 @@ void bonk::TypeInferringVisitor::visit(TreeNodeBinaryOperation* node) {
 
     // Check if the operation is allowed between the two types
     if (!left_type->allows_binary_operation(node->operator_type, right_type)) {
-        middle_end.linked_compiler.error().at(node->right->source_position)
+        error().at(node->right->source_position)
             << "Cannot perform '" << BONK_OPERATOR_NAMES[(int)node->operator_type] << "' between "
             << *left_type << " and " << *right_type;
         return;
@@ -411,7 +404,7 @@ void bonk::TypeInferringVisitor::visit(TreeNodeUnaryOperation* node) {
     auto type = infer_type(node->operand.get());
 
     if (!type->allows_unary_operation(node->operator_type)) {
-        middle_end.linked_compiler.error().at(node->operand->source_position)
+        error().at(node->operand->source_position)
             << "Cannot perform '" << BONK_OPERATOR_NAMES[(int)node->operator_type] << "' on "
             << *type;
         return;
@@ -441,7 +434,7 @@ void bonk::TypeInferringVisitor::visit(TreeNodeHiveAccess* node) {
         return;
 
     if (type->kind != TypeKind::hive) {
-        middle_end.linked_compiler.error().at(node->source_position)
+        error().at(node->source_position)
             << "Cannot use 'of' operator on non-hive type '" << *type << "'";
         return;
     }
@@ -453,7 +446,7 @@ void bonk::TypeInferringVisitor::visit(TreeNodeHiveAccess* node) {
     TreeNode* definition = resolver.get_name_definition(node->field->identifier_text);
 
     if (definition == nullptr) {
-        middle_end.linked_compiler.error().at(node->field->source_position)
+        error().at(node->field->source_position)
             << "Cannot find hive field '" << node->field->identifier_text << "' in hive '"
             << hive_type->hive_definition->hive_name->identifier_text << "'";
         return;
@@ -475,17 +468,28 @@ void bonk::TypeInferringVisitor::visit(TreeNodeCall* node) {
     // Determine the return type of the function
     auto callee_type = infer_type(node->callee.get());
 
+    if (callee_type->kind == TypeKind::external) {
+        callee_type = ((ExternalType*)callee_type)->get_resolved();
+    }
+
     if (!callee_type || callee_type->kind == TypeKind::error)
         return;
 
     if (callee_type->kind != TypeKind::blok) {
-        middle_end.linked_compiler.error().at(node->callee->source_position)
+        error().at(node->callee->source_position)
             << "Cannot call non-function type";
         return;
     }
 
     auto function_type = (BlokType*)callee_type;
-    get_current_type_table().annotate(node, function_type->return_type.get());
+
+    auto return_type = function_type->return_type.get();
+
+    if(return_type->kind == TypeKind::external) {
+        return_type = ((ExternalType*)return_type)->get_resolved();
+    }
+
+    get_current_type_table().annotate(node, return_type);
 
     // Infer type of expressions in arguments
     // and check if they are compatible with function arguments
@@ -505,7 +509,7 @@ void bonk::TypeInferringVisitor::visit(TreeNodeCall* node) {
         auto definition = resolver.get_name_definition(argument->parameter_name->identifier_text);
 
         if (definition == nullptr) {
-            middle_end.linked_compiler.error().at(argument->parameter_name->source_position)
+            error().at(argument->parameter_name->source_position)
                 << "Cannot find function parameter '" << argument->parameter_name->identifier_text
                 << "' in function '" << *function_type << "'";
             continue;
@@ -521,7 +525,7 @@ void bonk::TypeInferringVisitor::visit(TreeNodeCall* node) {
             continue;
 
         if (*valid_type != *argument_type) {
-            middle_end.linked_compiler.error().at(argument->parameter_value->source_position)
+            error().at(argument->parameter_value->source_position)
                 << "Cannot pass '" << *argument_type << "' to parameter '"
                 << argument->parameter_name->identifier_text << "' of type '" << *valid_type << "'";
         }
@@ -544,6 +548,8 @@ void bonk::TypeInferringVisitor::visit(TreeNodeCast* node) {
 }
 
 bonk::Type* bonk::TypeInferringVisitor::infer_type(bonk::TreeNode* node) {
+    errors_occurred = false;
+
     // Note: when infer_type is called on a node, it is assumed
     // that the node parent has already been visited and its type
     // has been annotated
@@ -584,7 +590,22 @@ void bonk::TypeInferringVisitor::pop_type_table() {
     assert(!type_table_stack.empty());
     type_table_stack.pop_back();
 }
+bonk::MessageStreamProxy bonk::TypeInferringVisitor::warning() const { return middle_end.compiler.warning(); }
 
 void bonk::TypeInferringVisitor::visit(bonk::TreeNodeNull* node) {
     get_current_type_table().annotate<NullType>(node);
+}
+
+bonk::MessageStreamProxy bonk::TypeInferringVisitor::error() {
+    errors_occurred = true;
+    return middle_end.compiler.error();
+}
+
+bonk::MessageStreamProxy bonk::TypeInferringVisitor::fatal_error() {
+    errors_occurred = true;
+    return middle_end.compiler.fatal_error();
+}
+
+bool bonk::TypeInferringVisitor::had_errors_occurred() const {
+    return errors_occurred;
 }

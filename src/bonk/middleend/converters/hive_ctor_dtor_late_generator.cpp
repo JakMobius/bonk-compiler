@@ -4,10 +4,11 @@
 #include "bonk/middleend/annotators/type_annotator.hpp"
 #include "bonk/tree/ast_clone_visitor.hpp"
 
-void bonk::HiveConstructorDestructorLateGenerator::generate(bonk::AST& ast) {
+bool bonk::HiveConstructorDestructorLateGenerator::generate(bonk::AST& ast) {
     current_ast = &ast;
     ast.root->accept(this);
     current_ast = nullptr;
+    return true;
 }
 
 void bonk::HiveConstructorDestructorLateGenerator::visit(bonk::TreeNodeHiveDefinition* node) {
@@ -161,9 +162,45 @@ void bonk::HiveConstructorDestructorLateGenerator::fill_destructor(
         destructor->body->body.push_back(std::move(assignment));
     }
 
+    // Now generate the following code:
+    // bowl addr = cast<long>(object);
+    // object = null;
+    // $$bonk_destroy_object(addr);
+
+    // Generate 'bowl addr = cast<long>(object)'
+    auto addr_text = current_ast->buffer.get_symbol("addr");
+
+    auto addr_variable_definition = std::make_unique<TreeNodeVariableDefinition>();
+    addr_variable_definition->variable_name = std::make_unique<TreeNodeIdentifier>();
+    addr_variable_definition->variable_name->identifier_text = addr_text;
+
+    auto cast = std::make_unique<TreeNodeCast>();
+    auto long_type = std::make_unique<TreeNodePrimitiveType>();
+    long_type->primitive_type = TrivialTypeKind::t_long;
+    cast->target_type = std::move(long_type);
+
+    auto object_identifier = std::make_unique<TreeNodeIdentifier>();
+    object_identifier->identifier_text = current_ast->buffer.get_symbol("object");
+
+    cast->operand = std::move(object_identifier);
+
+    addr_variable_definition->variable_value = std::move(cast);
+    destructor->body->body.push_back(std::move(addr_variable_definition));
+
+    // Generate 'object = null'
+
+    object_identifier = std::make_unique<TreeNodeIdentifier>();
+    object_identifier->identifier_text = current_ast->buffer.get_symbol("object");
+
+    auto assignment = std::make_unique<TreeNodeBinaryOperation>();
+    assignment->left = std::move(object_identifier);
+    assignment->right = std::make_unique<TreeNodeNull>();
+    assignment->operator_type = OperatorType::o_assign;
+    destructor->body->body.push_back(std::move(assignment));
+
     // Now call the $$bonk_destroy_object function
 
-    // @$$bonk_object_free[object = object]
+    // @$$bonk_object_free[object = addr]
     auto call = std::make_unique<TreeNodeCall>();
     auto callee_identifier = std::make_unique<TreeNodeIdentifier>();
     callee_identifier->identifier_text =
@@ -177,18 +214,11 @@ void bonk::HiveConstructorDestructorLateGenerator::fill_destructor(
     object_parameter_name->identifier_text = object_text;
 
     auto object_parameter_value = std::make_unique<TreeNodeIdentifier>();
-    object_parameter_value->identifier_text = object_text;
-
-    // Cast the object to the long type
-    auto cast = std::make_unique<TreeNodeCast>();
-    auto long_type = std::make_unique<TreeNodePrimitiveType>();
-    long_type->primitive_type = TrivialTypeKind::t_long;
-    cast->target_type = std::move(long_type);
-    cast->operand = std::move(object_parameter_value);
+    object_parameter_value->identifier_text = addr_text;
 
     auto size_parameter = std::make_unique<TreeNodeParameterListItem>();
     size_parameter->parameter_name = std::move(object_parameter_name);
-    size_parameter->parameter_value = std::move(cast);
+    size_parameter->parameter_value = std::move(object_parameter_value);
 
     call->arguments->parameters.push_back(std::move(size_parameter));
 

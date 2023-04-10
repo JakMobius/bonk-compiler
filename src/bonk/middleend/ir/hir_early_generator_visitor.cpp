@@ -314,87 +314,78 @@ void bonk::HIREarlyGeneratorVisitor::compile_lazy_logic(TreeNodeBinaryOperation*
     assert(left_type->kind == TypeKind::primitive);
     assert(right_type->kind == TypeKind::primitive);
 
-    // Compile left part, and only compile right part if it's needed
+    // Compute left part, and only compute right part if it's needed
     auto left = eval(node->left.get());
     auto left_loaded = load_value(left.get());
     auto left_id = std::get<HIRValueRaw>(left_loaded->value).register_id;
 
-    int true_label = middle_end.id_table.get_unused_id();
-    int false_label = middle_end.id_table.get_unused_id();
+    int return_lhs_label = middle_end.id_table.get_unused_id();
+    int calculate_rhs_label = middle_end.id_table.get_unused_id();
     int end_label = middle_end.id_table.get_unused_id();
-
-    HIRJumpNZ* jump1 = nullptr;
-
-    if (node->operator_type == OperatorType::o_and) {
-        jump1 = current_base_block->instruction<HIRJumpNZ>(left_id, true_label, false_label);
-    } else {
-        jump1 = current_base_block->instruction<HIRJumpNZ>(left_id, false_label, true_label);
-    }
 
     int result = middle_end.id_table.get_unused_id();
 
-    current_base_block->instructions.push_back(jump1);
+    if (node->operator_type == OperatorType::o_or) {
+        auto jump1 = current_base_block->instruction<HIRJumpNZ>(left_id, return_lhs_label,
+                                                           calculate_rhs_label);
+        current_base_block->instructions.push_back(jump1);
+    } else {
+        auto jump1 = current_base_block->instruction<HIRJumpNZ>(left_id, calculate_rhs_label,
+                                                           return_lhs_label);
+        current_base_block->instructions.push_back(jump1);
+    }
+
     current_base_block->instructions.push_back(
-        current_base_block->instruction<HIRLabel>(true_label));
+        current_base_block->instruction<HIRLabel>(return_lhs_label));
 
-    node->right->accept(this);
-
-    //    if (right_type->is(TrivialTypeKind::t_nothing)) {
-    // The or/and construction should work like an 'if' statement, like this:
-    // ((cond and true_branch) or false_branch)
-    // So, if cond turned out to be false, the value of the (cond and true_branch)
-    // expression should be false, and vice versa.
-
-    // Move left to result
-    auto instruction = current_base_block->instruction<HIROperation>();
-    instruction->operation_type = HIROperationType::assign;
-    instruction->result_type = convert_type_to_hir(left_type);
-    instruction->operand_type = instruction->operand_type;
-    instruction->target = result;
-    instruction->left = left_id;
-    current_base_block->instructions.push_back(instruction);
-    //    } else {
-    //        // If it's an ordinary or/and construction, its value
-    //        // should actually be calculated.
-    //        auto right = eval(node->right.get());
-    //        auto right_loaded = load_value(right.get());
-    //        auto right_id = std::get<HIRValueRaw>(right_loaded->value).register_id;
-    //
-    //        HIRDataType hir_type = convert_type_to_hir(left_type);
-    //        HIROperationType operation_type = convert_operation_to_hir(node->operator_type);
-    //
-    //        auto instruction = current_base_block->instruction<HIROperation>();
-    //        instruction->operation_type = operation_type;
-    //        instruction->result_type = hir_type;
-    //        instruction->operand_type = hir_type;
-    //        instruction->target = result;
-    //        instruction->left = left_id;
-    //        instruction->right = right_id;
-    //        current_base_block->instructions.push_back(instruction);
-    //    }
+    if (node->right->type != TreeNodeType::n_code_block) {
+        // The "result" value is not used if the right-hand operand is a code block
+        // because it's an 'if' expressed with lazy logic.
+        auto instruction = current_base_block->instruction<HIROperation>();
+        instruction->operation_type = HIROperationType::assign;
+        instruction->result_type = convert_type_to_hir(left_type);
+        instruction->operand_type = instruction->result_type;
+        instruction->target = result;
+        instruction->left = left_id;
+        current_base_block->instructions.push_back(instruction);
+    }
 
     auto jump2 = current_base_block->instruction<HIRJump>();
     jump2->label_id = end_label;
     current_base_block->instructions.push_back(jump2);
 
     current_base_block->instructions.push_back(
-        current_base_block->instruction<HIRLabel>(false_label));
+        current_base_block->instruction<HIRLabel>(calculate_rhs_label));
 
-    auto assign_instruction = current_base_block->instruction<HIROperation>();
-    assign_instruction->operation_type = HIROperationType::assign;
-    assign_instruction->result_type = convert_type_to_hir(left_type);
-    assign_instruction->operand_type = assign_instruction->operand_type;
-    assign_instruction->target = result;
-    assign_instruction->left = left_id;
-    current_base_block->instructions.push_back(assign_instruction);
+    auto right = eval(node->right.get());
 
-    current_base_block->instructions.push_back(
-        current_base_block->instruction<HIRLabel>(end_label));
+    if (node->right->type == TreeNodeType::n_code_block) {
+        // It's an 'if' expressed with lazy logic. Just execute the right part and
+        // return the result of the left part
+        current_base_block->instructions.push_back(
+            current_base_block->instruction<HIRLabel>(end_label));
 
-    auto result_value = std::make_unique<HIRValue>(*this);
-    result_value->set_value(result, middle_end.type_table.get_type(node));
-    result_value->increase_reference_counter();
-    return_value = std::move(result_value);
+        return_value = std::move(left);
+    } else {
+        auto right_loaded = load_value(right.get());
+        auto right_id = std::get<HIRValueRaw>(right_loaded->value).register_id;
+
+        auto assign_instruction = current_base_block->instruction<HIROperation>();
+        assign_instruction->operation_type = HIROperationType::assign;
+        assign_instruction->result_type = convert_type_to_hir(left_type);
+        assign_instruction->operand_type = assign_instruction->result_type;
+        assign_instruction->target = result;
+        assign_instruction->left = right_id;
+
+        current_base_block->instructions.push_back(assign_instruction);
+        current_base_block->instructions.push_back(
+            current_base_block->instruction<HIRLabel>(end_label));
+
+        auto result_value = std::make_unique<HIRValue>(*this);
+        result_value->set_value(result, middle_end.type_table.get_type(node));
+        result_value->increase_reference_counter();
+        return_value = std::move(result_value);
+    }
 }
 
 void bonk::HIREarlyGeneratorVisitor::visit(bonk::TreeNodeUnaryOperation* node) {
@@ -672,11 +663,12 @@ void bonk::HIREarlyGeneratorVisitor::visit(bonk::TreeNodeCall* node) {
         }
 
         // TODO: move this diagnostic somewhere else
-        middle_end.linked_compiler.error().at(node->source_position)
+        middle_end.compiler.error().at(node->source_position)
             << "Missing argument for parameter \"" << parameter_name->identifier_text << "\"";
+        errors_occurred = true;
     }
 
-    if (middle_end.linked_compiler.state) {
+    if (parameters.size() < block_type->parameters.size()) {
         return;
     }
 

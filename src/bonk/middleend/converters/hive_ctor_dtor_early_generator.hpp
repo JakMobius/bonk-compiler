@@ -13,11 +13,12 @@ class HiveConstructorDestructorEarlyGenerator {
     bonk::AST* current_ast = nullptr;
 
   public:
-    explicit HiveConstructorDestructorEarlyGenerator(MiddleEnd& middle_end): middle_end(middle_end) {
+    explicit
+        HiveConstructorDestructorEarlyGenerator(MiddleEnd& middle_end): middle_end(middle_end) {
 
     }
 
-    void generate(bonk::AST& ast);
+    bool generate(bonk::AST& ast);
 
 
   private:

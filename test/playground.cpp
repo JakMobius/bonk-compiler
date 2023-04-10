@@ -22,11 +22,13 @@ TEST(Playground, Playground) {
     )";
 
     auto lexemes = bonk::Lexer(compiler).parse_file("test", source);
+    ASSERT_FALSE(lexemes.empty());
+
     auto root = bonk::Parser(compiler).parse_file(&lexemes);
+    ASSERT_NE(root, nullptr);
+
     auto ast = bonk::AST();
     ast.root = std::move(root);
-
-    ASSERT_NE(ast.root, nullptr);
 
     bonk::MiddleEnd middle_end(compiler);
 
