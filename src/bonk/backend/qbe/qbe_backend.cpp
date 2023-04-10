@@ -1,8 +1,8 @@
 
 #include "qbe_backend.hpp"
-#include "bonk/compiler.hpp"
+#include "bonk/compiler/compiler.hpp"
+#include "bonk/frontend/frontend.hpp"
 #include "bonk/middleend/ir/hir.hpp"
-#include "bonk/middleend/middleend.hpp"
 
 void bonk::qbe_backend::QBEBackend::compile_program(bonk::IRProgram& program,
                                                     const bonk::OutputStream& output) {

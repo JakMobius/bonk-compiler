@@ -1,6 +1,6 @@
 #pragma once
 
-#include "bonk/middleend/middleend.hpp"
+#include "bonk/frontend/frontend.hpp"
 #include "hir.hpp"
 #include "utils/streams.hpp"
 

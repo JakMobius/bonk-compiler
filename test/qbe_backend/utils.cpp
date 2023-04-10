@@ -1,5 +1,6 @@
 
 #include "utils.hpp"
+#include "bonk/middleend/middleend.hpp"
 
 bool run_bonk(const char* bonk_source, const char* executable_name) {
     if (!compile_bonk_source(bonk_source, "bonk.qbe"))
@@ -65,19 +66,25 @@ bool compile_bonk_source(const char* source, std::filesystem::path output_file) 
     auto ast = bonk::AST();
     ast.root = std::move(root);
 
-    bonk::MiddleEnd middle_end(compiler);
+    bonk::FrontEnd front_end(compiler);
 
-    if (!middle_end.transform_ast(ast)) {
+    if (!front_end.transform_ast(ast)) {
         return false;
     }
 
-    auto ir_program = middle_end.generate_hir(ast.root.get());
+    auto ir_program = front_end.generate_hir(ast.root.get());
 
     if (ir_program == nullptr) {
         return false;
     }
 
-    bonk::qbe_backend::QBEBackend(compiler).compile_program(*ir_program, output_stream);
+    bonk::MiddleEnd middle_end(compiler);
+    middle_end.program = std::move(ir_program);
+    if(!middle_end.do_passes()) {
+        return false;
+    }
+
+    bonk::qbe_backend::QBEBackend(compiler).compile_program(*middle_end.program, output_stream);
 
     return true;
 }

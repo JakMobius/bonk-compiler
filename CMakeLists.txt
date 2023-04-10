@@ -9,7 +9,7 @@ file(GLOB_RECURSE SOURCES src/bonk/*.cpp src/bonk/*.hpp src/utils/*.cpp src/util
 add_executable(bonk ${SOURCES} src/main.cpp)
 target_include_directories(bonk PUBLIC src)
 
-add_executable(bonk-metafile-viewer ${SOURCES} src/metafile-viewer.cpp)
+add_executable(bonk-metafile-viewer ${SOURCES} src/metafile_viewer.cpp)
 target_include_directories(bonk-metafile-viewer PUBLIC src)
 
 add_subdirectory(test)

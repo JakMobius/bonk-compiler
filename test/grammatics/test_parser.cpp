@@ -1,7 +1,7 @@
 
 #include <gtest/gtest.h>
-#include "bonk/parsing/parser.hpp"
-#include "bonk/tree/json_ast_serializer.hpp"
+#include "bonk/frontend/parsing/parser.hpp"
+#include "bonk/frontend/ast/json_ast_serializer.hpp"
 
 TEST(Parser, TestHiveBowls) {
     auto error_stream = bonk::StdOutputStream(std::cout);

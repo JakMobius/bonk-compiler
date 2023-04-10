@@ -3,9 +3,9 @@
 #include "argparse/argparse.hpp"
 #include "bonk/backend/qbe/qbe_backend.hpp"
 //#include "bonk/backend/x86/x86_backend.hpp"
-#include "bonk/compiler.hpp"
+#include "bonk/compiler/compiler.hpp"
+#include "bonk/frontend/frontend.hpp"
 #include "bonk/help-resolver/help_resolver.hpp"
-#include "bonk/middleend/middleend.hpp"
 #include "bonk/tree/ast_printer.hpp"
 #include "bonk/tree/json_ast_serializer.hpp"
 
@@ -13,15 +13,15 @@ struct InitErrorReporter {
 
     bonk::StdOutputStream error_file{std::cerr};
 
-    [[nodiscard]] bonk::MessageStreamProxy warning() const {
+    [[nodiscard]] bonk::CompilerMessageStreamProxy warning() const {
         return {bonk::CompilerMessageType::warning, error_file};
     }
 
-    [[nodiscard]] bonk::MessageStreamProxy error() const {
+    [[nodiscard]] bonk::CompilerMessageStreamProxy error() const {
         return {bonk::CompilerMessageType::error, error_file};
     }
 
-    [[nodiscard]] bonk::MessageStreamProxy fatal_error() const {
+    [[nodiscard]] bonk::CompilerMessageStreamProxy fatal_error() const {
         return {bonk::CompilerMessageType::fatal_error, error_file};
     }
 };

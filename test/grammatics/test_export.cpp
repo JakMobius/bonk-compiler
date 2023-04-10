@@ -1,10 +1,10 @@
 
 #include <gtest/gtest.h>
-#include "bonk/parsing/parser.hpp"
-#include "bonk/tree/binary_ast_deserializer.hpp"
-#include "bonk/tree/binary_ast_serializer.hpp"
-#include "bonk/tree/json_ast_serializer.hpp"
-#include "bonk/tree/template_visitor.hpp"
+#include "bonk/frontend/parsing/parser.hpp"
+#include "bonk/frontend/ast/binary_ast_deserializer.hpp"
+#include "bonk/frontend/ast/binary_ast_serializer.hpp"
+#include "bonk/frontend/ast/json_ast_serializer.hpp"
+#include "bonk/frontend/ast/template_visitor.hpp"
 #include "utils/json_serializer.hpp"
 
 std::string dump_ast_to_json(bonk::TreeNode* ast) {

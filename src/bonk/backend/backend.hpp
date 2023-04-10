@@ -7,7 +7,7 @@ struct Compiler;
 
 }
 
-#include "../tree/ast.hpp"
+#include "bonk/frontend/ast/ast.hpp"
 #include "bonk/middleend/ir/ir.hpp"
 #include "utils/streams.hpp"
 

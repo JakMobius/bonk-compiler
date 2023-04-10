@@ -1,16 +1,15 @@
 
 #include <sstream>
 #include <gtest/gtest.h>
-#include "bonk/middleend/annotators/basic_symbol_annotator.hpp"
-#include "bonk/middleend/converters/stdlib_header_generator.hpp"
+#include "bonk/frontend/converters/hir_early_generator_visitor.hpp"
+#include "bonk/frontend/converters/stdlib_header_generator.hpp"
+#include "bonk/frontend/frontend.hpp"
+#include "bonk/frontend/parsing/parser.hpp"
+#include "bonk/frontend/ast/ast_printer.hpp"
+#include "bonk/middleend/ir/algorithms/hir_ref_count_replacer.hpp"
 #include "bonk/middleend/ir/hir.hpp"
-#include "bonk/middleend/ir/hir_early_generator_visitor.hpp"
-#include "bonk/middleend/ir/hir_ref_count_replacer.hpp"
-#include "bonk/middleend/middleend.hpp"
-#include "bonk/parsing/parser.hpp"
-#include "bonk/tree/ast_printer.hpp"
 
-TEST(MiddleEnd, TypecheckerTest1) {
+TEST(FrontEnd, TypecheckerTest1) {
     std::stringstream error_stringstream;
     auto error_stream = bonk::StdOutputStream(error_stringstream);
 
@@ -33,15 +32,15 @@ TEST(MiddleEnd, TypecheckerTest1) {
     auto ast = bonk::AST();
     ast.root = std::move(root);
 
-    bonk::MiddleEnd middle_end(compiler);
+    bonk::FrontEnd front_end(compiler);
 
-    EXPECT_EQ(middle_end.transform_ast(ast), false);
+    EXPECT_EQ(front_end.transform_ast(ast), false);
 
     EXPECT_EQ(error_stringstream.str(),
               "test:4:18: error: Cannot perform '*=' between flot and strg\n");
 }
 
-TEST(MiddleEnd, TypecheckerTest2) {
+TEST(FrontEnd, TypecheckerTest2) {
     std::stringstream error_stringstream;
     auto error_stream = bonk::StdOutputStream(error_stringstream);
 
@@ -71,14 +70,14 @@ TEST(MiddleEnd, TypecheckerTest2) {
     auto ast = bonk::AST();
     ast.root = std::move(root);
 
-    bonk::MiddleEnd middle_end(compiler);
+    bonk::FrontEnd front_end(compiler);
 
-    EXPECT_EQ(middle_end.transform_ast(ast), false);
+    EXPECT_EQ(front_end.transform_ast(ast), false);
     EXPECT_EQ(error_stringstream.str(),
               "test:11:42: error: Cannot perform '+' between TestHive and nubr\n");
 }
 
-//TEST(MiddleEnd, TypecheckerTest3) {
+//TEST(FrontEnd, TypecheckerTest3) {
 //    std::stringstream error_stringstream;
 //    auto error_stream = bonk::StdOutputStream(error_stringstream);
 //
@@ -96,13 +95,13 @@ TEST(MiddleEnd, TypecheckerTest2) {
 //
 //    ASSERT_NE(ast, nullptr);
 //
-//    bonk::MiddleEnd middle_end(compiler);
+//    bonk::FrontEnd front_end(compiler);
 //
-//    EXPECT_EQ(middle_end.transform_ast(ast.get()), false);
+//    EXPECT_EQ(front_end.transform_ast(ast.get()), false);
 //    EXPECT_EQ(error_stringstream.str(), "<mismatch of return types>\n");
 //}
 
-TEST(MiddleEnd, TypecheckerFibonacciTest) {
+TEST(FrontEnd, TypecheckerFibonacciTest) {
     // This test is aimed at testing the type checker's ability to correctly
     // infer the return type of recursive functions. The fibonacci function
     // has two bonk statements, one of which is a recursive call. The type checker
@@ -131,21 +130,21 @@ TEST(MiddleEnd, TypecheckerFibonacciTest) {
     auto ast = bonk::AST();
     ast.root = std::move(root);
 
-    bonk::MiddleEnd middle_end(compiler);
-    EXPECT_EQ(middle_end.transform_ast(ast), true);
+    bonk::FrontEnd front_end(compiler);
+    EXPECT_EQ(front_end.transform_ast(ast), true);
 
     // Get the global scope and find the fibonacci function definition
-    auto global_scope = middle_end.symbol_table.global_scope;
+    auto global_scope = front_end.symbol_table.global_scope;
     auto fibonacci_definition = global_scope->symbols["fibonacci"];
 
-    auto fibonacci_block_type = middle_end.type_table.get_type(fibonacci_definition);
+    auto fibonacci_block_type = front_end.type_table.get_type(fibonacci_definition);
     auto fibonacci_return_type = ((bonk::BlokType*)fibonacci_block_type)->return_type.get();
 
     auto fibonacci_return_type_data = (bonk::TrivialType*)fibonacci_return_type;
     ASSERT_EQ(fibonacci_return_type_data->trivial_kind, bonk::TrivialTypeKind::t_nubr);
 }
 
-TEST(MiddleEnd, TypecheckerRecursiveTest) {
+TEST(FrontEnd, TypecheckerRecursiveTest) {
 
     auto error_stream = bonk::StdOutputStream(std::cerr);
 
@@ -170,16 +169,16 @@ TEST(MiddleEnd, TypecheckerRecursiveTest) {
 
     ASSERT_NE(ast.root, nullptr);
 
-    bonk::MiddleEnd middle_end(compiler);
-    EXPECT_EQ(middle_end.transform_ast(ast), true);
+    bonk::FrontEnd front_end(compiler);
+    EXPECT_EQ(front_end.transform_ast(ast), true);
 
     // Get the global scope and find the recursive_a and recursive_b function definition
-    auto global_scope = middle_end.symbol_table.global_scope;
+    auto global_scope = front_end.symbol_table.global_scope;
     auto rec_a_definition = global_scope->symbols["recursive_a"];
     auto rec_b_definition = global_scope->symbols["recursive_b"];
 
-    auto rec_a_block_type = middle_end.type_table.get_type(rec_a_definition);
-    auto rec_b_block_type = middle_end.type_table.get_type(rec_b_definition);
+    auto rec_a_block_type = front_end.type_table.get_type(rec_a_definition);
+    auto rec_b_block_type = front_end.type_table.get_type(rec_b_definition);
 
     auto rec_a_return_type = ((bonk::BlokType*)rec_a_block_type)->return_type.get();
     auto rec_b_return_type = ((bonk::BlokType*)rec_b_block_type)->return_type.get();
@@ -191,7 +190,7 @@ TEST(MiddleEnd, TypecheckerRecursiveTest) {
     ASSERT_EQ(rec_b_return_type_data->trivial_kind, bonk::TrivialTypeKind::t_buul);
 }
 
-TEST(MiddleEnd, TypecheckerRecursiveNeverTest) {
+TEST(FrontEnd, TypecheckerRecursiveNeverTest) {
 
     auto error_stream = bonk::StdOutputStream(std::cerr);
 
@@ -216,16 +215,16 @@ TEST(MiddleEnd, TypecheckerRecursiveNeverTest) {
     auto ast = bonk::AST();
     ast.root = std::move(root);
 
-    bonk::MiddleEnd middle_end(compiler);
-    EXPECT_EQ(middle_end.transform_ast(ast), true);
+    bonk::FrontEnd front_end(compiler);
+    EXPECT_EQ(front_end.transform_ast(ast), true);
 
     // Get the global scope and find the recursive_a and recursive_b function definition
-    auto global_scope = middle_end.symbol_table.global_scope;
+    auto global_scope = front_end.symbol_table.global_scope;
     auto rec_a_definition = global_scope->symbols["recursive_a"];
     auto rec_b_definition = global_scope->symbols["recursive_b"];
 
-    auto rec_a_block_type = middle_end.type_table.get_type(rec_a_definition);
-    auto rec_b_block_type = middle_end.type_table.get_type(rec_b_definition);
+    auto rec_a_block_type = front_end.type_table.get_type(rec_a_definition);
+    auto rec_b_block_type = front_end.type_table.get_type(rec_b_definition);
 
     auto rec_a_return_type = ((bonk::BlokType*)rec_a_block_type)->return_type.get();
     auto rec_b_return_type = ((bonk::BlokType*)rec_b_block_type)->return_type.get();
@@ -234,7 +233,7 @@ TEST(MiddleEnd, TypecheckerRecursiveNeverTest) {
     ASSERT_TRUE(rec_b_return_type->is(bonk::TrivialTypeKind::t_never));
 }
 
-TEST(MiddleEnd, TypecheckerFallproofTest) {
+TEST(FrontEnd, TypecheckerFallproofTest) {
 
     // This test checks that the type-checker doesn't crash if return type of blok
     // cannot be inferred due to a semantic error
@@ -263,8 +262,8 @@ TEST(MiddleEnd, TypecheckerFallproofTest) {
     auto ast = bonk::AST();
     ast.root = std::move(root);
 
-    bonk::MiddleEnd middle_end(compiler);
-    EXPECT_EQ(middle_end.transform_ast(ast), false);
+    bonk::FrontEnd front_end(compiler);
+    EXPECT_EQ(front_end.transform_ast(ast), false);
 
     std::string error_string = error_stringstream.str();
 
@@ -283,7 +282,7 @@ bonk::HIRProcedure* get_procedure_header(const bonk::IRProcedure* procedure) {
     return nullptr;
 }
 
-TEST(MiddleEnd, CodegenTest) {
+TEST(FrontEnd, CodegenTest) {
     auto error_stream = bonk::StdOutputStream(std::cout);
 
     bonk::CompilerConfig config{.error_file = error_stream};
@@ -308,10 +307,10 @@ TEST(MiddleEnd, CodegenTest) {
     auto ast = bonk::AST();
     ast.root = std::move(root);
 
-    bonk::MiddleEnd middle_end(compiler);
+    bonk::FrontEnd front_end(compiler);
 
-    ASSERT_EQ(middle_end.transform_ast(ast), true);
-    auto ir_program = middle_end.generate_hir(ast.root.get());
+    ASSERT_EQ(front_end.transform_ast(ast), true);
+    auto ir_program = front_end.generate_hir(ast.root.get());
 
     ASSERT_NE(ir_program, nullptr);
 
@@ -324,7 +323,7 @@ TEST(MiddleEnd, CodegenTest) {
         auto procedure_header = get_procedure_header(procedure.get());
         ASSERT_NE(procedure_header, nullptr);
         auto procedure_id = ((bonk::HIRProcedure*)procedure_header)->procedure_id;
-        auto procedure_definition = middle_end.id_table.get_node(procedure_id);
+        auto procedure_definition = front_end.id_table.get_node(procedure_id);
 
         ASSERT_EQ(procedure_definition->type, bonk::TreeNodeType::n_block_definition);
         auto& procedure_name =
@@ -346,14 +345,14 @@ TEST(MiddleEnd, CodegenTest) {
     }
 }
 
-TEST(MiddleEnd, StdLibHeaderGenerator) {
+TEST(FrontEnd, StdLibHeaderGenerator) {
     auto error_stream = bonk::StdOutputStream(std::cout);
 
     bonk::CompilerConfig config{.error_file = error_stream};
     bonk::Compiler compiler(config);
 
-    bonk::MiddleEnd middle_end(compiler);
-    bonk::StdLibHeaderGenerator header_generator(middle_end);
+    bonk::FrontEnd front_end(compiler);
+    bonk::StdLibHeaderGenerator header_generator(front_end);
 
     auto stdlib_header = header_generator.generate();
 
@@ -368,7 +367,7 @@ TEST(MiddleEnd, StdLibHeaderGenerator) {
     EXPECT_NE(ast_string.find("blok $$bonk_object_free[bowl object: long]"), std::string::npos);
 }
 
-TEST(MiddleEnd, ConstructorDestructorGeneratorTest) {
+TEST(FrontEnd, ConstructorDestructorGeneratorTest) {
     auto error_stream = bonk::StdOutputStream(std::cout);
 
     bonk::CompilerConfig config{.error_file = error_stream};
@@ -400,10 +399,10 @@ TEST(MiddleEnd, ConstructorDestructorGeneratorTest) {
     auto ast = bonk::AST();
     ast.root = std::move(root);
 
-    bonk::MiddleEnd middle_end(compiler);
-    ASSERT_TRUE(middle_end.transform_ast(ast));
+    bonk::FrontEnd front_end(compiler);
+    ASSERT_TRUE(front_end.transform_ast(ast));
 
-    auto global_scope = middle_end.symbol_table.global_scope;
+    auto global_scope = front_end.symbol_table.global_scope;
     auto constructor =
         (bonk::TreeNodeBlockDefinition*)global_scope->symbols["TestHive$$constructor"];
     auto destructor = (bonk::TreeNodeBlockDefinition*)global_scope->symbols["TestHive$$destructor"];
@@ -514,7 +513,7 @@ TEST(MiddleEnd, ConstructorDestructorGeneratorTest) {
     EXPECT_EQ(visitor.hive_reference_count, 6);
 }
 
-bonk::IRProcedure* find_procedure(bonk::MiddleEnd& middle_end, bonk::IRProgram* program,
+bonk::IRProcedure* find_procedure(bonk::FrontEnd& front_end, bonk::IRProgram* program,
                                   std::string_view name) {
     for (auto& procedure : program->procedures) {
         auto header = get_procedure_header(procedure.get());
@@ -523,7 +522,7 @@ bonk::IRProcedure* find_procedure(bonk::MiddleEnd& middle_end, bonk::IRProgram* 
             continue;
         }
         auto procedure_header = (bonk::HIRProcedure*)header;
-        auto definition = middle_end.id_table.get_node(procedure_header->procedure_id);
+        auto definition = front_end.id_table.get_node(procedure_header->procedure_id);
         if (definition->type != bonk::TreeNodeType::n_block_definition) {
             continue;
         }
@@ -535,7 +534,7 @@ bonk::IRProcedure* find_procedure(bonk::MiddleEnd& middle_end, bonk::IRProgram* 
     return nullptr;
 }
 
-TEST(MiddleEnd, RefCountReplacementTest1) {
+TEST(FrontEnd, RefCountReplacementTest1) {
     auto output_stream = bonk::StdOutputStream(std::cout);
     auto error_stream = bonk::StdOutputStream(std::cout);
 
@@ -557,20 +556,20 @@ TEST(MiddleEnd, RefCountReplacementTest1) {
     auto ast = bonk::AST();
     ast.root = std::move(root);
 
-    bonk::MiddleEnd middle_end(compiler);
-    ASSERT_TRUE(middle_end.transform_ast(ast));
+    bonk::FrontEnd front_end(compiler);
+    ASSERT_TRUE(front_end.transform_ast(ast));
 
-    auto program = bonk::HIREarlyGeneratorVisitor(middle_end).generate(ast.root.get());
+    auto program = bonk::HIREarlyGeneratorVisitor(front_end).generate(ast.root.get());
 
     // Find procedure called "main"
-    bonk::IRProcedure* main_procedure = find_procedure(middle_end, program.get(), "main");
+    bonk::IRProcedure* main_procedure = find_procedure(front_end, program.get(), "main");
     ASSERT_NE(main_procedure, nullptr) << "Procedure 'main' not found";
 
     //    std::cout << "Before refcount replacement:" << std::endl;
     //    bonk::HIRPrinter printer(output_stream);
     //    printer.print(*program, *main_procedure);
 
-    bonk::HIRRefCountReplacer(middle_end).replace_ref_counters(*main_procedure);
+    bonk::HIRRefCountReplacer().replace_ref_counters(*main_procedure);
 
     //    std::cout << "After refcount replacement:" << std::endl;
     //    printer.print(*program, *main_procedure);
@@ -592,7 +591,7 @@ TEST(MiddleEnd, RefCountReplacementTest1) {
     }
 }
 
-TEST(MiddleEnd, RefCountReplacementTest2) {
+TEST(FrontEnd, RefCountReplacementTest2) {
     auto output_stream = bonk::StdOutputStream(std::cout);
     auto error_stream = bonk::StdOutputStream(std::cout);
 
@@ -619,16 +618,16 @@ TEST(MiddleEnd, RefCountReplacementTest2) {
     auto ast = bonk::AST();
     ast.root = std::move(root);
 
-    bonk::MiddleEnd middle_end(compiler);
-    ASSERT_TRUE(middle_end.transform_ast(ast));
+    bonk::FrontEnd front_end(compiler);
+    ASSERT_TRUE(front_end.transform_ast(ast));
 
-    auto program = bonk::HIREarlyGeneratorVisitor(middle_end).generate(ast.root.get());
+    auto program = bonk::HIREarlyGeneratorVisitor(front_end).generate(ast.root.get());
 
     //    std::cout << "Before refcount replacement:" << std::endl;
     //    bonk::HIRPrinter printer(output_stream);
     //    printer.print(*program);
 
-    bonk::HIRRefCountReplacer(middle_end).replace_ref_counters(*program);
+    bonk::HIRRefCountReplacer().replace_ref_counters(*program);
 
     //    std::cout << "After refcount replacement:" << std::endl;
     //    printer.print(*program);
@@ -654,7 +653,7 @@ TEST(MiddleEnd, RefCountReplacementTest2) {
     }
 }
 
-TEST(MiddleEnd, TestMetadataExporter) {
+TEST(FrontEnd, TestMetadataExporter) {
     auto output_stream = bonk::StdOutputStream(std::cout);
     auto error_stream = bonk::StdOutputStream(std::cout);
 

@@ -4,8 +4,8 @@
 #include <sstream>
 #include <gtest/gtest.h>
 #include "bonk/backend/qbe/qbe_backend.hpp"
-#include "bonk/middleend/middleend.hpp"
-#include "bonk/parsing/parser.hpp"
+#include "bonk/frontend/frontend.hpp"
+#include "bonk/frontend/parsing/parser.hpp"
 
 void ensure_path(std::filesystem::path& path);
 bool compile_bonk_source(const char* source, std::filesystem::path output_file);

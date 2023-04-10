@@ -1,12 +1,12 @@
 
 #include <gtest/gtest.h>
+#include "bonk/frontend/converters/hir_early_generator_visitor.hpp"
+#include "bonk/frontend/frontend.hpp"
+#include "bonk/frontend/parsing/lexic/lexer.hpp"
+#include "bonk/frontend/parsing/parser.hpp"
+#include "bonk/frontend/ast/ast_printer.hpp"
 #include "bonk/middleend/ir/hir.hpp"
-#include "bonk/middleend/ir/hir_early_generator_visitor.hpp"
 #include "bonk/middleend/ir/hir_printer.hpp"
-#include "bonk/middleend/middleend.hpp"
-#include "bonk/parsing/lexic/lexer.hpp"
-#include "bonk/parsing/parser.hpp"
-#include "bonk/tree/ast_printer.hpp"
 
 TEST(Playground, Playground) {
     auto error_stream = bonk::StdOutputStream(std::cerr);
@@ -30,15 +30,15 @@ TEST(Playground, Playground) {
     auto ast = bonk::AST();
     ast.root = std::move(root);
 
-    bonk::MiddleEnd middle_end(compiler);
+    bonk::FrontEnd front_end(compiler);
 
-    ASSERT_EQ(middle_end.transform_ast(ast), true);
+    ASSERT_EQ(front_end.transform_ast(ast), true);
 
     // Print AST
     bonk::ASTPrinter ast_printer{output_stream};
     ast.root->accept(&ast_printer);
 
-    auto ir_program = bonk::HIREarlyGeneratorVisitor(middle_end).generate(ast.root.get());
+    auto ir_program = bonk::HIREarlyGeneratorVisitor(front_end).generate(ast.root.get());
 
     ASSERT_NE(ir_program, nullptr);
 

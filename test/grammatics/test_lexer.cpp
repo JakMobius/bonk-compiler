@@ -1,6 +1,6 @@
 
 #include <gtest/gtest.h>
-#include "bonk/parsing/parser.hpp"
+#include "bonk/frontend/parsing/parser.hpp"
 
 TEST(Lexer, TestHive) {
     auto error_stream = bonk::StdOutputStream(std::cerr);

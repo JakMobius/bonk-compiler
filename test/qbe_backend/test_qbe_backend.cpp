@@ -2,8 +2,9 @@
 #include <sstream>
 #include <gtest/gtest.h>
 #include "bonk/backend/qbe/qbe_backend.hpp"
+#include "bonk/frontend/frontend.hpp"
+#include "bonk/frontend/parsing/parser.hpp"
 #include "bonk/middleend/middleend.hpp"
-#include "bonk/parsing/parser.hpp"
 
 TEST(QBEBackend, CodegenTest) {
 
@@ -34,15 +35,23 @@ TEST(QBEBackend, CodegenTest) {
     auto ast = bonk::AST();
     ast.root = std::move(root);
 
-    bonk::MiddleEnd middle_end(compiler);
+    bonk::FrontEnd front_end(compiler);
 
-    ASSERT_TRUE(middle_end.transform_ast(ast));
-    auto ir_program = middle_end.generate_hir(ast.root.get());
+    ASSERT_TRUE(front_end.transform_ast(ast));
+    auto ir_program = front_end.generate_hir(ast.root.get());
 
     ASSERT_NE(ir_program, nullptr);
 
+    bonk::MiddleEnd middle_end(compiler);
+    middle_end.program = std::move(ir_program);
+    middle_end.do_passes();
+
+    auto ir_program_raw = middle_end.program.get();
+
+    ASSERT_NE(ir_program_raw, nullptr);
+
     bonk::qbe_backend::QBEBackend backend{compiler};
-    backend.compile_program(*ir_program, output_stream);
+    backend.compile_program(*ir_program_raw, output_stream);
     std::string result = result_stream.str();
 
     // add_one function definition
