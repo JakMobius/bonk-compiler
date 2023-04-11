@@ -7,14 +7,14 @@
 namespace bonk {
 
 class HIRBaseBlockSeparator {
-    std::list<IRInstruction*> current_instructions {};
-    std::list<IRInstruction*>::iterator current_it {};
-    std::unordered_map<int, IRBaseBlock*> block_by_id_map;
-    std::unordered_map<IRBaseBlock*, int> id_by_block_map;
+    std::list<HIRInstruction*> current_instructions {};
+    std::list<HIRInstruction*>::iterator current_it {};
+    std::unordered_map<int, HIRBaseBlock*> block_by_id_map;
+    std::unordered_map<HIRBaseBlock*, int> id_by_block_map;
     int return_block_label_id = -1;
 
-    IRBaseBlock* current_block = nullptr;
-    IRProcedure* current_procedure = nullptr;
+    HIRBaseBlock* current_block = nullptr;
+    HIRProcedure* current_procedure = nullptr;
 
     HIRInstruction* peek_instruction();
     HIRInstruction* next_instruction();
@@ -26,9 +26,9 @@ class HIRBaseBlockSeparator {
     void insert_jump_edges();
 
   public:
-    bool separate_blocks(IRProgram& program);
-    bool separate_blocks(IRProcedure& procedure);
-    void annotate_block_with_label(IRBaseBlock* block, int label);
+    bool separate_blocks(HIRProgram& program);
+    bool separate_blocks(HIRProcedure& procedure);
+    void annotate_block_with_label(HIRBaseBlock* block, int label);
 };
 
 } // namespace bonk

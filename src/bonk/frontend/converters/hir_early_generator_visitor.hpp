@@ -1,10 +1,10 @@
 #pragma once
 
 #include <unordered_map>
-#include "bonk/frontend/frontend.hpp"
 #include "bonk/frontend/ast/ast_visitor.hpp"
+#include "bonk/frontend/frontend.hpp"
 #include "bonk/middleend/ir/hir.hpp"
-#include "bonk/middleend/ir/ir.hpp"
+#include "bonk/middleend/ir/instruction_pool.hpp"
 
 namespace bonk {
 
@@ -75,13 +75,13 @@ class HIREarlyGeneratorVisitor : ASTVisitor {
     friend struct HIRValue;
 
     FrontEnd& front_end;
-    IRProgram* current_program;
+    HIRProgram* current_program;
     bool errors_occurred = false;
 
     TreeNodeHiveDefinition* current_hive_definition = nullptr;
     TreeNodeBlockDefinition* current_block_definition = nullptr;
-    IRProcedure* current_procedure = nullptr;
-    IRBaseBlock* current_base_block = nullptr;
+    HIRProcedure* current_procedure = nullptr;
+    HIRBaseBlock* current_base_block = nullptr;
 
     std::optional<HIRLoopContext> current_loop_context{};
     std::vector<AliveScope> alive_scopes;
@@ -91,7 +91,7 @@ class HIREarlyGeneratorVisitor : ASTVisitor {
     HIREarlyGeneratorVisitor(FrontEnd& front_end) : front_end(front_end) {
     }
 
-    std::unique_ptr<IRProgram> generate(TreeNode* ast);
+    std::unique_ptr<HIRProgram> generate(TreeNode* ast);
 
     HIROperationType convert_operation_to_hir(OperatorType type);
     HIRDataType convert_type_to_hir(Type* type);

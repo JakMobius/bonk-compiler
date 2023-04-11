@@ -1,7 +1,8 @@
 
-#include "ir.hpp"
+#include "instruction_pool.hpp"
+#include "hir.hpp"
 
-char* bonk::IRInstructionPool::allocate_instruction(size_t size) {
+char* bonk::InstructionPool::allocate_instruction(size_t size) {
     char* ptr = (char*)allocator.allocate(sizeof(void*) + size);
 
     if (!first_instruction) {
@@ -18,26 +19,17 @@ char* bonk::IRInstructionPool::allocate_instruction(size_t size) {
     return ptr + sizeof(void*);
 }
 
-void bonk::IRInstructionPool::deallocate_instructions() {
+void bonk::InstructionPool::deallocate_instructions() {
     for (void* ptr = first_instruction; ptr; ptr = *((void**)ptr)) {
         char* ptr2 = (char*)ptr;
         ptr2 += sizeof(void*);
-        ((IRInstruction*)ptr2)->~IRInstruction();
+        ((HIRInstruction*)ptr2)->~HIRInstruction();
     }
     allocator.clear();
     first_instruction = nullptr;
     last_instruction = nullptr;
 }
 
-bonk::IRInstructionPool::~IRInstructionPool() {
+bonk::InstructionPool::~InstructionPool() {
     deallocate_instructions();
-}
-
-void bonk::IRProgram::create_procedure() {
-    procedures.push_back(std::make_unique<IRProcedure>(*this));
-}
-
-void bonk::IRProcedure::add_control_flow_edge(bonk::IRBaseBlock* from, bonk::IRBaseBlock* to) {
-    from->successors.push_back(to);
-    to->predecessors.push_back(from);
 }

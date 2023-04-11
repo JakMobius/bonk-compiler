@@ -11,9 +11,9 @@ class HIRGraphvizDumper {
     HIRGraphvizDumper(bonk::OutputStream& stream) : stream(stream) {
     }
 
-    void dump(IRProgram& program);
-    void dump(IRProcedure& procedure);
-    void dump_instruction_text(bonk::IRProgram& program, bonk::IRInstruction* instruction);
+    void dump(HIRProgram& program);
+    void dump(HIRProcedure& procedure);
+    void dump_instruction_text(bonk::HIRProgram& program, bonk::HIRInstruction* instruction);
 
   private:
     bonk::OutputStream& stream;

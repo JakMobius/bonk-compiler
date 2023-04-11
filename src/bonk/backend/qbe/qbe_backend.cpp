@@ -4,7 +4,7 @@
 #include "bonk/frontend/frontend.hpp"
 #include "bonk/middleend/ir/hir.hpp"
 
-void bonk::qbe_backend::QBEBackend::compile_program(bonk::IRProgram& program,
+void bonk::qbe_backend::QBEBackend::compile_program(bonk::HIRProgram& program,
                                                     const bonk::OutputStream& output) {
     current_program = &program;
     output_stream = &output;
@@ -14,52 +14,23 @@ void bonk::qbe_backend::QBEBackend::compile_program(bonk::IRProgram& program,
     }
 }
 
-void bonk::qbe_backend::QBEBackend::compile_procedure(bonk::IRProcedure& procedure) {
+void bonk::qbe_backend::QBEBackend::compile_procedure(bonk::HIRProcedure& procedure) {
+    if (procedure.is_external)
+        return;
 
-    bool is_first = true;
-
-    for (auto& block : procedure.base_blocks) {
-        for (auto& instruction : block->instructions) {
-            auto hir_instruction = static_cast<HIRInstruction*>(instruction);
-            if (hir_instruction->type == HIRInstructionType::file) {
-                assert(is_first);
-                compile_instruction(static_cast<HIRFile&>(*instruction));
-                continue;
-            }
-            if (is_first) {
-                if (!compile_procedure_header(*instruction)) {
-                    // Procedure is external
-                    return;
-                }
-                is_first = false;
-            } else {
-                compile_instruction(*instruction);
-            }
-        }
-        assert(call_parameters.empty());
+    // A workaround for the fact that QBE doesn't support
+    // file instructions in procedures. Find the file instruction
+    // and compile it before the procedure.
+    HIRFileInstruction* file_instruction = find_procedure_file_instruction(procedure);
+    if(file_instruction) {
+        compile_instruction(*file_instruction);
     }
 
-    compile_procedure_footer();
-}
-
-bool bonk::qbe_backend::QBEBackend::compile_procedure_header(bonk::IRInstruction& instruction) {
-
-    auto hir_instruction = static_cast<HIRInstruction&>(instruction);
-
-    assert(hir_instruction.type == HIRInstructionType::procedure);
-
-    auto& procedure = static_cast<HIRProcedure&>(instruction);
-
-    if (procedure.is_external) {
-        return false;
-    }
-
-    output_stream->get_stream() << "export function " << get_hir_type(procedure.return_type);
-    output_stream->get_stream() << " ";
     TreeNode* procedure_definition = current_program->id_table.get_node(procedure.procedure_id);
     std::string_view procedure_name =
         current_program->symbol_table.symbol_names[procedure_definition];
-    output_stream->get_stream() << "$\"_" << procedure_name << "\" (";
+    output_stream->get_stream() << "export function " << get_hir_type(procedure.return_type) << " "
+                                << "$\"_" << procedure_name << "\" (";
 
     for (int i = 0; i < procedure.parameters.size(); i++) {
         if (i != 0)
@@ -71,18 +42,20 @@ bool bonk::qbe_backend::QBEBackend::compile_procedure_header(bonk::IRInstruction
 
     output_stream->get_stream() << ") {\n@start\n";
 
-    return true;
-}
+    for (auto& block : procedure.base_blocks) {
+        for (auto& instruction : block->instructions) {
+            compile_instruction(*instruction);
+        }
+    }
 
-void bonk::qbe_backend::QBEBackend::compile_procedure_footer() {
     output_stream->get_stream() << "}\n";
 }
 
-void bonk::qbe_backend::QBEBackend::compile_instruction(HIRLabel& instruction) {
+void bonk::qbe_backend::QBEBackend::compile_instruction(HIRLabelInstruction& instruction) {
     output_stream->get_stream() << "@L" << instruction.label_id << "\n";
 }
 
-void bonk::qbe_backend::QBEBackend::compile_instruction(HIRConstantLoad& instruction) {
+void bonk::qbe_backend::QBEBackend::compile_instruction(HIRConstantLoadInstruction& instruction) {
     auto target = instruction.target;
     auto value = instruction.constant;
     auto type = instruction.type;
@@ -111,7 +84,7 @@ void bonk::qbe_backend::QBEBackend::compile_instruction(HIRConstantLoad& instruc
     output_stream->get_stream() << "\n";
 }
 
-void bonk::qbe_backend::QBEBackend::compile_instruction(HIRSymbolLoad& instruction) {
+void bonk::qbe_backend::QBEBackend::compile_instruction(HIRSymbolLoadInstruction& instruction) {
     auto type = instruction.type;
 
     padding();
@@ -124,7 +97,7 @@ void bonk::qbe_backend::QBEBackend::compile_instruction(HIRSymbolLoad& instructi
     output_stream->get_stream() << " $\"_" << symbol_name << "\"\n";
 }
 
-void bonk::qbe_backend::QBEBackend::compile_instruction(HIROperation& instruction) {
+void bonk::qbe_backend::QBEBackend::compile_instruction(HIROperationInstruction& instruction) {
     auto target = instruction.target;
 
     padding();
@@ -218,18 +191,18 @@ void bonk::qbe_backend::QBEBackend::print_comparison(HIROperationType type,
     output_stream->get_stream() << get_hir_type(operand_type) << " ";
 }
 
-void bonk::qbe_backend::QBEBackend::compile_instruction(HIRJump& instruction) {
+void bonk::qbe_backend::QBEBackend::compile_instruction(HIRJumpInstruction& instruction) {
     padding();
     output_stream->get_stream() << "jmp @L" << instruction.label_id << "\n";
 }
 
-void bonk::qbe_backend::QBEBackend::compile_instruction(HIRJumpNZ& instruction) {
+void bonk::qbe_backend::QBEBackend::compile_instruction(HIRJumpNZInstruction& instruction) {
     padding();
     output_stream->get_stream() << "jnz %r" << instruction.condition << ", @L"
                                 << instruction.nz_label << ", @L" << instruction.z_label << "\n";
 }
 
-void bonk::qbe_backend::QBEBackend::compile_instruction(HIRCall& instruction) {
+void bonk::qbe_backend::QBEBackend::compile_instruction(HIRCallInstruction& instruction) {
     padding();
 
     if (instruction.return_value.has_value()) {
@@ -255,7 +228,7 @@ void bonk::qbe_backend::QBEBackend::compile_instruction(HIRCall& instruction) {
     output_stream->get_stream() << ")\n";
 }
 
-void bonk::qbe_backend::QBEBackend::compile_instruction(HIRReturn& instruction) {
+void bonk::qbe_backend::QBEBackend::compile_instruction(HIRReturnInstruction& instruction) {
     padding();
     output_stream->get_stream() << "ret";
     if (instruction.return_value.has_value()) {
@@ -264,11 +237,11 @@ void bonk::qbe_backend::QBEBackend::compile_instruction(HIRReturn& instruction) 
     output_stream->get_stream() << "\n";
 }
 
-void bonk::qbe_backend::QBEBackend::compile_instruction(HIRParameter& instruction) {
+void bonk::qbe_backend::QBEBackend::compile_instruction(HIRParameterInstruction& instruction) {
     call_parameters.push_back({instruction.type, instruction.parameter});
 }
 
-void bonk::qbe_backend::QBEBackend::compile_instruction(HIRMemoryLoad& instruction) {
+void bonk::qbe_backend::QBEBackend::compile_instruction(HIRMemoryLoadInstruction& instruction) {
     padding();
     output_stream->get_stream() << "%r" << instruction.target << " ="
                                 << get_hir_type(instruction.type) << " load"
@@ -281,49 +254,50 @@ void bonk::qbe_backend::QBEBackend::compile_instruction(HIRMemoryLoad& instructi
     output_stream->get_stream() << " %r" << instruction.address << "\n";
 }
 
-void bonk::qbe_backend::QBEBackend::compile_instruction(HIRMemoryStore& instruction) {
+void bonk::qbe_backend::QBEBackend::compile_instruction(HIRMemoryStoreInstruction& instruction) {
     padding();
     output_stream->get_stream() << "store" << get_hir_type(instruction.type, false) << " %r"
                                 << instruction.value << ", %r" << instruction.address << "\n";
 }
 
-void bonk::qbe_backend::QBEBackend::compile_instruction(bonk::IRInstruction& instruction) {
+void bonk::qbe_backend::QBEBackend::compile_instruction(bonk::HIRInstruction& instruction) {
 
     auto hir_instruction = static_cast<HIRInstruction&>(instruction);
 
     switch (hir_instruction.type) {
     case HIRInstructionType::label:
-        return compile_instruction(static_cast<HIRLabel&>(instruction));
+        return compile_instruction(static_cast<HIRLabelInstruction&>(instruction));
     case HIRInstructionType::constant_load:
-        return compile_instruction(static_cast<HIRConstantLoad&>(instruction));
+        return compile_instruction(static_cast<HIRConstantLoadInstruction&>(instruction));
     case HIRInstructionType::symbol_load:
-        return compile_instruction(static_cast<HIRSymbolLoad&>(instruction));
+        return compile_instruction(static_cast<HIRSymbolLoadInstruction&>(instruction));
     case HIRInstructionType::operation:
-        return compile_instruction(static_cast<HIROperation&>(instruction));
+        return compile_instruction(static_cast<HIROperationInstruction&>(instruction));
     case HIRInstructionType::jump:
-        return compile_instruction(static_cast<HIRJump&>(instruction));
+        return compile_instruction(static_cast<HIRJumpInstruction&>(instruction));
     case HIRInstructionType::jump_nz:
-        return compile_instruction(static_cast<HIRJumpNZ&>(instruction));
+        return compile_instruction(static_cast<HIRJumpNZInstruction&>(instruction));
     case HIRInstructionType::call:
-        return compile_instruction(static_cast<HIRCall&>(instruction));
+        return compile_instruction(static_cast<HIRCallInstruction&>(instruction));
     case HIRInstructionType::return_op:
-        return compile_instruction(static_cast<HIRReturn&>(instruction));
+        return compile_instruction(static_cast<HIRReturnInstruction&>(instruction));
     case HIRInstructionType::parameter:
-        return compile_instruction(static_cast<HIRParameter&>(instruction));
+        return compile_instruction(static_cast<HIRParameterInstruction&>(instruction));
     case HIRInstructionType::memory_load:
-        return compile_instruction(static_cast<HIRMemoryLoad&>(instruction));
+        return compile_instruction(static_cast<HIRMemoryLoadInstruction&>(instruction));
     case HIRInstructionType::memory_store:
-        return compile_instruction(static_cast<HIRMemoryStore&>(instruction));
+        return compile_instruction(static_cast<HIRMemoryStoreInstruction&>(instruction));
     case HIRInstructionType::location:
-        return compile_instruction(static_cast<HIRLocation&>(instruction));
-    case HIRInstructionType::procedure:
-        assert(!"Procedure header occurred in the middle of the procedure");
+        return compile_instruction(static_cast<HIRLocationInstruction&>(instruction));
+    case HIRInstructionType::file:
+        // Ignore, because QBE doesn't support file instructions within functions
+        return;
     default:
         assert(!"Unknown instruction type");
     }
 }
 
-void bonk::qbe_backend::QBEBackend::compile_instruction(bonk::HIRFile& instruction) {
+void bonk::qbe_backend::QBEBackend::compile_instruction(bonk::HIRFileInstruction& instruction) {
     padding();
     output_stream->get_stream() << "file \"";
 
@@ -350,7 +324,7 @@ void bonk::qbe_backend::QBEBackend::compile_instruction(bonk::HIRFile& instructi
     output_stream->get_stream() << "\"\n";
 }
 
-void bonk::qbe_backend::QBEBackend::compile_instruction(bonk::HIRLocation& instruction) {
+void bonk::qbe_backend::QBEBackend::compile_instruction(bonk::HIRLocationInstruction& instruction) {
     if (!generate_debug_symbols)
         return;
 
@@ -379,4 +353,18 @@ char bonk::qbe_backend::QBEBackend::get_hir_type(bonk::HIRDataType type, bool ba
 
 void bonk::qbe_backend::QBEBackend::padding() {
     output_stream->get_stream() << "    ";
+}
+
+bonk::HIRFileInstruction*
+bonk::qbe_backend::QBEBackend::find_procedure_file_instruction(bonk::HIRProcedure& procedure) {
+
+    for (auto& base_block : procedure.base_blocks) {
+        for (auto& instruction : base_block->instructions) {
+            if (instruction->type == HIRInstructionType::file) {
+                return static_cast<HIRFileInstruction*>(instruction);
+            }
+        }
+    }
+
+    return nullptr;
 }

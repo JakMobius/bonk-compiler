@@ -272,16 +272,6 @@ TEST(FrontEnd, TypecheckerFallproofTest) {
               std::string::npos);
 }
 
-bonk::HIRProcedure* get_procedure_header(const bonk::IRProcedure* procedure) {
-    auto& block = procedure->base_blocks[0];
-    for(auto& instruction : block->instructions) {
-        if(static_cast<bonk::HIRInstruction*>(instruction)->type == bonk::HIRInstructionType::procedure) {
-            return static_cast<bonk::HIRProcedure*>(instruction);
-        }
-    }
-    return nullptr;
-}
-
 TEST(FrontEnd, CodegenTest) {
     auto error_stream = bonk::StdOutputStream(std::cout);
 
@@ -320,9 +310,7 @@ TEST(FrontEnd, CodegenTest) {
     };
 
     for (const auto& procedure : ir_program->procedures) {
-        auto procedure_header = get_procedure_header(procedure.get());
-        ASSERT_NE(procedure_header, nullptr);
-        auto procedure_id = ((bonk::HIRProcedure*)procedure_header)->procedure_id;
+        auto procedure_id = procedure->procedure_id;
         auto procedure_definition = front_end.id_table.get_node(procedure_id);
 
         ASSERT_EQ(procedure_definition->type, bonk::TreeNodeType::n_block_definition);
@@ -513,16 +501,10 @@ TEST(FrontEnd, ConstructorDestructorGeneratorTest) {
     EXPECT_EQ(visitor.hive_reference_count, 6);
 }
 
-bonk::IRProcedure* find_procedure(bonk::FrontEnd& front_end, bonk::IRProgram* program,
+bonk::HIRProcedure* find_procedure(bonk::FrontEnd& front_end, bonk::HIRProgram* program,
                                   std::string_view name) {
     for (auto& procedure : program->procedures) {
-        auto header = get_procedure_header(procedure.get());
-        if (!header) {
-            ADD_FAILURE() << "Could not get procedure header";
-            continue;
-        }
-        auto procedure_header = (bonk::HIRProcedure*)header;
-        auto definition = front_end.id_table.get_node(procedure_header->procedure_id);
+        auto definition = front_end.id_table.get_node(procedure->procedure_id);
         if (definition->type != bonk::TreeNodeType::n_block_definition) {
             continue;
         }
@@ -562,7 +544,7 @@ TEST(FrontEnd, RefCountReplacementTest1) {
     auto program = bonk::HIREarlyGeneratorVisitor(front_end).generate(ast.root.get());
 
     // Find procedure called "main"
-    bonk::IRProcedure* main_procedure = find_procedure(front_end, program.get(), "main");
+    bonk::HIRProcedure* main_procedure = find_procedure(front_end, program.get(), "main");
     ASSERT_NE(main_procedure, nullptr) << "Procedure 'main' not found";
 
     //    std::cout << "Before refcount replacement:" << std::endl;
@@ -573,12 +555,6 @@ TEST(FrontEnd, RefCountReplacementTest1) {
 
     //    std::cout << "After refcount replacement:" << std::endl;
     //    printer.print(*program, *main_procedure);
-
-    // Check that the procedure header is still a procedure header
-    auto header = get_procedure_header(main_procedure);
-
-    EXPECT_EQ(header->type, bonk::HIRInstructionType::procedure)
-        << "Procedure header is not a 'procedure' command";
 
     // Check that the procedure doesn't have dec_ref instruction
     for (auto& block : main_procedure->base_blocks) {
@@ -634,9 +610,6 @@ TEST(FrontEnd, RefCountReplacementTest2) {
 
     // Check all the internal procedures
     for (auto& procedure : program->procedures) {
-
-        auto header = get_procedure_header(procedure.get());
-        EXPECT_NE(header, nullptr) << "Could not find procedure header";
 
         // Check that the procedure doesn't have dec_ref instruction
         for (auto& block : procedure->base_blocks) {

@@ -13,28 +13,27 @@ class HIRPrinter {
     HIRPrinter(const OutputStream& stream) : stream(stream) {
     }
 
-    void print(const bonk::IRProgram& block) const;
-    void print(const bonk::IRProgram& program, const bonk::IRProcedure& procedure) const;
+    void print(const bonk::HIRProgram& block) const;
+    void print(const bonk::HIRProgram& program, const bonk::HIRProcedure& procedure) const;
 
-    void print(const bonk::IRProgram& program, const bonk::HIRLabel& instruction) const;
-    void print(const bonk::IRProgram& program, const bonk::HIRConstantLoad& instruction) const;
-    void print(const bonk::IRProgram& program, const bonk::HIRSymbolLoad& instruction) const;
-    void print(const bonk::IRProgram& program, const bonk::HIRJump& instruction) const;
-    void print(const bonk::IRProgram& program, const bonk::HIRJumpNZ& instruction) const;
-    void print(const bonk::IRProgram& program, const bonk::HIRCall& instruction) const;
-    void print(const bonk::IRProgram& program, const bonk::HIRReturn& instruction) const;
-    void print(const bonk::IRProgram& program, const bonk::HIROperation& instruction) const;
-    void print(const bonk::IRProgram& program, const bonk::HIRProcedure& instruction) const;
-    void print(const bonk::IRProgram& program, const bonk::HIRParameter& instruction) const;
-    void print(const bonk::IRProgram& program, const bonk::HIRMemoryLoad& instruction) const;
-    void print(const bonk::IRProgram& program, const bonk::HIRMemoryStore& instruction) const;
-    void print(const bonk::IRProgram& program, const bonk::HIRIncRefCounter& instruction) const;
-    void print(const bonk::IRProgram& program, const bonk::HIRDecRefCounter& instruction) const;
-    void print(const bonk::IRProgram& program, const bonk::HIRFile& instruction) const;
-    void print(const bonk::IRProgram& program, const bonk::HIRLocation& instruction) const;
+    void print(const bonk::HIRProgram& program, const bonk::HIRLabelInstruction& instruction) const;
+    void print(const bonk::HIRProgram& program, const bonk::HIRConstantLoadInstruction& instruction) const;
+    void print(const bonk::HIRProgram& program, const bonk::HIRSymbolLoadInstruction& instruction) const;
+    void print(const bonk::HIRProgram& program, const bonk::HIRJumpInstruction& instruction) const;
+    void print(const bonk::HIRProgram& program, const bonk::HIRJumpNZInstruction& instruction) const;
+    void print(const bonk::HIRProgram& program, const bonk::HIRCallInstruction& instruction) const;
+    void print(const bonk::HIRProgram& program, const bonk::HIRReturnInstruction& instruction) const;
+    void print(const bonk::HIRProgram& program, const bonk::HIROperationInstruction& instruction) const;
+    void print(const bonk::HIRProgram& program, const bonk::HIRParameterInstruction& instruction) const;
+    void print(const bonk::HIRProgram& program, const bonk::HIRMemoryLoadInstruction& instruction) const;
+    void print(const bonk::HIRProgram& program, const bonk::HIRMemoryStoreInstruction& instruction) const;
+    void print(const bonk::HIRProgram& program, const bonk::HIRIncRefCounterInstruction& instruction) const;
+    void print(const bonk::HIRProgram& program, const bonk::HIRDecRefCounterInstruction& instruction) const;
+    void print(const bonk::HIRProgram& program, const bonk::HIRFileInstruction& instruction) const;
+    void print(const bonk::HIRProgram& program, const bonk::HIRLocationInstruction& instruction) const;
 
-    void print(const bonk::IRProgram& program, const bonk::HIRInstruction& instruction) const;
-    void print_label(const bonk::IRProgram& program, int label) const;
+    void print(const bonk::HIRProgram& program, const bonk::HIRInstruction& instruction) const;
+    void print_label(const bonk::HIRProgram& program, int label) const;
 
     void print(bonk::HIROperationType type) const;
     void print(HIRDataType type) const;

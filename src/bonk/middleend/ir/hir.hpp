@@ -2,7 +2,14 @@
 
 namespace bonk {
 
+struct HIRBaseBlock;
+struct HIRProcedure;
+struct HIRProgram;
+struct HIRInstruction;
 struct TreeNodeHiveDefinition;
+struct IDTable;
+struct SymbolTable;
+struct HIRProcedureParameter;
 
 enum class HIRInstructionType {
     unset,
@@ -15,7 +22,6 @@ enum class HIRInstructionType {
     call,
     return_op,
     parameter,
-    procedure,
     memory_load,
     memory_store,
     inc_ref_counter,
@@ -56,46 +62,103 @@ enum class HIRDataType {
 
 #include <optional>
 #include <string>
-#include "ir.hpp"
+#include "instruction_pool.hpp"
 
 namespace bonk {
 
-struct HIRInstruction : IRInstruction {
+struct HIRProgram {
+    IDTable& id_table;
+    SymbolTable& symbol_table;
+    InstructionPool instruction_pool{};
+    std::vector<std::unique_ptr<HIRProcedure>> procedures{};
+
+    HIRProgram(IDTable& id_table, SymbolTable& symbol_table) : id_table(id_table), symbol_table(symbol_table) {
+    }
+
+    // Proxy for IRInstructionPool::instruction
+    template <typename T, typename... Args> T* instruction(Args&&... args) {
+        return instruction_pool.instruction<T>(std::forward<Args>(args)...);
+    }
+    void create_procedure();
+};
+
+struct HIRProcedure {
+    HIRProgram& program;
+    std::vector<std::unique_ptr<HIRBaseBlock>> base_blocks{};
+
+    int procedure_id = -1;
+    int start_block_index = -1;
+    int end_block_index = -1;
+
+    std::vector<HIRProcedureParameter> parameters;
+    HIRDataType return_type = HIRDataType::unset;
+    bool is_external = false;
+
+    HIRProcedure(HIRProgram& program) : program(program) {
+    }
+
+    void add_control_flow_edge(HIRBaseBlock* from, HIRBaseBlock* to);
+
+    // Proxy for HIRProgram::instruction
+    template <typename T, typename... Args> T* instruction(Args&&... args) {
+        return program.instruction<T>(std::forward<Args>(args)...);
+    }
+
+    void create_base_block();
+};
+
+struct HIRBaseBlock {
+    int index = -1;
+    HIRProcedure& procedure;
+    std::list<HIRInstruction*> instructions{};
+    std::vector<HIRBaseBlock*> predecessors{};
+    std::vector<HIRBaseBlock*> successors{};
+
+    HIRBaseBlock(HIRProcedure& procedure) : procedure(procedure) {
+    }
+
+    // Proxy for HIRProcedure::instruction
+    template <typename T, typename... Args> T* instruction(Args&&... args) {
+        return procedure.instruction<T>(std::forward<Args>(args)...);
+    }
+};
+
+struct HIRInstruction {
     HIRInstructionType type = HIRInstructionType::unset;
 
     HIRInstruction(HIRInstructionType type);
     virtual ~HIRInstruction() = default;
 };
 
-struct HIRLabel : HIRInstruction {
+struct HIRLabelInstruction : HIRInstruction {
     int label_id = -1;
 
-    HIRLabel(int label_id);
+    HIRLabelInstruction(int label_id);
 };
 
-struct HIRConstantLoad : HIRInstruction {
+struct HIRConstantLoadInstruction : HIRInstruction {
     IRRegister target = 0;
     HIRDataType type = HIRDataType::unset;
     long long constant = 0;
 
-    HIRConstantLoad(IRRegister target, long long constant, HIRDataType type);
-    HIRConstantLoad(IRRegister target, int64_t constant);
-    HIRConstantLoad(IRRegister target, int32_t constant);
-    HIRConstantLoad(IRRegister target, int16_t constant);
-    HIRConstantLoad(IRRegister target, int8_t constant);
-    HIRConstantLoad(IRRegister target, float constant);
-    HIRConstantLoad(IRRegister target, double constant);
+    HIRConstantLoadInstruction(IRRegister target, long long constant, HIRDataType type);
+    HIRConstantLoadInstruction(IRRegister target, int64_t constant);
+    HIRConstantLoadInstruction(IRRegister target, int32_t constant);
+    HIRConstantLoadInstruction(IRRegister target, int16_t constant);
+    HIRConstantLoadInstruction(IRRegister target, int8_t constant);
+    HIRConstantLoadInstruction(IRRegister target, float constant);
+    HIRConstantLoadInstruction(IRRegister target, double constant);
 };
 
-struct HIRSymbolLoad : HIRInstruction {
+struct HIRSymbolLoadInstruction : HIRInstruction {
     IRRegister target = 0;
     HIRDataType type = HIRDataType::unset;
     int symbol_id = -1;
 
-    HIRSymbolLoad(IRRegister target, int symbol_id, HIRDataType type);
+    HIRSymbolLoadInstruction(IRRegister target, int symbol_id, HIRDataType type);
 };
 
-struct HIROperation : HIRInstruction {
+struct HIROperationInstruction : HIRInstruction {
     IRRegister target{};
     IRRegister left{};
     std::optional<IRRegister> right{};
@@ -103,45 +166,45 @@ struct HIROperation : HIRInstruction {
     HIRDataType operand_type = HIRDataType::unset;
     HIRDataType result_type = HIRDataType::unset;
 
-    HIROperation();
+    HIROperationInstruction();
 };
 
-struct HIRJump : HIRInstruction {
+struct HIRJumpInstruction : HIRInstruction {
     int label_id = -1;
 
-    HIRJump();
+    HIRJumpInstruction();
 };
 
-struct HIRJumpNZ : HIRInstruction {
+struct HIRJumpNZInstruction : HIRInstruction {
     IRRegister condition = 0;
     int nz_label = -1;
     int z_label = -1;
 
-    HIRJumpNZ(IRRegister condition, int nz_label, int z_label);
+    HIRJumpNZInstruction(IRRegister condition, int nz_label, int z_label);
 };
 
-struct HIRCall : HIRInstruction {
+struct HIRCallInstruction : HIRInstruction {
     HIRDataType return_type = HIRDataType::unset;
     std::optional<IRRegister> return_value = std::nullopt;
 
     int procedure_label_id = -1;
 
-    HIRCall();
+    HIRCallInstruction();
 };
 
-struct HIRReturn : HIRInstruction {
+struct HIRReturnInstruction : HIRInstruction {
     HIRDataType return_type = HIRDataType::unset;
     std::optional<IRRegister> return_value = std::nullopt;
 
-    HIRReturn(IRRegister return_value);
-    HIRReturn();
+    HIRReturnInstruction(IRRegister return_value);
+    HIRReturnInstruction();
 };
 
-struct HIRParameter : HIRInstruction {
+struct HIRParameterInstruction : HIRInstruction {
     HIRDataType type = HIRDataType::unset;
     IRRegister parameter = 0;
 
-    HIRParameter();
+    HIRParameterInstruction();
 };
 
 struct HIRProcedureParameter {
@@ -149,55 +212,46 @@ struct HIRProcedureParameter {
     IRRegister register_id = 0;
 };
 
-struct HIRProcedure : HIRInstruction {
-    int procedure_id = -1;
-    std::vector<HIRProcedureParameter> parameters;
-    HIRDataType return_type = HIRDataType::unset;
-    bool is_external = false;
-
-    HIRProcedure(int procedure_id, HIRDataType return_type);
-};
-
-struct HIRMemoryLoad : HIRInstruction {
+struct HIRMemoryLoadInstruction : HIRInstruction {
     IRRegister target = 0;
     IRRegister address = 0;
     HIRDataType type = HIRDataType::unset;
 
-    HIRMemoryLoad();
+    HIRMemoryLoadInstruction();
 };
 
-struct HIRMemoryStore : HIRInstruction {
+struct HIRMemoryStoreInstruction : HIRInstruction {
     IRRegister address = 0;
     IRRegister value = 0;
     HIRDataType type = HIRDataType::unset;
 
-    HIRMemoryStore();
+    HIRMemoryStoreInstruction();
 };
 
-struct HIRIncRefCounter : HIRInstruction {
+struct HIRIncRefCounterInstruction : HIRInstruction {
     IRRegister address = 0;
 
-    HIRIncRefCounter();
+    HIRIncRefCounterInstruction();
 };
 
-struct HIRDecRefCounter : HIRInstruction {
+struct HIRDecRefCounterInstruction : HIRInstruction {
     IRRegister address = 0;
     TreeNodeHiveDefinition* hive_definition = nullptr;
 
-    HIRDecRefCounter();
+    HIRDecRefCounterInstruction();
 };
 
-struct HIRFile: HIRInstruction {
+struct HIRFileInstruction: HIRInstruction {
     std::string_view file {};
 
-    HIRFile();
+    HIRFileInstruction();
 };
 
-struct HIRLocation : HIRInstruction {
+struct HIRLocationInstruction : HIRInstruction {
     unsigned int line = 0;
     unsigned int column = 0;
 
-    HIRLocation();
+    HIRLocationInstruction();
 };
 
 } // namespace bonk

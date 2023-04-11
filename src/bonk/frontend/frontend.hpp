@@ -11,7 +11,7 @@ class FrontEnd;
 #include <unordered_set>
 #include "bonk/compiler/compiler.hpp"
 #include "bonk/frontend/annotators/types.hpp"
-#include "bonk/middleend/ir/ir.hpp"
+#include "bonk/middleend/ir/instruction_pool.hpp"
 
 namespace bonk {
 
@@ -175,7 +175,7 @@ class FrontEnd {
     // i.e. the raw AST parsed from source files
     bool transform_ast(bonk::AST& ast);
 
-    std::unique_ptr<IRProgram> generate_hir(TreeNode* ast);
+    std::unique_ptr<HIRProgram> generate_hir(TreeNode* ast);
 
     int get_hive_field_offset(TreeNodeHiveDefinition* hive_definition, int field_index);
 

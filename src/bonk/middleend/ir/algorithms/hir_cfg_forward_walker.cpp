@@ -2,12 +2,12 @@
 
 #include "hir_cfg_forward_walker.hpp"
 
-bool bonk::HIRCFGForwardWalker::walk(bonk::IRProcedure& procedure) {
+bool bonk::HIRCFGForwardWalker::walk(bonk::HIRProcedure& procedure) {
     auto& start_block = *procedure.base_blocks[0];
     return walk_block(start_block);
 }
 
-bool bonk::HIRCFGForwardWalker::walk_block(bonk::IRBaseBlock& block) {
+bool bonk::HIRCFGForwardWalker::walk_block(bonk::HIRBaseBlock& block) {
     visited_blocks.insert(&block);
 
     for(auto& next : block.successors) {

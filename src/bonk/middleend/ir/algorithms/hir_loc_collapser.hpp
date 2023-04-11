@@ -1,13 +1,14 @@
 #pragma once
 
-#include "bonk/middleend/ir/ir.hpp"
+#include "bonk/middleend/ir/hir.hpp"
+#include "bonk/middleend/ir/instruction_pool.hpp"
 namespace bonk {
 
 class HIRLocCollapser {
   public:
-    bool collapse(IRProgram& program);
-    bool collapse(IRProcedure& procedure);
-    bool collapse(IRBaseBlock& block);
+    bool collapse(HIRProgram& program);
+    bool collapse(HIRProcedure& procedure);
+    bool collapse(HIRBaseBlock& block);
 };
 
 }

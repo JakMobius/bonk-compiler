@@ -1,17 +1,17 @@
 #pragma once
 
-#include "bonk/frontend/frontend.hpp"
 #include "bonk/frontend/ast/ast_visitor.hpp"
+#include "bonk/frontend/frontend.hpp"
 #include "bonk/middleend/ir/hir.hpp"
-#include "bonk/middleend/ir/ir.hpp"
+#include "bonk/middleend/ir/instruction_pool.hpp"
 
 namespace bonk {
 
 class HIRRefCountReplacer : ASTVisitor {
 
-    IRProgram* current_program;
-    IRBaseBlock* current_base_block;
-    std::list<IRInstruction*>::iterator current_instruction_iterator;
+    HIRProgram* current_program;
+    HIRBaseBlock* current_base_block;
+    std::list<HIRInstruction*>::iterator current_instruction_iterator;
 
   public:
     HIRRefCountReplacer() {
@@ -35,8 +35,8 @@ class HIRRefCountReplacer : ASTVisitor {
     void remove_instruction();
 
   public:
-    bool replace_ref_counters(IRProgram& program);
-    bool replace_ref_counters(IRProcedure& procedure);
+    bool replace_ref_counters(HIRProgram& program);
+    bool replace_ref_counters(HIRProcedure& procedure);
 };
 
 } // namespace bonk

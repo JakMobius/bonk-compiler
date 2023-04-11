@@ -41,12 +41,10 @@ void bonk::HIREarlyGeneratorVisitor::visit(bonk::TreeNodeBlockDefinition* node) 
 
     write_file(node);
 
-    int id = front_end.id_table.get_id(node);
+    current_procedure->procedure_id = front_end.id_table.get_id(node);
     auto type = (BlokType*)front_end.type_table.get_type(node);
     HIRDataType return_type = convert_type_to_hir(type->return_type.get());
-
-    // Create a procedure instruction
-    auto procedure_header = current_base_block->instruction<HIRProcedure>(id, return_type);
+    current_procedure->return_type = return_type;
 
     if (node->block_parameters) {
         for (auto& parameter : node->block_parameters->parameters) {
@@ -54,12 +52,10 @@ void bonk::HIREarlyGeneratorVisitor::visit(bonk::TreeNodeBlockDefinition* node) 
                 int parameter_id = front_end.id_table.get_id(parameter.get());
                 auto parameter_type = (BlokType*)front_end.type_table.get_type(parameter.get());
                 HIRDataType hir_parameter_type = convert_type_to_hir(parameter_type);
-                procedure_header->parameters.push_back({hir_parameter_type, parameter_id});
+                current_procedure->parameters.push_back({hir_parameter_type, parameter_id});
             }
         }
     }
-
-    current_base_block->instructions.push_back(procedure_header);
 
     // Create parameter values (if it's necessary)
     if (node->block_parameters && node->body) {
@@ -84,10 +80,10 @@ void bonk::HIREarlyGeneratorVisitor::visit(bonk::TreeNodeBlockDefinition* node) 
         current_block_definition = old_block;
         alive_scopes.pop_back();
 
-        auto instruction = current_base_block->instruction<HIRReturn>();
+        auto instruction = current_base_block->instruction<HIRReturnInstruction>();
         current_base_block->instructions.push_back(instruction);
     } else {
-        procedure_header->is_external = true;
+        current_procedure->is_external = true;
         current_block_definition = old_block;
         alive_scopes.pop_back();
     }
@@ -112,7 +108,7 @@ void bonk::HIREarlyGeneratorVisitor::visit(bonk::TreeNodeVariableDefinition* nod
     // operation decreases the reference counter of the left-hand operand
     // if pointer is not null, so it should be set to null explicitly
 
-    auto instruction = current_base_block->instruction<HIRConstantLoad>(variable_id, (int64_t)0);
+    auto instruction = current_base_block->instruction<HIRConstantLoadInstruction>(variable_id, (int64_t)0);
     current_base_block->instructions.push_back(instruction);
 
     variable_value->set_value(variable_id, variable_type);
@@ -169,7 +165,7 @@ void bonk::HIREarlyGeneratorVisitor::visit(bonk::TreeNodeNumberConstant* node) {
     HIRDataType hir_type = convert_type_to_hir(type);
 
     int id = front_end.id_table.get_unused_id();
-    auto instruction = current_base_block->instruction<HIRConstantLoad>(id, 0, hir_type);
+    auto instruction = current_base_block->instruction<HIRConstantLoadInstruction>(id, 0, hir_type);
 
     switch (hir_type) {
     case HIRDataType::unset:
@@ -213,7 +209,7 @@ void bonk::HIREarlyGeneratorVisitor::visit(bonk::TreeNodeStringConstant* node) {
 
     // TODO: find the string in the string table and get its pointer
     int64_t string_pointer = 0;
-    auto instruction = current_base_block->instruction<HIRConstantLoad>(id, string_pointer);
+    auto instruction = current_base_block->instruction<HIRConstantLoadInstruction>(id, string_pointer);
     auto type = front_end.type_table.get_type(node);
     current_base_block->instructions.push_back(instruction);
 
@@ -231,7 +227,7 @@ std::unique_ptr<bonk::HIRValue> bonk::HIREarlyGeneratorVisitor::assign(HIRValue*
     auto right_loaded = load_value(right);
 
     if (left->is_reference()) {
-        auto instruction = current_base_block->instruction<HIRMemoryStore>();
+        auto instruction = current_base_block->instruction<HIRMemoryStoreInstruction>();
         instruction->address = std::get<HIRValueReference>(left->value).register_id;
         instruction->value = std::get<HIRValueRaw>(right_loaded->value).register_id;
         instruction->type = hir_type;
@@ -244,7 +240,7 @@ std::unique_ptr<bonk::HIRValue> bonk::HIREarlyGeneratorVisitor::assign(HIRValue*
         right_loaded->increase_reference_counter();
         load_value(left)->decrease_reference_count();
 
-        auto instruction = current_base_block->instruction<HIROperation>();
+        auto instruction = current_base_block->instruction<HIROperationInstruction>();
         instruction->operation_type = HIROperationType::assign;
         instruction->operand_type = hir_type;
         instruction->result_type = hir_type;
@@ -289,7 +285,7 @@ void bonk::HIREarlyGeneratorVisitor::visit(bonk::TreeNodeBinaryOperation* node) 
         auto left_loaded = load_value(left.get());
         auto right_loaded = load_value(right.get());
 
-        auto instruction = current_base_block->instruction<HIROperation>();
+        auto instruction = current_base_block->instruction<HIROperationInstruction>();
         instruction->operation_type = operation_type;
         instruction->operand_type = hir_type;
         instruction->result_type = result_type;
@@ -326,22 +322,22 @@ void bonk::HIREarlyGeneratorVisitor::compile_lazy_logic(TreeNodeBinaryOperation*
     int result = front_end.id_table.get_unused_id();
 
     if (node->operator_type == OperatorType::o_or) {
-        auto jump1 = current_base_block->instruction<HIRJumpNZ>(left_id, return_lhs_label,
+        auto jump1 = current_base_block->instruction<HIRJumpNZInstruction>(left_id, return_lhs_label,
                                                            calculate_rhs_label);
         current_base_block->instructions.push_back(jump1);
     } else {
-        auto jump1 = current_base_block->instruction<HIRJumpNZ>(left_id, calculate_rhs_label,
+        auto jump1 = current_base_block->instruction<HIRJumpNZInstruction>(left_id, calculate_rhs_label,
                                                            return_lhs_label);
         current_base_block->instructions.push_back(jump1);
     }
 
     current_base_block->instructions.push_back(
-        current_base_block->instruction<HIRLabel>(return_lhs_label));
+        current_base_block->instruction<HIRLabelInstruction>(return_lhs_label));
 
     if (node->right->type != TreeNodeType::n_code_block) {
         // The "result" value is not used if the right-hand operand is a code block
         // because it's an 'if' expressed with lazy logic.
-        auto instruction = current_base_block->instruction<HIROperation>();
+        auto instruction = current_base_block->instruction<HIROperationInstruction>();
         instruction->operation_type = HIROperationType::assign;
         instruction->result_type = convert_type_to_hir(left_type);
         instruction->operand_type = instruction->result_type;
@@ -350,12 +346,12 @@ void bonk::HIREarlyGeneratorVisitor::compile_lazy_logic(TreeNodeBinaryOperation*
         current_base_block->instructions.push_back(instruction);
     }
 
-    auto jump2 = current_base_block->instruction<HIRJump>();
+    auto jump2 = current_base_block->instruction<HIRJumpInstruction>();
     jump2->label_id = end_label;
     current_base_block->instructions.push_back(jump2);
 
     current_base_block->instructions.push_back(
-        current_base_block->instruction<HIRLabel>(calculate_rhs_label));
+        current_base_block->instruction<HIRLabelInstruction>(calculate_rhs_label));
 
     auto right = eval(node->right.get());
 
@@ -363,14 +359,14 @@ void bonk::HIREarlyGeneratorVisitor::compile_lazy_logic(TreeNodeBinaryOperation*
         // It's an 'if' expressed with lazy logic. Just execute the right part and
         // return the result of the left part
         current_base_block->instructions.push_back(
-            current_base_block->instruction<HIRLabel>(end_label));
+            current_base_block->instruction<HIRLabelInstruction>(end_label));
 
         return_value = std::move(left);
     } else {
         auto right_loaded = load_value(right.get());
         auto right_id = std::get<HIRValueRaw>(right_loaded->value).register_id;
 
-        auto assign_instruction = current_base_block->instruction<HIROperation>();
+        auto assign_instruction = current_base_block->instruction<HIROperationInstruction>();
         assign_instruction->operation_type = HIROperationType::assign;
         assign_instruction->result_type = convert_type_to_hir(left_type);
         assign_instruction->operand_type = assign_instruction->result_type;
@@ -379,7 +375,7 @@ void bonk::HIREarlyGeneratorVisitor::compile_lazy_logic(TreeNodeBinaryOperation*
 
         current_base_block->instructions.push_back(assign_instruction);
         current_base_block->instructions.push_back(
-            current_base_block->instruction<HIRLabel>(end_label));
+            current_base_block->instruction<HIRLabelInstruction>(end_label));
 
         auto result_value = std::make_unique<HIRValue>(*this);
         result_value->set_value(result, front_end.type_table.get_type(node));
@@ -410,20 +406,20 @@ void bonk::HIREarlyGeneratorVisitor::visit(bonk::TreeNodeUnaryOperation* node) {
     HIRDataType hir_type = convert_type_to_hir(type);
 
     int zero_operand = front_end.id_table.get_unused_id();
-    HIRConstantLoad* zero_load_instruction = nullptr;
+    HIRConstantLoadInstruction* zero_load_instruction = nullptr;
 
     if (primitive->primitive_type == TrivialTypeKind::t_nubr) {
         zero_load_instruction =
-            current_base_block->instruction<HIRConstantLoad>(zero_operand, (int32_t)0);
+            current_base_block->instruction<HIRConstantLoadInstruction>(zero_operand, (int32_t)0);
     } else {
         zero_load_instruction =
-            current_base_block->instruction<HIRConstantLoad>(zero_operand, (float)0.0f);
+            current_base_block->instruction<HIRConstantLoadInstruction>(zero_operand, (float)0.0f);
     }
 
     current_base_block->instructions.push_back(zero_load_instruction);
 
     int id = front_end.id_table.get_unused_id();
-    auto instruction = current_base_block->instruction<HIROperation>();
+    auto instruction = current_base_block->instruction<HIROperationInstruction>();
     instruction->operation_type = HIROperationType::minus;
     instruction->result_type = hir_type;
     instruction->operand_type = hir_type;
@@ -477,12 +473,12 @@ void bonk::HIREarlyGeneratorVisitor::visit(bonk::TreeNodeHiveAccess* node) {
     int constant_storage = front_end.id_table.get_unused_id();
 
     auto constant_load =
-        current_base_block->instruction<HIRConstantLoad>(constant_storage, (int64_t)offset);
+        current_base_block->instruction<HIRConstantLoadInstruction>(constant_storage, (int64_t)offset);
     current_base_block->instructions.push_back(constant_load);
 
     int result_id = front_end.id_table.get_unused_id();
 
-    auto instruction = current_base_block->instruction<HIROperation>();
+    auto instruction = current_base_block->instruction<HIROperationInstruction>();
     instruction->operation_type = HIROperationType::plus;
     instruction->result_type = HIRDataType::dword;
     instruction->operand_type = HIRDataType::dword;
@@ -504,7 +500,7 @@ void bonk::HIREarlyGeneratorVisitor::visit(bonk::TreeNodeHiveAccess* node) {
 
     int hive_loaded_copy_id = front_end.id_table.get_unused_id();
 
-    auto hive_loaded_copy_instruction = current_base_block->instruction<HIROperation>();
+    auto hive_loaded_copy_instruction = current_base_block->instruction<HIROperationInstruction>();
     hive_loaded_copy_instruction->operation_type = HIROperationType::assign;
     hive_loaded_copy_instruction->result_type = HIRDataType::dword;
     hive_loaded_copy_instruction->operand_type = HIRDataType::dword;
@@ -531,7 +527,7 @@ void bonk::HIREarlyGeneratorVisitor::visit(bonk::TreeNodeHiveAccess* node) {
 void bonk::HIREarlyGeneratorVisitor::visit(bonk::TreeNodeBonkStatement* node) {
     write_location(node);
 
-    auto instruction = current_base_block->instruction<HIRReturn>();
+    auto instruction = current_base_block->instruction<HIRReturnInstruction>();
 
     // The expression (if it's present) should outlive the instruction,
     // so reference counter is not decremented before returning.
@@ -573,14 +569,14 @@ void bonk::HIREarlyGeneratorVisitor::visit(bonk::TreeNodeLoopStatement* node) {
     current_loop_context->loop_block = node;
 
     // Insert loop start label
-    auto loop_start_label = current_base_block->instruction<HIRLabel>(loop_start_id);
+    auto loop_start_label = current_base_block->instruction<HIRLabelInstruction>(loop_start_id);
     current_base_block->instructions.push_back(loop_start_label);
 
     // Compile loop body
     node->body->accept(this);
 
     // Insert jump to loop start
-    auto jump_instruction = current_base_block->instruction<HIRJump>();
+    auto jump_instruction = current_base_block->instruction<HIRJumpInstruction>();
     jump_instruction->label_id = loop_start_id;
     current_base_block->instructions.push_back(jump_instruction);
 
@@ -588,7 +584,7 @@ void bonk::HIREarlyGeneratorVisitor::visit(bonk::TreeNodeLoopStatement* node) {
     alive_scopes.pop_back();
 
     // Insert loop end label (after killing all variables, including loop variables)
-    auto loop_end_label = current_base_block->instruction<HIRLabel>(loop_end_id);
+    auto loop_end_label = current_base_block->instruction<HIRLabelInstruction>(loop_end_id);
     current_base_block->instructions.push_back(loop_end_label);
 }
 
@@ -598,7 +594,7 @@ void bonk::HIREarlyGeneratorVisitor::visit(bonk::TreeNodeBrekStatement* node) {
 
     kill_alive_variables(current_loop_context->loop_block);
 
-    auto instruction = current_base_block->instruction<HIRJump>();
+    auto instruction = current_base_block->instruction<HIRJumpInstruction>();
     instruction->label_id = current_loop_context->loop_end_label;
     current_base_block->instructions.push_back(instruction);
 }
@@ -673,14 +669,14 @@ void bonk::HIREarlyGeneratorVisitor::visit(bonk::TreeNodeCall* node) {
     }
 
     for (auto& parameter : parameters) {
-        auto instruction = current_base_block->instruction<HIRParameter>();
+        auto instruction = current_base_block->instruction<HIRParameterInstruction>();
         instruction->parameter = std::get<HIRValueRaw>(parameter->value).register_id;
         instruction->type = convert_type_to_hir(parameter->get_type());
         current_base_block->instructions.push_back(instruction);
     }
 
     auto return_register = front_end.id_table.get_unused_id();
-    auto instruction = current_base_block->instruction<HIRCall>();
+    auto instruction = current_base_block->instruction<HIRCallInstruction>();
     instruction->procedure_label_id = label_id;
     instruction->return_value = return_register;
     instruction->return_type = convert_type_to_hir(block_type->return_type.get());
@@ -709,8 +705,8 @@ void bonk::HIREarlyGeneratorVisitor::visit(TreeNodeCast* node) {
     return_value = std::move(value);
 }
 
-std::unique_ptr<bonk::IRProgram> bonk::HIREarlyGeneratorVisitor::generate(bonk::TreeNode* ast) {
-    auto program = std::make_unique<IRProgram>(front_end.id_table, front_end.symbol_table);
+std::unique_ptr<bonk::HIRProgram> bonk::HIREarlyGeneratorVisitor::generate(bonk::TreeNode* ast) {
+    auto program = std::make_unique<HIRProgram>(front_end.id_table, front_end.symbol_table);
     current_program = program.get();
     ast->accept(this);
     return program;
@@ -797,7 +793,7 @@ bonk::HIRDataType bonk::HIREarlyGeneratorVisitor::convert_type_to_hir(bonk::Type
 std::unique_ptr<bonk::HIRValue> bonk::HIREarlyGeneratorVisitor::load_value(HIRValue* value) {
     if (value->is_reference()) {
         int value_register = front_end.id_table.get_unused_id();
-        auto instruction = current_base_block->instruction<HIRMemoryLoad>();
+        auto instruction = current_base_block->instruction<HIRMemoryLoadInstruction>();
         instruction->target = value_register;
         instruction->type = convert_type_to_hir(value->get_type());
         instruction->address = std::get<HIRValueReference>(value->value).register_id;
@@ -834,7 +830,7 @@ std::unique_ptr<bonk::HIRValue> bonk::HIREarlyGeneratorVisitor::eval(bonk::TreeN
 void bonk::HIREarlyGeneratorVisitor::write_file(bonk::TreeNode* operation) {
     auto location = operation->source_position;
     if (current_base_block && location.line > 0 && location.ch > 0) {
-        auto instruction = current_base_block->instruction<HIRFile>();
+        auto instruction = current_base_block->instruction<HIRFileInstruction>();
         instruction->file = location.filename;
         current_base_block->instructions.push_back(instruction);
     }
@@ -843,7 +839,7 @@ void bonk::HIREarlyGeneratorVisitor::write_file(bonk::TreeNode* operation) {
 void bonk::HIREarlyGeneratorVisitor::write_location(bonk::TreeNode* operation) {
     auto location = operation->source_position;
     if (current_base_block && location.line > 0 && location.ch > 0) {
-        auto instruction = current_base_block->instruction<HIRLocation>();
+        auto instruction = current_base_block->instruction<HIRLocationInstruction>();
         instruction->column = location.ch;
         instruction->line = location.line;
         current_base_block->instructions.push_back(instruction);
@@ -853,7 +849,7 @@ void bonk::HIREarlyGeneratorVisitor::write_location(bonk::TreeNode* operation) {
 void bonk::HIREarlyGeneratorVisitor::visit(bonk::TreeNodeNull* node) {
     write_location(node);
     auto null_id = front_end.id_table.get_unused_id();
-    auto instruction = current_base_block->instruction<HIRConstantLoad>(null_id, (int64_t)0);
+    auto instruction = current_base_block->instruction<HIRConstantLoadInstruction>(null_id, (int64_t)0);
     current_base_block->instructions.push_back(instruction);
 
     auto null_value = std::make_unique<HIRValue>(*this);
@@ -868,7 +864,7 @@ void bonk::HIRValue::increase_reference_counter() {
     if (std::holds_alternative<HIRValueReference>(value)) {
         auto& reference_container = std::get<HIRValueReference>(value).reference_container;
 
-        auto reference_increment = visitor.current_base_block->instruction<HIRIncRefCounter>();
+        auto reference_increment = visitor.current_base_block->instruction<HIRIncRefCounterInstruction>();
         reference_increment->address = reference_container.register_id;
         visitor.current_base_block->instructions.push_back(reference_increment);
     }
@@ -878,7 +874,7 @@ void bonk::HIRValue::increase_reference_counter() {
         if (raw_value.type->kind != TypeKind::hive) {
             return;
         }
-        auto reference_increment = visitor.current_base_block->instruction<HIRIncRefCounter>();
+        auto reference_increment = visitor.current_base_block->instruction<HIRIncRefCounterInstruction>();
         reference_increment->address = raw_value.register_id;
         visitor.current_base_block->instructions.push_back(reference_increment);
     }
@@ -888,7 +884,7 @@ void bonk::HIRValue::decrease_reference_count() {
     if (std::holds_alternative<HIRValueReference>(value)) {
         auto& reference_container = std::get<HIRValueReference>(value).reference_container;
 
-        auto reference_decrement = visitor.current_base_block->instruction<HIRDecRefCounter>();
+        auto reference_decrement = visitor.current_base_block->instruction<HIRDecRefCounterInstruction>();
         reference_decrement->address = reference_container.register_id;
         reference_decrement->hive_definition =
             ((HiveType*)reference_container.type)->hive_definition;
@@ -900,7 +896,7 @@ void bonk::HIRValue::decrease_reference_count() {
         if (raw_value.type->kind != TypeKind::hive) {
             return;
         }
-        auto reference_decrement = visitor.current_base_block->instruction<HIRDecRefCounter>();
+        auto reference_decrement = visitor.current_base_block->instruction<HIRDecRefCounterInstruction>();
         reference_decrement->address = raw_value.register_id;
         reference_decrement->hive_definition = ((HiveType*)get_type())->hive_definition;
         visitor.current_base_block->instructions.push_back(reference_decrement);

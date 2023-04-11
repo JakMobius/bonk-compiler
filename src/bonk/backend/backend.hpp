@@ -8,7 +8,7 @@ struct Compiler;
 }
 
 #include "bonk/frontend/ast/ast.hpp"
-#include "bonk/middleend/ir/ir.hpp"
+#include "bonk/middleend/ir/hir.hpp"
 #include "utils/streams.hpp"
 
 namespace bonk {
@@ -19,7 +19,7 @@ struct Backend {
 
     virtual ~Backend() = default;
 
-    virtual void compile_program(IRProgram& program, const bonk::OutputStream& output) = 0;
+    virtual void compile_program(HIRProgram& program, const bonk::OutputStream& output) = 0;
 };
 
 } // namespace bonk

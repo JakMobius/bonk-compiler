@@ -73,7 +73,7 @@ bonk::ExternalModule* bonk::FrontEnd::add_external_module(const std::filesystem:
     return module_ptr;
 }
 
-std::unique_ptr<bonk::IRProgram> bonk::FrontEnd::generate_hir(TreeNode* ast) {
+std::unique_ptr<bonk::HIRProgram> bonk::FrontEnd::generate_hir(TreeNode* ast) {
     return bonk::HIREarlyGeneratorVisitor(*this).generate(ast);
 }
 

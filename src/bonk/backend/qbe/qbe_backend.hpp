@@ -7,29 +7,28 @@ namespace bonk::qbe_backend {
 
 class QBEBackend : public Backend {
 
-    IRProgram* current_program = nullptr;
+    HIRProgram* current_program = nullptr;
     std::vector<HIRProcedureParameter> call_parameters;
     const bonk::OutputStream* output_stream = nullptr;
 
-    void compile_procedure(IRProcedure& procedure);
-    void compile_instruction(IRInstruction& instruction);
-    bool compile_procedure_header(bonk::IRInstruction& instruction);
+    void compile_procedure(HIRProcedure& procedure);
+    void compile_instruction(HIRInstruction& instruction);
+    bool compile_procedure_header(bonk::HIRInstruction& instruction);
     void compile_procedure_footer();
 
-    void compile_instruction(HIRInstruction& instruction);
-    void compile_instruction(HIRLabel& instruction);
-    void compile_instruction(HIRConstantLoad& instruction);
-    void compile_instruction(HIRSymbolLoad& instruction);
-    void compile_instruction(HIROperation& instruction);
-    void compile_instruction(HIRJump& instruction);
-    void compile_instruction(HIRJumpNZ& instruction);
-    void compile_instruction(HIRCall& instruction);
-    void compile_instruction(HIRReturn& instruction);
-    void compile_instruction(HIRParameter& instruction);
-    void compile_instruction(HIRMemoryLoad& instruction);
-    void compile_instruction(HIRMemoryStore& instruction);
-    void compile_instruction(HIRFile& instruction);
-    void compile_instruction(HIRLocation& instruction);
+    void compile_instruction(HIRLabelInstruction& instruction);
+    void compile_instruction(HIRConstantLoadInstruction& instruction);
+    void compile_instruction(HIRSymbolLoadInstruction& instruction);
+    void compile_instruction(HIROperationInstruction& instruction);
+    void compile_instruction(HIRJumpInstruction& instruction);
+    void compile_instruction(HIRJumpNZInstruction& instruction);
+    void compile_instruction(HIRCallInstruction& instruction);
+    void compile_instruction(HIRReturnInstruction& instruction);
+    void compile_instruction(HIRParameterInstruction& instruction);
+    void compile_instruction(HIRMemoryLoadInstruction& instruction);
+    void compile_instruction(HIRMemoryStoreInstruction& instruction);
+    void compile_instruction(HIRFileInstruction& instruction);
+    void compile_instruction(HIRLocationInstruction& instruction);
 
     char get_hir_type(bonk::HIRDataType type, bool base_type = true);
     void print_comparison(HIROperationType type, HIRDataType operand_type);
@@ -37,11 +36,12 @@ class QBEBackend : public Backend {
     void padding();
 
   public:
-    void compile_program(IRProgram& program, const bonk::OutputStream& output) override;
+    void compile_program(HIRProgram& program, const bonk::OutputStream& output) override;
 
     QBEBackend(Compiler& linked_compiler): Backend(linked_compiler) {};
 
     bool generate_debug_symbols = false;
+    HIRFileInstruction* find_procedure_file_instruction(HIRProcedure& procedure);
 };
 
 }
