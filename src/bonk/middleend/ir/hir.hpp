@@ -173,6 +173,7 @@ struct HIRJumpInstruction : HIRInstruction {
     int label_id = -1;
 
     HIRJumpInstruction();
+    HIRJumpInstruction(int label_id);
 };
 
 struct HIRJumpNZInstruction : HIRInstruction {
@@ -180,6 +181,7 @@ struct HIRJumpNZInstruction : HIRInstruction {
     int nz_label = -1;
     int z_label = -1;
 
+    HIRJumpNZInstruction();
     HIRJumpNZInstruction(IRRegister condition, int nz_label, int z_label);
 };
 

@@ -7,13 +7,15 @@
 namespace bonk {
 
 class HIRDominatorFinder : public HIRCFGForwardWalker {
-    std::unordered_map<HIRBaseBlock*, std::vector<bool>> counted_dominators;
+    std::vector<std::vector<bool>> counted_dominators;
+
+    bool walk_block(HIRBaseBlock& block) override;
 
   public:
     HIRDominatorFinder() : HIRCFGForwardWalker() {
     }
 
-    bool walk_block(HIRBaseBlock& block) override;
+    std::vector<std::vector<bool>>& find_dominators(HIRProcedure& procedure);
 };
 
 }

@@ -342,13 +342,16 @@ void bonk::HIRPrinter::print(const bonk::HIRProgram& program,
 void bonk::HIRPrinter::print_label(const bonk::HIRProgram& program, int label) const {
 
     auto node = program.id_table.get_node(label);
-    auto it = program.symbol_table.symbol_names.find(node);
 
-    if (it != program.symbol_table.symbol_names.end()) {
-        stream.get_stream() << it->second;
-    } else {
-        stream.get_stream() << "L" << label;
+    if(node) {
+        auto it = program.symbol_table.symbol_names.find(node);
+        if (it != program.symbol_table.symbol_names.end()) {
+            stream.get_stream() << it->second;
+            return;
+        }
     }
+
+    stream.get_stream() << "L" << label;
 }
 
 void bonk::HIRPrinter::padding() const {
