@@ -69,6 +69,8 @@ struct IRProcedure {
     IRProcedure(IRProgram& program) : program(program) {
     }
 
+    void add_control_flow_edge(IRBaseBlock* from, IRBaseBlock* to);
+
     // Proxy for IRProgram::instruction
     template <typename T, typename... Args> T* instruction(Args&&... args) {
         return program.instruction<T>(std::forward<Args>(args)...);
@@ -82,8 +84,8 @@ struct IRProcedure {
 struct IRBaseBlock {
     IRProcedure& procedure;
     std::list<IRInstruction*> instructions{};
-    std::vector<IRRegister> input_registers{};
-    std::vector<IRRegister> output_registers{};
+    std::vector<IRBaseBlock*> predecessors{};
+    std::vector<IRBaseBlock*> successors{};
 
     IRBaseBlock(IRProcedure& procedure) : procedure(procedure) {
     }

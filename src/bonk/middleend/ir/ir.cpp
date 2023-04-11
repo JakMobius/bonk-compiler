@@ -36,3 +36,8 @@ bonk::IRInstructionPool::~IRInstructionPool() {
 void bonk::IRProgram::create_procedure() {
     procedures.push_back(std::make_unique<IRProcedure>(*this));
 }
+
+void bonk::IRProcedure::add_control_flow_edge(bonk::IRBaseBlock* from, bonk::IRBaseBlock* to) {
+    from->successors.push_back(to);
+    to->predecessors.push_back(from);
+}
