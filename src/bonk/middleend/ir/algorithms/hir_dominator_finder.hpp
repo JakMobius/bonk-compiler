@@ -2,20 +2,18 @@
 
 #include <unordered_map>
 #include <vector>
-#include "hir_cfg_forward_walker.hpp"
+#include "hir_cfg_walker.hpp"
+#include "utils/dynamic_bitset.hpp"
 
 namespace bonk {
 
-class HIRDominatorFinder : public HIRCFGForwardWalker {
-    std::vector<std::vector<bool>> counted_dominators;
-
-    bool walk_block(HIRBaseBlock& block) override;
+class HIRDominatorFinder {
 
   public:
-    HIRDominatorFinder() : HIRCFGForwardWalker() {
+    HIRDominatorFinder() {
     }
 
-    std::vector<std::vector<bool>>& find_dominators(HIRProcedure& procedure);
+    std::vector<DynamicBitSet> find_dominators(HIRProcedure& procedure);
 };
 
 }

@@ -78,13 +78,11 @@ bool compile_bonk_source(const char* source, std::filesystem::path output_file) 
         return false;
     }
 
-    bonk::MiddleEnd middle_end(compiler);
-    middle_end.program = std::move(ir_program);
-    if(!middle_end.do_passes()) {
+    if(!bonk::MiddleEnd(compiler).do_passes(*ir_program)) {
         return false;
     }
 
-    bonk::qbe_backend::QBEBackend(compiler).compile_program(*middle_end.program, output_stream);
+    bonk::qbe_backend::QBEBackend(compiler).compile_program(*ir_program, output_stream);
 
     return true;
 }

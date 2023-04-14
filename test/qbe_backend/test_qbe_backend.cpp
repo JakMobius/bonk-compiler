@@ -42,16 +42,12 @@ TEST(QBEBackend, CodegenTest) {
 
     ASSERT_NE(ir_program, nullptr);
 
-    bonk::MiddleEnd middle_end(compiler);
-    middle_end.program = std::move(ir_program);
-    middle_end.do_passes();
+    bonk::MiddleEnd(compiler).do_passes(*ir_program);
 
-    auto ir_program_raw = middle_end.program.get();
-
-    ASSERT_NE(ir_program_raw, nullptr);
+    ASSERT_NE(ir_program, nullptr);
 
     bonk::qbe_backend::QBEBackend backend{compiler};
-    backend.compile_program(*ir_program_raw, output_stream);
+    backend.compile_program(*ir_program, output_stream);
     std::string result = result_stream.str();
 
     // add_one function definition

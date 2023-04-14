@@ -72,7 +72,8 @@ struct HIRProgram {
     InstructionPool instruction_pool{};
     std::vector<std::unique_ptr<HIRProcedure>> procedures{};
 
-    HIRProgram(IDTable& id_table, SymbolTable& symbol_table) : id_table(id_table), symbol_table(symbol_table) {
+    HIRProgram(IDTable& id_table, SymbolTable& symbol_table)
+        : id_table(id_table), symbol_table(symbol_table) {
     }
 
     // Proxy for IRInstructionPool::instruction
@@ -89,6 +90,7 @@ struct HIRProcedure {
     int procedure_id = -1;
     int start_block_index = -1;
     int end_block_index = -1;
+    int used_registers = -1;
 
     std::vector<HIRProcedureParameter> parameters;
     HIRDataType return_type = HIRDataType::unset;
@@ -105,6 +107,7 @@ struct HIRProcedure {
     }
 
     void create_base_block();
+    int get_unused_register();
 };
 
 struct HIRBaseBlock {
@@ -128,6 +131,42 @@ struct HIRInstruction {
 
     HIRInstruction(HIRInstructionType type);
     virtual ~HIRInstruction() = default;
+
+    virtual int get_read_register_count() const {
+        return 0;
+    }
+    virtual int get_write_register_count() const {
+        return 0;
+    }
+    int get_operand_count() const {
+        return get_read_register_count() + get_write_register_count();
+    }
+
+
+    const IRRegister& get_read_register(int index) const {
+        return const_cast<HIRInstruction*>(this)->get_read_register(index);
+    }
+    const IRRegister& get_write_register(int index) const {
+        return const_cast<HIRInstruction*>(this)->get_write_register(index);
+    }
+    const IRRegister& get_operand(int index) const {
+        return const_cast<HIRInstruction*>(this)->get_operand(index);
+    }
+
+    virtual IRRegister& get_read_register(int index) {
+        assert(false);
+    }
+    virtual IRRegister& get_write_register(int index) {
+        assert(false);
+    }
+    IRRegister& get_operand(int index) {
+        int read_count = get_read_register_count();
+        if(index < read_count) {
+            return get_read_register(index);
+        } else {
+            return get_write_register(index - read_count);
+        }
+    }
 };
 
 struct HIRLabelInstruction : HIRInstruction {
@@ -148,6 +187,13 @@ struct HIRConstantLoadInstruction : HIRInstruction {
     HIRConstantLoadInstruction(IRRegister target, int8_t constant);
     HIRConstantLoadInstruction(IRRegister target, float constant);
     HIRConstantLoadInstruction(IRRegister target, double constant);
+
+    int get_write_register_count() const override {
+        return 1;
+    }
+    IRRegister& get_write_register(int index) override {
+        return target;
+    }
 };
 
 struct HIRSymbolLoadInstruction : HIRInstruction {
@@ -156,6 +202,13 @@ struct HIRSymbolLoadInstruction : HIRInstruction {
     int symbol_id = -1;
 
     HIRSymbolLoadInstruction(IRRegister target, int symbol_id, HIRDataType type);
+
+    int get_write_register_count() const override {
+        return 1;
+    }
+    IRRegister& get_write_register(int index) override {
+        return target;
+    }
 };
 
 struct HIROperationInstruction : HIRInstruction {
@@ -167,6 +220,19 @@ struct HIROperationInstruction : HIRInstruction {
     HIRDataType result_type = HIRDataType::unset;
 
     HIROperationInstruction();
+
+    int get_read_register_count() const override {
+        return right.has_value() ? 2 : 1;
+    }
+    IRRegister& get_read_register(int index) override {
+        return index == 0 ? left : right.value();
+    }
+    int get_write_register_count() const override {
+        return 1;
+    }
+    IRRegister& get_write_register(int index) override {
+        return target;
+    }
 };
 
 struct HIRJumpInstruction : HIRInstruction {
@@ -183,6 +249,13 @@ struct HIRJumpNZInstruction : HIRInstruction {
 
     HIRJumpNZInstruction();
     HIRJumpNZInstruction(IRRegister condition, int nz_label, int z_label);
+
+    int get_read_register_count() const override {
+        return 1;
+    }
+    IRRegister& get_read_register(int index) override {
+        return condition;
+    }
 };
 
 struct HIRCallInstruction : HIRInstruction {
@@ -192,6 +265,13 @@ struct HIRCallInstruction : HIRInstruction {
     int procedure_label_id = -1;
 
     HIRCallInstruction();
+
+    int get_write_register_count() const override {
+        return return_value.has_value() ? 1 : 0;
+    }
+    IRRegister& get_write_register(int index) override {
+        return return_value.value();
+    }
 };
 
 struct HIRReturnInstruction : HIRInstruction {
@@ -200,6 +280,13 @@ struct HIRReturnInstruction : HIRInstruction {
 
     HIRReturnInstruction(IRRegister return_value);
     HIRReturnInstruction();
+
+    int get_read_register_count() const override {
+        return return_value.has_value() ? 1 : 0;
+    }
+    IRRegister& get_read_register(int index) override {
+        return return_value.value();
+    }
 };
 
 struct HIRParameterInstruction : HIRInstruction {
@@ -207,6 +294,13 @@ struct HIRParameterInstruction : HIRInstruction {
     IRRegister parameter = 0;
 
     HIRParameterInstruction();
+
+    int get_read_register_count() const override {
+        return 1;
+    }
+    IRRegister& get_read_register(int index) override {
+        return parameter;
+    }
 };
 
 struct HIRProcedureParameter {
@@ -220,6 +314,20 @@ struct HIRMemoryLoadInstruction : HIRInstruction {
     HIRDataType type = HIRDataType::unset;
 
     HIRMemoryLoadInstruction();
+    HIRMemoryLoadInstruction(IRRegister target, IRRegister address, HIRDataType type);
+
+    int get_write_register_count() const override {
+        return 1;
+    }
+    IRRegister& get_write_register(int index) override {
+        return target;
+    }
+    int get_read_register_count() const override {
+        return 1;
+    }
+    IRRegister& get_read_register(int index) override {
+        return address;
+    }
 };
 
 struct HIRMemoryStoreInstruction : HIRInstruction {
@@ -228,12 +336,26 @@ struct HIRMemoryStoreInstruction : HIRInstruction {
     HIRDataType type = HIRDataType::unset;
 
     HIRMemoryStoreInstruction();
+
+    int get_read_register_count() const override {
+        return 2;
+    }
+    IRRegister& get_read_register(int index) override {
+        return index == 0 ? address : value;
+    }
 };
 
 struct HIRIncRefCounterInstruction : HIRInstruction {
     IRRegister address = 0;
 
     HIRIncRefCounterInstruction();
+
+    int get_read_register_count() const override {
+        return 1;
+    }
+    IRRegister& get_read_register(int index) override {
+        return address;
+    }
 };
 
 struct HIRDecRefCounterInstruction : HIRInstruction {
@@ -241,10 +363,17 @@ struct HIRDecRefCounterInstruction : HIRInstruction {
     TreeNodeHiveDefinition* hive_definition = nullptr;
 
     HIRDecRefCounterInstruction();
+
+    int get_read_register_count() const override {
+        return 1;
+    }
+    IRRegister& get_read_register(int index) override {
+        return address;
+    }
 };
 
-struct HIRFileInstruction: HIRInstruction {
-    std::string_view file {};
+struct HIRFileInstruction : HIRInstruction {
+    std::string_view file{};
 
     HIRFileInstruction();
 };

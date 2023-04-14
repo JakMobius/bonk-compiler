@@ -19,6 +19,9 @@ void bonk::HIRProcedure::create_base_block() {
     block->index = base_blocks.size();
     base_blocks.push_back(std::move(block));
 }
+int bonk::HIRProcedure::get_unused_register() {
+    return used_registers++;
+}
 
 bonk::HIRLabelInstruction::HIRLabelInstruction(int label_id)
     : HIRInstruction(HIRInstructionType::label), label_id(label_id) {
@@ -111,6 +114,12 @@ bonk::HIRParameterInstruction::HIRParameterInstruction()
 
 bonk::HIRMemoryLoadInstruction::HIRMemoryLoadInstruction()
     : HIRInstruction(HIRInstructionType::memory_load) {
+}
+
+bonk::HIRMemoryLoadInstruction::HIRMemoryLoadInstruction(IRRegister target, IRRegister address,
+                                                         HIRDataType type)
+    : HIRInstruction(HIRInstructionType::memory_load), target(target), address(address),
+      type(type) {
 }
 
 bonk::HIRMemoryStoreInstruction::HIRMemoryStoreInstruction()

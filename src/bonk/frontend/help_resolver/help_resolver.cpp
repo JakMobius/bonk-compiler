@@ -187,16 +187,13 @@ void bonk::HelpResolver::recompile_file(bonk::FrontEnd& front_end,
     if (!hir)
         return;
 
-    MiddleEnd middle_end(compiler);
-    middle_end.program = std::move(hir);
-
-    if(!middle_end.do_passes())
+    if(!bonk::MiddleEnd(compiler).do_passes(*hir))
         return;
 
     std::filesystem::path output_path = get_output_path(path);
     std::filesystem::create_directories(output_path.parent_path());
     bonk::FileOutputStream output_file(output_path.string());
-    compiler.backend->compile_program(*middle_end.program, output_file);
+    compiler.backend->compile_program(*hir, output_file);
 }
 
 void bonk::HelpResolver::file_not_found(bonk::TreeNode* node, const std::filesystem::path& path) {

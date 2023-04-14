@@ -6,15 +6,17 @@
 
 namespace bonk {
 
-class HIRCFGForwardWalker {
+class HIRCFGWalker {
+  protected:
     std::unordered_set<HIRBaseBlock*> visited_blocks;
 
   public:
-    explicit HIRCFGForwardWalker() {
+    explicit HIRCFGWalker() {
     }
 
     bool walk(HIRProcedure& procedure);
     virtual bool walk_block(HIRBaseBlock& block);
+    bool walk_backwards = false;
 };
 
 }

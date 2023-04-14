@@ -12,6 +12,7 @@ bool bonk::HIRRefCountReplacer::replace_ref_counters(bonk::HIRProgram& program) 
 }
 
 bool bonk::HIRRefCountReplacer::replace_ref_counters(bonk::HIRProcedure& procedure) {
+    current_procedure = &procedure;
     current_program = &procedure.program;
     for (auto& block : procedure.base_blocks) {
         current_base_block = block.get();
@@ -21,6 +22,7 @@ bool bonk::HIRRefCountReplacer::replace_ref_counters(bonk::HIRProcedure& procedu
         }
     }
     current_program = nullptr;
+    current_procedure = nullptr;
     return true;
 }
 
@@ -39,10 +41,10 @@ void bonk::HIRRefCountReplacer::replace_ref_counters(HIRInstruction* instruction
 }
 
 bonk::IRRegister bonk::HIRRefCountReplacer::get_reference_address(IRRegister hive_register) {
-    int constant_register = current_program->id_table.get_unused_id();
+    int constant_register = current_procedure->get_unused_register();
     add_instruction<HIRConstantLoadInstruction>(constant_register, (int64_t)8);
 
-    int value_register = current_program->id_table.get_unused_id();
+    int value_register = current_procedure->get_unused_register();
     auto instruction = add_instruction<HIROperationInstruction>();
     instruction->target = value_register;
     instruction->result_type = HIRDataType::dword;
@@ -106,13 +108,14 @@ void bonk::HIRRefCountReplacer::decrease_reference_count(bonk::IRRegister regist
     add_instruction<HIRLabelInstruction>(skip_label);
 }
 
+
 void bonk::HIRRefCountReplacer::remove_instruction() {
     current_instruction_iterator =
         current_base_block->instructions.erase(current_instruction_iterator);
 }
 
 bonk::IRRegister bonk::HIRRefCountReplacer::load_reference_count(bonk::IRRegister reference_address) {
-    int reference_counter_register = current_program->id_table.get_unused_id();
+    int reference_counter_register = current_procedure->get_unused_register();
     auto load_instruction = add_instruction<HIRMemoryLoadInstruction>();
     load_instruction->target = reference_counter_register;
     load_instruction->type = HIRDataType::dword;
@@ -122,10 +125,10 @@ bonk::IRRegister bonk::HIRRefCountReplacer::load_reference_count(bonk::IRRegiste
 
 bonk::IRRegister bonk::HIRRefCountReplacer::adjust_reference_count(IRRegister reference_count,
                                                                    int64_t delta) {
-    int constant_register = current_program->id_table.get_unused_id();
+    int constant_register = current_procedure->get_unused_register();
     add_instruction<HIRConstantLoadInstruction>(constant_register, delta);
 
-    int result_register = current_program->id_table.get_unused_id();
+    int result_register = current_procedure->get_unused_register();
     auto instruction = add_instruction<HIROperationInstruction>();
     instruction->target = result_register;
     instruction->result_type = HIRDataType::dword;

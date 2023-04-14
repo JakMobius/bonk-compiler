@@ -10,6 +10,7 @@ namespace bonk {
 class HIRRefCountReplacer : ASTVisitor {
 
     HIRProgram* current_program;
+    HIRProcedure* current_procedure;
     HIRBaseBlock* current_base_block;
     std::list<HIRInstruction*>::iterator current_instruction_iterator;
 

@@ -20,7 +20,7 @@ TEST(Playground, Playground) {
 
     const char* source = R"(
         blok main {
-            loop[bowl counter = 0] {
+            loop[bowl counter = 10] {
                 counter = counter - 1;
                 counter > 0 or { brek; };
             }
@@ -52,19 +52,17 @@ TEST(Playground, Playground) {
     //    bonk::HIRPrinter printer{output_stream};
     //    printer.print(*ir_program);
 
-    bonk::MiddleEnd middle_end(compiler);
-    middle_end.program = std::move(ir_program);
-    ASSERT_EQ(middle_end.do_passes(), true);
+    ASSERT_EQ(bonk::MiddleEnd(compiler).do_passes(*ir_program), true);
 
     // Print CFG
 
     bonk::HIRGraphvizDumper dumper{output_stream};
-    dumper.dump(*middle_end.program);
+    dumper.dump(*ir_program);
 
     // Print dominators
 
     bonk::HIRDominatorFinder dominator_finder;
-    auto& dominators = dominator_finder.find_dominators(*middle_end.program->procedures[0]);
+    auto dominators = dominator_finder.find_dominators(*ir_program->procedures[0]);
 
     for (int i = 0; i < dominators.size(); i++) {
         std::cout << "dominators[" << i << "] = {";
@@ -72,7 +70,7 @@ TEST(Playground, Playground) {
             if (j != 0) {
                 std::cout << ", ";
             }
-            std::cout << dominators[i][j];
+            std::cout << (dominators[i][j] ? "1" : "0");
         }
         std::cout << "}" << std::endl;
     }

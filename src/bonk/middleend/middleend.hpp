@@ -9,11 +9,10 @@ namespace bonk {
 class MiddleEnd {
   public:
     Compiler& compiler;
-    std::unique_ptr<HIRProgram> program;
 
     MiddleEnd(Compiler& compiler): compiler(compiler) {};
 
-    bool do_passes();
+    bool do_passes(HIRProgram& program);
 
 };
 

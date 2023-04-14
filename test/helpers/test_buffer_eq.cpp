@@ -1,6 +1,6 @@
 
 #include <gtest/gtest.h>
-#include "../utils/test_buffer_eq.hpp"
+#include "../helpers/test_buffer_eq.hpp"
 
 static const char HEX_DIGITS[] = "0123456789abcdef";
 

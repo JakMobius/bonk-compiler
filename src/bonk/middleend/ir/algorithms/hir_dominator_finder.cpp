@@ -1,34 +1,55 @@
 
 #include "hir_dominator_finder.hpp"
 
-bool bonk::HIRDominatorFinder::walk_block(bonk::HIRBaseBlock& block) {
-    auto& dominators = counted_dominators[block.index];
+std::vector<bonk::DynamicBitSet>
+bonk::HIRDominatorFinder::find_dominators(bonk::HIRProcedure& procedure) {
+    std::vector<bonk::DynamicBitSet> result;
+    result.reserve(procedure.base_blocks.size());
+    for (auto& block : procedure.base_blocks) {
+        result.emplace_back(procedure.base_blocks.size(), true);
+    }
 
-    dominators.resize(counted_dominators.size());
+    bonk::DynamicBitSet work_list(procedure.base_blocks.size(), false);
+    work_list[procedure.start_block_index] = true;
 
-    if (!block.predecessors.empty()) {
-        dominators = counted_dominators[block.predecessors[0]->index];
+    bonk::DynamicBitSet temp(procedure.base_blocks.size());
 
-        for (int i = 1; i < block.predecessors.size(); i++) {
-            auto& predecessor_dominators = counted_dominators[block.predecessors[i]->index];
-            if(predecessor_dominators.empty()) continue;
+    while(true) {
+        bool changed = false;
+        for (int i = 0; i < procedure.base_blocks.size(); i++) {
+            if (!work_list[i])
+                continue;
+            work_list[i] = false;
 
-            for (int j = 0; j < dominators.size(); j++) {
-                dominators[j] = dominators[j] && predecessor_dominators[j];
+            auto& block = *procedure.base_blocks[i];
+
+            if (!block.predecessors.empty()) {
+                temp.set();
+
+                for (auto& predecessor : block.predecessors) {
+                    auto& predecessor_dominators = result[predecessor->index];
+                    temp &= predecessor_dominators;
+                }
+            } else {
+                temp.reset();
             }
+
+            temp[i] = true;
+            if (temp == result[i])
+                continue;
+
+            result[i] = temp;
+
+            changed = true;
+
+            for (auto& successor : block.successors) {
+                work_list[successor->index] = true;
+            }
+        }
+        if(!changed) {
+            break;
         }
     }
 
-    dominators[block.index] = true;
-
-    HIRCFGForwardWalker::walk_block(block);
-    return true;
-}
-
-std::vector<std::vector<bool>>&
-bonk::HIRDominatorFinder::find_dominators(bonk::HIRProcedure& procedure) {
-    counted_dominators.clear();
-    counted_dominators.resize(procedure.base_blocks.size());
-    walk_block(*procedure.base_blocks[procedure.start_block_index]);
-    return counted_dominators;
+    return result;
 }
