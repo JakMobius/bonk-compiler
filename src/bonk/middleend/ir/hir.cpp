@@ -22,6 +22,54 @@ void bonk::HIRProcedure::create_base_block() {
 int bonk::HIRProcedure::get_unused_register() {
     return used_registers++;
 }
+void bonk::HIRProcedure::remove_killed_blocks() {
+    std::vector<int> new_indices(base_blocks.size(), -1);
+
+    int new_block_count = 0;
+
+    for (int i = 0; new_block_count < base_blocks.size(); new_block_count++) {
+        while (i < base_blocks.size() && base_blocks[i]->index == -1) {
+            i++;
+        }
+        if (i < base_blocks.size()) {
+            base_blocks[i]->remove_killed_edges();
+            new_indices[new_block_count] = i++;
+        } else {
+            break;
+        }
+    }
+
+    for (int i = 0; i < base_blocks.size(); i++) {
+        if (new_indices[i] == -1)
+            continue;
+
+        base_blocks[i] = std::move(base_blocks[new_indices[i]]);
+        base_blocks[i]->index = i;
+    }
+
+    start_block_index = new_indices[start_block_index];
+    end_block_index = new_indices[end_block_index];
+
+    base_blocks.resize(new_block_count);
+}
+
+void bonk::HIRBaseBlock::remove_killed_edges() {
+    int new_index = 0;
+    for (auto & successor : successors) {
+        if (successor->index != -1) {
+            successors[new_index++] = successor;
+        }
+    }
+    successors.resize(new_index);
+
+    new_index = 0;
+    for (auto & predecessor : predecessors) {
+        if (predecessor->index != -1) {
+            predecessors[new_index++] = predecessor;
+        }
+    }
+    predecessors.resize(new_index);
+}
 
 bonk::HIRLabelInstruction::HIRLabelInstruction(int label_id)
     : HIRInstruction(HIRInstructionType::label), label_id(label_id) {
@@ -78,6 +126,18 @@ bonk::HIRSymbolLoadInstruction::HIRSymbolLoadInstruction(bonk::IRRegister target
 
 bonk::HIROperationInstruction::HIROperationInstruction()
     : HIRInstruction(HIRInstructionType::operation) {
+}
+
+bonk::HIROperationInstruction& bonk::HIROperationInstruction::set_assign(bonk::IRRegister target,
+                                                                         bonk::IRRegister left,
+                                                                         bonk::HIRDataType type) {
+    this->target = target;
+    this->left = left;
+    this->right = std::nullopt;
+    this->operation_type = HIROperationType::assign;
+    this->operand_type = type;
+    this->result_type = type;
+    return *this;
 }
 
 bonk::HIRJumpInstruction::HIRJumpInstruction()
@@ -141,5 +201,6 @@ bonk::HIRLocationInstruction::HIRLocationInstruction()
     : HIRInstruction(HIRInstructionType::location) {
 }
 
-bonk::HIRPhiFunctionInstruction::HIRPhiFunctionInstruction(): HIRInstruction(HIRInstructionType::phi_function){
+bonk::HIRPhiFunctionInstruction::HIRPhiFunctionInstruction()
+    : HIRInstruction(HIRInstructionType::phi_function) {
 }

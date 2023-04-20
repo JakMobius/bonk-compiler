@@ -110,6 +110,7 @@ struct HIRProcedure {
 
     void create_base_block();
     int get_unused_register();
+    void remove_killed_blocks();
 };
 
 struct HIRBaseBlock {
@@ -122,10 +123,19 @@ struct HIRBaseBlock {
     HIRBaseBlock(HIRProcedure& procedure) : procedure(procedure) {
     }
 
+    void kill() {
+        index = -1;
+        instructions.clear();
+        predecessors.clear();
+        successors.clear();
+    }
+
     // Proxy for HIRProcedure::instruction
     template <typename T, typename... Args> T* instruction(Args&&... args) {
         return procedure.instruction<T>(std::forward<Args>(args)...);
     }
+
+    void remove_killed_edges();
 };
 
 struct HIRInstruction {
@@ -241,6 +251,8 @@ struct HIROperationInstruction : HIRInstruction {
             *type = result_type;
         return target;
     }
+
+    HIROperationInstruction& set_assign(IRRegister target, IRRegister left, HIRDataType type);
 };
 
 struct HIRJumpInstruction : HIRInstruction {

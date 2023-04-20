@@ -5,7 +5,15 @@
 #include "bonk/frontend/frontend.hpp"
 #include "bonk/frontend/parsing/lexic/lexer.hpp"
 #include "bonk/frontend/parsing/parser.hpp"
+#include "bonk/middleend/ir/algorithms/hir_base_block_separator.hpp"
+#include "bonk/middleend/ir/algorithms/hir_copy_propagation.hpp"
 #include "bonk/middleend/ir/algorithms/hir_dominator_finder.hpp"
+#include "bonk/middleend/ir/algorithms/hir_loc_collapser.hpp"
+#include "bonk/middleend/ir/algorithms/hir_ref_count_replacer.hpp"
+#include "bonk/middleend/ir/algorithms/hir_ssa_converter.hpp"
+#include "bonk/middleend/ir/algorithms/hir_unreachable_code_deleter.hpp"
+#include "bonk/middleend/ir/algorithms/hir_unused_def_deleter.hpp"
+#include "bonk/middleend/ir/algorithms/hir_variable_index_compressor.hpp"
 #include "bonk/middleend/ir/hir.hpp"
 #include "bonk/middleend/ir/hir_graphviz_dumper.hpp"
 #include "bonk/middleend/ir/hir_printer.hpp"
@@ -19,11 +27,18 @@ TEST(Playground, Playground) {
     bonk::Compiler compiler(config);
 
     const char* source = R"(
+        hive Value {
+            bowl value = 10;
+        }
+
+        hive Box {
+            bowl box: Value = null;
+        }
+
         blok main {
-            loop[bowl counter = 10] {
-                counter = counter - 1;
-                counter > 0 or { brek; };
-            }
+            bowl box = @Box;
+            bowl box2 = box;
+            bowl box3 = box2;
         }
     )";
 
@@ -52,7 +67,22 @@ TEST(Playground, Playground) {
     //    bonk::HIRPrinter printer{output_stream};
     //    printer.print(*ir_program);
 
-    ASSERT_EQ(bonk::MiddleEnd(compiler).do_passes(*ir_program), true);
+    bonk::HIRVariableIndexCompressor().compress(*ir_program);
+    bonk::HIRBaseBlockSeparator().separate_blocks(*ir_program);
+    bonk::HIRLocCollapser().collapse(*ir_program);
+
+    // <optimizations>
+    bonk::HIRSSAConverter().convert(*ir_program);
+    bonk::HIRCopyPropagation().propagate_copies(*ir_program);
+    bonk::HIRUnusedDefDeleter().delete_unused_defs(*ir_program);
+    bonk::HIRUnreachableCodeDeleter().delete_unreachable_code(*ir_program);
+    bonk::HIRVariableIndexCompressor().compress(*ir_program);
+    // </optimizations>
+
+//    bonk::HIRRefCountReplacer().replace_ref_counters(*ir_program);
+
+    bonk::HIRPrinter printer{output_stream};
+    printer.print(*ir_program);
 
     // Print CFG
 
