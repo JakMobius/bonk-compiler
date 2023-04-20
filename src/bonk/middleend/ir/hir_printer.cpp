@@ -1,7 +1,7 @@
 
 #include "hir_printer.hpp"
 
-void bonk::HIRPrinter::print(const bonk::HIRProgram& program,
+void bonk::HIRPrinter::print(const bonk::HIRBaseBlock& block,
                              const bonk::HIRConstantLoadInstruction& instruction) const {
     padding();
     stream.get_stream() << "%" << instruction.target << " <- ";
@@ -37,37 +37,33 @@ void bonk::HIRPrinter::print(const bonk::HIRProgram& program,
     stream.get_stream() << '\n';
 }
 
-void bonk::HIRPrinter::print(const bonk::HIRProgram& program,
+void bonk::HIRPrinter::print(const bonk::HIRBaseBlock& block,
                              const bonk::HIRLabelInstruction& instruction) const {
-    print_label(program, instruction.label_id);
+    print_label(block, instruction.label_id);
     stream.get_stream() << ":\n";
 }
 
-void bonk::HIRPrinter::print(const bonk::HIRProgram& program,
+void bonk::HIRPrinter::print(const bonk::HIRBaseBlock& block,
                              const bonk::HIRSymbolLoadInstruction& instruction) const {
     padding();
-    stream.get_stream() << "%" << instruction.target << " <- symbol " << instruction.symbol_id << "\n";
+    stream.get_stream() << "%" << instruction.target << " <- symbol " << instruction.symbol_id
+                        << "\n";
 }
 
-void bonk::HIRPrinter::print(const bonk::HIRProgram& program,
+void bonk::HIRPrinter::print(const bonk::HIRBaseBlock& block,
                              const bonk::HIRJumpInstruction& instruction) const {
     padding();
-    stream.get_stream() << "jmp ";
-    print_label(program, instruction.label_id);
-    stream.get_stream() << '\n';
+    stream.get_stream() << "jmp L" << instruction.label_id << '\n';
 }
 
-void bonk::HIRPrinter::print(const bonk::HIRProgram& program,
+void bonk::HIRPrinter::print(const bonk::HIRBaseBlock& block,
                              const bonk::HIRJumpNZInstruction& instruction) const {
     padding();
-    stream.get_stream() << "jmpnz %" << instruction.condition << ", ";
-    print_label(program, instruction.nz_label);
-    stream.get_stream() << ", ";
-    print_label(program, instruction.z_label);
-    stream.get_stream() << '\n';
+    stream.get_stream() << "jmpnz %" << instruction.condition << ", L" << instruction.nz_label
+                        << ", L" << instruction.z_label << '\n';
 }
 
-void bonk::HIRPrinter::print(const bonk::HIRProgram& program,
+void bonk::HIRPrinter::print(const bonk::HIRBaseBlock& block,
                              const bonk::HIRMemoryLoadInstruction& instruction) const {
     padding();
     stream.get_stream() << "%" << instruction.target << " <- load ";
@@ -76,7 +72,7 @@ void bonk::HIRPrinter::print(const bonk::HIRProgram& program,
     stream.get_stream() << '\n';
 }
 
-void bonk::HIRPrinter::print(const bonk::HIRProgram& program,
+void bonk::HIRPrinter::print(const bonk::HIRBaseBlock& block,
                              const bonk::HIRMemoryStoreInstruction& instruction) const {
     padding();
     stream.get_stream() << "store ";
@@ -85,7 +81,7 @@ void bonk::HIRPrinter::print(const bonk::HIRProgram& program,
     stream.get_stream() << '\n';
 }
 
-void bonk::HIRPrinter::print(const bonk::HIRProgram& program,
+void bonk::HIRPrinter::print(const bonk::HIRBaseBlock& block,
                              const bonk::HIRCallInstruction& instruction) const {
     padding();
 
@@ -95,12 +91,12 @@ void bonk::HIRPrinter::print(const bonk::HIRProgram& program,
 
     stream.get_stream() << "call ";
 
-    print_label(program, instruction.procedure_label_id);
+    print_label(block, instruction.procedure_label_id);
 
     stream.get_stream() << '\n';
 }
 
-void bonk::HIRPrinter::print(const bonk::HIRProgram& program,
+void bonk::HIRPrinter::print(const bonk::HIRBaseBlock& block,
                              const bonk::HIRReturnInstruction& instruction) const {
     padding();
 
@@ -114,7 +110,7 @@ void bonk::HIRPrinter::print(const bonk::HIRProgram& program,
     stream.get_stream() << '\n';
 }
 
-void bonk::HIRPrinter::print(const bonk::HIRProgram& program,
+void bonk::HIRPrinter::print(const bonk::HIRBaseBlock& block,
                              const bonk::HIROperationInstruction& instruction) const {
     padding();
 
@@ -131,7 +127,7 @@ void bonk::HIRPrinter::print(const bonk::HIRProgram& program,
     stream.get_stream() << '\n';
 }
 
-void bonk::HIRPrinter::print(const bonk::HIRProgram& program,
+void bonk::HIRPrinter::print(const bonk::HIRBaseBlock& block,
                              const bonk::HIRParameterInstruction& instruction) const {
     padding();
     stream.get_stream() << "param ";
@@ -216,66 +212,83 @@ void bonk::HIRPrinter::print(bonk::HIRDataType type) const {
     }
 }
 
-void bonk::HIRPrinter::print(const bonk::HIRProgram& program,
+void bonk::HIRPrinter::print(const bonk::HIRBaseBlock& block,
                              const bonk::HIRIncRefCounterInstruction& instruction) const {
     padding();
     stream.get_stream() << "inc_ref %" << instruction.address << "\n";
 }
 
-void bonk::HIRPrinter::print(const bonk::HIRProgram& program,
+void bonk::HIRPrinter::print(const bonk::HIRBaseBlock& block,
                              const bonk::HIRDecRefCounterInstruction& instruction) const {
     padding();
     stream.get_stream() << "dec_ref %" << instruction.address << " (hive "
                         << instruction.hive_definition->hive_name->identifier_text << ")\n";
 }
 
-void bonk::HIRPrinter::print(const bonk::HIRProgram& program,
+void bonk::HIRPrinter::print(const bonk::HIRBaseBlock& block,
+                             const bonk::HIRPhiFunctionInstruction& instruction) const {
+    padding();
+    assert(instruction.sources.size() == block.predecessors.size());
+    stream.get_stream() << "%" << instruction.target << " <- phi (";
+    for (int i = 0; i < instruction.sources.size(); i++) {
+        if (i != 0)
+            stream.get_stream() << ", ";
+        stream.get_stream() << "L" << block.predecessors[i]->index << " = %"
+                                << instruction.sources[i];
+    }
+    stream.get_stream() << ")\n";
+}
+
+void bonk::HIRPrinter::print(const bonk::HIRBaseBlock& block,
                              const bonk::HIRInstruction& instruction) const {
     switch (instruction.type) {
     case HIRInstructionType::constant_load:
-        print(program, static_cast<const HIRConstantLoadInstruction&>(instruction));
+        print(block, static_cast<const HIRConstantLoadInstruction&>(instruction));
         break;
     case HIRInstructionType::symbol_load:
-        print(program, static_cast<const HIRSymbolLoadInstruction&>(instruction));
+        print(block, static_cast<const HIRSymbolLoadInstruction&>(instruction));
         break;
     case HIRInstructionType::jump:
-        print(program, static_cast<const HIRJumpInstruction&>(instruction));
+        print(block, static_cast<const HIRJumpInstruction&>(instruction));
         break;
     case HIRInstructionType::jump_nz:
-        print(program, static_cast<const HIRJumpNZInstruction&>(instruction));
+        print(block, static_cast<const HIRJumpNZInstruction&>(instruction));
         break;
     case HIRInstructionType::call:
-        print(program, static_cast<const HIRCallInstruction&>(instruction));
+        print(block, static_cast<const HIRCallInstruction&>(instruction));
         break;
     case HIRInstructionType::return_op:
-        print(program, static_cast<const HIRReturnInstruction&>(instruction));
+        print(block, static_cast<const HIRReturnInstruction&>(instruction));
         break;
     case HIRInstructionType::operation:
-        print(program, static_cast<const HIROperationInstruction&>(instruction));
+        print(block, static_cast<const HIROperationInstruction&>(instruction));
         break;
     case HIRInstructionType::label:
-        print(program, static_cast<const HIRLabelInstruction&>(instruction));
+        print(block, static_cast<const HIRLabelInstruction&>(instruction));
         break;
     case HIRInstructionType::parameter:
-        print(program, static_cast<const HIRParameterInstruction&>(instruction));
+        print(block, static_cast<const HIRParameterInstruction&>(instruction));
         break;
     case HIRInstructionType::memory_load:
-        print(program, static_cast<const HIRMemoryLoadInstruction&>(instruction));
+        print(block, static_cast<const HIRMemoryLoadInstruction&>(instruction));
         break;
     case HIRInstructionType::memory_store:
-        print(program, static_cast<const HIRMemoryStoreInstruction&>(instruction));
+        print(block, static_cast<const HIRMemoryStoreInstruction&>(instruction));
         break;
     case HIRInstructionType::inc_ref_counter:
-        print(program, static_cast<const HIRIncRefCounterInstruction&>(instruction));
+        print(block, static_cast<const HIRIncRefCounterInstruction&>(instruction));
         break;
     case HIRInstructionType::dec_ref_counter:
-        print(program, static_cast<const HIRDecRefCounterInstruction&>(instruction));
+        print(block, static_cast<const HIRDecRefCounterInstruction&>(instruction));
         break;
     case HIRInstructionType::file:
-        print(program, static_cast<const HIRFileInstruction&>(instruction));
+        print(block, static_cast<const HIRFileInstruction&>(instruction));
         break;
     case HIRInstructionType::location:
-        print(program, static_cast<const HIRLocationInstruction&>(instruction));
+        print(block, static_cast<const HIRLocationInstruction&>(instruction));
+        break;
+    case HIRInstructionType::phi_function:
+        print(block, static_cast<const HIRPhiFunctionInstruction&>(instruction));
         break;
     default:
         assert(!"Unknown instruction type");
@@ -284,20 +297,19 @@ void bonk::HIRPrinter::print(const bonk::HIRProgram& program,
 
 void bonk::HIRPrinter::print(const bonk::HIRProgram& program) const {
     for (const auto& procedure : program.procedures) {
-        print(program, *procedure);
+        print(*procedure);
     }
 }
 
-void bonk::HIRPrinter::print(const bonk::HIRProgram& program,
-                             const bonk::HIRProcedure& procedure) const {
+void bonk::HIRPrinter::print(const bonk::HIRProcedure& procedure) const {
 
     if (procedure.is_external) {
         stream.get_stream() << "external ";
     }
     stream.get_stream() << "procedure ";
 
-    auto node = program.id_table.get_node(procedure.procedure_id);
-    stream.get_stream() << program.symbol_table.symbol_names[node];
+    auto node = procedure.program.id_table.get_node(procedure.procedure_id);
+    stream.get_stream() << procedure.program.symbol_table.symbol_names[node];
 
     stream.get_stream() << ": (";
     for (int i = 0; i < procedure.parameters.size(); i++) {
@@ -312,7 +324,7 @@ void bonk::HIRPrinter::print(const bonk::HIRProgram& program,
     stream.get_stream() << ") -> ";
     print(procedure.return_type);
 
-    if(procedure.is_external) {
+    if (procedure.is_external) {
         stream.get_stream() << ";";
         return;
     }
@@ -320,30 +332,32 @@ void bonk::HIRPrinter::print(const bonk::HIRProgram& program,
     stream.get_stream() << " {\n";
 
     for (const auto& base_block : procedure.base_blocks) {
+        stream.get_stream() << "L" << base_block->index << ":\n";
         for (const auto& instruction : base_block->instructions) {
-            print(program, static_cast<const bonk::HIRInstruction&>(*instruction));
+            print(*base_block, static_cast<const bonk::HIRInstruction&>(*instruction));
         }
     }
     stream.get_stream() << "}\n";
 }
 
-void bonk::HIRPrinter::print(const bonk::HIRProgram& program,
+void bonk::HIRPrinter::print(const bonk::HIRBaseBlock& block,
                              const bonk::HIRFileInstruction& instruction) const {
     padding();
     stream.get_stream() << "file " << instruction.file << "\n";
 }
 
-void bonk::HIRPrinter::print(const bonk::HIRProgram& program,
+void bonk::HIRPrinter::print(const bonk::HIRBaseBlock& block,
                              const bonk::HIRLocationInstruction& instruction) const {
     padding();
     stream.get_stream() << "loc " << instruction.line << ":" << instruction.column << "\n";
 }
 
-void bonk::HIRPrinter::print_label(const bonk::HIRProgram& program, int label) const {
+void bonk::HIRPrinter::print_label(const bonk::HIRBaseBlock& block, int label) const {
 
+    auto& program = block.procedure.program;
     auto node = program.id_table.get_node(label);
 
-    if(node) {
+    if (node) {
         auto it = program.symbol_table.symbol_names.find(node);
         if (it != program.symbol_table.symbol_names.end()) {
             stream.get_stream() << it->second;

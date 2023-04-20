@@ -176,7 +176,7 @@ class DynamicBitSet {
         if (bit_size != other.bit_size) {
             return false;
         }
-        for (auto i = (ssize_t)num_chunks(); i >= 0; --i) {
+        for (auto i = (ssize_t)num_chunks() - 1; i >= 0; --i) {
             if (data()[i] != other.data()[i]) {
                 return false;
             }

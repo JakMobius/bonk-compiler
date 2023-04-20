@@ -27,6 +27,12 @@ class HIRRefCountReplacer : ASTVisitor {
     void replace_ref_counters(HIRInstruction* instruction);
     void call_destructor(TreeNodeHiveDefinition* hive_definition, IRRegister register_id);
 
+    void switch_to_block(HIRBaseBlock* block);
+    HIRBaseBlock* create_block();
+    HIRBaseBlock* split_block();
+    void jmpnz(IRRegister register_id, HIRBaseBlock* nz_block, HIRBaseBlock* z_block);
+    void jmp(HIRBaseBlock* block);
+
     template <typename T, typename... Args> T* add_instruction(Args&&... args) {
         auto instruction = current_base_block->instruction<T>(std::forward<Args>(args)...);
         current_base_block->instructions.insert(current_instruction_iterator, instruction);

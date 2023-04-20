@@ -27,7 +27,8 @@ enum class HIRInstructionType {
     inc_ref_counter,
     dec_ref_counter,
     file,
-    location
+    location,
+    phi_function
 };
 
 enum class HIROperationType {
@@ -62,6 +63,7 @@ enum class HIRDataType {
 
 #include <optional>
 #include <string>
+#include <vector>
 #include "instruction_pool.hpp"
 
 namespace bonk {
@@ -142,12 +144,11 @@ struct HIRInstruction {
         return get_read_register_count() + get_write_register_count();
     }
 
-
     const IRRegister& get_read_register(int index) const {
         return const_cast<HIRInstruction*>(this)->get_read_register(index);
     }
     const IRRegister& get_write_register(int index) const {
-        return const_cast<HIRInstruction*>(this)->get_write_register(index);
+        return const_cast<HIRInstruction*>(this)->get_write_register(index, nullptr);
     }
     const IRRegister& get_operand(int index) const {
         return const_cast<HIRInstruction*>(this)->get_operand(index);
@@ -156,15 +157,16 @@ struct HIRInstruction {
     virtual IRRegister& get_read_register(int index) {
         assert(false);
     }
-    virtual IRRegister& get_write_register(int index) {
+    virtual IRRegister& get_write_register(int index, HIRDataType* type) {
         assert(false);
     }
+
     IRRegister& get_operand(int index) {
         int read_count = get_read_register_count();
-        if(index < read_count) {
+        if (index < read_count) {
             return get_read_register(index);
         } else {
-            return get_write_register(index - read_count);
+            return get_write_register(index - read_count, nullptr);
         }
     }
 };
@@ -191,7 +193,9 @@ struct HIRConstantLoadInstruction : HIRInstruction {
     int get_write_register_count() const override {
         return 1;
     }
-    IRRegister& get_write_register(int index) override {
+    IRRegister& get_write_register(int index, HIRDataType* type) override {
+        if (type)
+            *type = this->type;
         return target;
     }
 };
@@ -206,7 +210,9 @@ struct HIRSymbolLoadInstruction : HIRInstruction {
     int get_write_register_count() const override {
         return 1;
     }
-    IRRegister& get_write_register(int index) override {
+    IRRegister& get_write_register(int index, HIRDataType* type) override {
+        if (type)
+            *type = this->type;
         return target;
     }
 };
@@ -230,7 +236,9 @@ struct HIROperationInstruction : HIRInstruction {
     int get_write_register_count() const override {
         return 1;
     }
-    IRRegister& get_write_register(int index) override {
+    IRRegister& get_write_register(int index, HIRDataType* type) override {
+        if (type)
+            *type = result_type;
         return target;
     }
 };
@@ -269,7 +277,9 @@ struct HIRCallInstruction : HIRInstruction {
     int get_write_register_count() const override {
         return return_value.has_value() ? 1 : 0;
     }
-    IRRegister& get_write_register(int index) override {
+    IRRegister& get_write_register(int index, HIRDataType* type) override {
+        if (type)
+            *type = return_type;
         return return_value.value();
     }
 };
@@ -319,7 +329,9 @@ struct HIRMemoryLoadInstruction : HIRInstruction {
     int get_write_register_count() const override {
         return 1;
     }
-    IRRegister& get_write_register(int index) override {
+    IRRegister& get_write_register(int index, HIRDataType* type) override {
+        if (type)
+            *type = this->type;
         return target;
     }
     int get_read_register_count() const override {
@@ -383,6 +395,29 @@ struct HIRLocationInstruction : HIRInstruction {
     unsigned int column = 0;
 
     HIRLocationInstruction();
+};
+
+struct HIRPhiFunctionInstruction : HIRInstruction {
+    IRRegister target = 0;
+    HIRDataType type = HIRDataType::unset;
+    std::vector<IRRegister> sources{};
+
+    HIRPhiFunctionInstruction();
+
+    int get_write_register_count() const override {
+        return 1;
+    }
+    IRRegister& get_write_register(int index, HIRDataType* type) override {
+        if (type)
+            *type = this->type;
+        return target;
+    }
+    int get_read_register_count() const override {
+        return sources.size();
+    }
+    IRRegister& get_read_register(int index) override {
+        return sources[index];
+    }
 };
 
 } // namespace bonk

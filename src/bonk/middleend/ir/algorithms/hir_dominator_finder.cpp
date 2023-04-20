@@ -1,12 +1,11 @@
 
 #include "hir_dominator_finder.hpp"
 
-std::vector<bonk::DynamicBitSet>
-bonk::HIRDominatorFinder::find_dominators(bonk::HIRProcedure& procedure) {
-    std::vector<bonk::DynamicBitSet> result;
-    result.reserve(procedure.base_blocks.size());
+void bonk::HIRDominatorFinder::calculate_dominators() {
+
+    dominators.reserve(procedure.base_blocks.size());
     for (auto& block : procedure.base_blocks) {
-        result.emplace_back(procedure.base_blocks.size(), true);
+        dominators.emplace_back(procedure.base_blocks.size(), false);
     }
 
     bonk::DynamicBitSet work_list(procedure.base_blocks.size(), false);
@@ -14,7 +13,7 @@ bonk::HIRDominatorFinder::find_dominators(bonk::HIRProcedure& procedure) {
 
     bonk::DynamicBitSet temp(procedure.base_blocks.size());
 
-    while(true) {
+    while (true) {
         bool changed = false;
         for (int i = 0; i < procedure.base_blocks.size(); i++) {
             if (!work_list[i])
@@ -27,7 +26,11 @@ bonk::HIRDominatorFinder::find_dominators(bonk::HIRProcedure& procedure) {
                 temp.set();
 
                 for (auto& predecessor : block.predecessors) {
-                    auto& predecessor_dominators = result[predecessor->index];
+                    auto& predecessor_dominators = dominators[predecessor->index];
+                    if(!predecessor_dominators[predecessor->index]) {
+                        // This block is not processed yet
+                        continue;
+                    }
                     temp &= predecessor_dominators;
                 }
             } else {
@@ -35,10 +38,10 @@ bonk::HIRDominatorFinder::find_dominators(bonk::HIRProcedure& procedure) {
             }
 
             temp[i] = true;
-            if (temp == result[i])
+            if (temp == dominators[i])
                 continue;
 
-            result[i] = temp;
+            dominators[i] = temp;
 
             changed = true;
 
@@ -46,10 +49,18 @@ bonk::HIRDominatorFinder::find_dominators(bonk::HIRProcedure& procedure) {
                 work_list[successor->index] = true;
             }
         }
-        if(!changed) {
+        if (!changed) {
             break;
         }
     }
+}
 
-    return result;
+std::vector<bonk::DynamicBitSet>& bonk::HIRDominatorFinder::get_dominators() {
+    if (dominators.empty()) {
+        calculate_dominators();
+    }
+    return dominators;
+}
+
+bonk::HIRDominatorFinder::HIRDominatorFinder(bonk::HIRProcedure& procedure) : procedure(procedure) {
 }

@@ -8,6 +8,7 @@ namespace bonk::qbe_backend {
 class QBEBackend : public Backend {
 
     HIRProgram* current_program = nullptr;
+    HIRBaseBlock* current_block = nullptr;
     std::vector<HIRProcedureParameter> call_parameters;
     const bonk::OutputStream* output_stream = nullptr;
 
@@ -16,7 +17,6 @@ class QBEBackend : public Backend {
     bool compile_procedure_header(bonk::HIRInstruction& instruction);
     void compile_procedure_footer();
 
-    void compile_instruction(HIRLabelInstruction& instruction);
     void compile_instruction(HIRConstantLoadInstruction& instruction);
     void compile_instruction(HIRSymbolLoadInstruction& instruction);
     void compile_instruction(HIROperationInstruction& instruction);
@@ -29,6 +29,7 @@ class QBEBackend : public Backend {
     void compile_instruction(HIRMemoryStoreInstruction& instruction);
     void compile_instruction(HIRFileInstruction& instruction);
     void compile_instruction(HIRLocationInstruction& instruction);
+    void compile_instruction(HIRPhiFunctionInstruction& instruction);
 
     char get_hir_type(bonk::HIRDataType type, bool base_type = true);
     void print_comparison(HIROperationType type, HIRDataType operand_type);
@@ -42,6 +43,7 @@ class QBEBackend : public Backend {
 
     bool generate_debug_symbols = false;
     HIRFileInstruction* find_procedure_file_instruction(HIRProcedure& procedure);
+    void compile_block(std::unique_ptr<HIRBaseBlock>& block);
 };
 
 }

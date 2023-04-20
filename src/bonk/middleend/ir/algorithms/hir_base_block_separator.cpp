@@ -27,7 +27,8 @@ void bonk::HIRBaseBlockSeparator::fill_procedure_body() {
         if (hir_instruction->type == HIRInstructionType::label) {
             if (!is_first_instruction)
                 create_next_block();
-            annotate_block_with_label(current_block, ((HIRLabelInstruction*)hir_instruction)->label_id);
+            annotate_block_with_label(current_block,
+                                      ((HIRLabelInstruction*)hir_instruction)->label_id);
         } else if (is_first_instruction) {
             // Create a new label for the block, insert it before the first instruction
             int unused_id = current_procedure->program.id_table.get_unused_id();
@@ -59,7 +60,7 @@ void bonk::HIRBaseBlockSeparator::insert_jump_edges() {
         auto& block = current_procedure->base_blocks[i];
         auto& instructions = block->instructions;
 
-        if(!instructions.empty()) {
+        if (!instructions.empty()) {
             auto* last_instruction = instructions.back();
             if (last_instruction->type == HIRInstructionType::jump) {
                 auto jump = (HIRJumpInstruction*)last_instruction;
@@ -81,7 +82,7 @@ void bonk::HIRBaseBlockSeparator::insert_jump_edges() {
             }
         }
 
-        if(i + 1 == current_procedure->end_block_index) {
+        if (i + 1 == current_procedure->end_block_index) {
             // Add ret instruction
             auto ret = current_procedure->instruction<HIRReturnInstruction>();
             block->instructions.push_back(ret);
@@ -104,6 +105,33 @@ void bonk::HIRBaseBlockSeparator::fill_return_block() {
     }
 }
 
+void bonk::HIRBaseBlockSeparator::rename_and_erase_labels() {
+    // Remove all 'label' instructions
+    for (auto& block : current_procedure->base_blocks) {
+        for (auto it = block->instructions.begin(); it != block->instructions.end();) {
+            if ((*it)->type == HIRInstructionType::label) {
+                it = block->instructions.erase(it);
+            } else {
+                ++it;
+            }
+        }
+    }
+
+    // Rename all jump instructions
+    for (auto& block : current_procedure->base_blocks) {
+        for (auto& instruction : block->instructions) {
+            if (instruction->type == HIRInstructionType::jump) {
+                auto jump = (HIRJumpInstruction*)instruction;
+                jump->label_id = block_by_id_map[jump->label_id]->index;
+            } else if (instruction->type == HIRInstructionType::jump_nz) {
+                auto jump = (HIRJumpNZInstruction*)instruction;
+                jump->z_label = block_by_id_map[jump->z_label]->index;
+                jump->nz_label = block_by_id_map[jump->nz_label]->index;
+            }
+        }
+    }
+}
+
 bool bonk::HIRBaseBlockSeparator::separate_blocks(bonk::HIRProcedure& procedure) {
     current_procedure = &procedure;
     assert(current_procedure->base_blocks.size() == 1);
@@ -115,6 +143,7 @@ bool bonk::HIRBaseBlockSeparator::separate_blocks(bonk::HIRProcedure& procedure)
     fill_procedure_body();
     fill_return_block();
     insert_jump_edges();
+    rename_and_erase_labels();
 
     block_by_id_map.clear();
     id_by_block_map.clear();

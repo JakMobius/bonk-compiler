@@ -64,7 +64,7 @@ void bonk::HIRAliveVariablesFinder::update_use_define(bonk::HIRBaseBlock& block)
         }
 
         for (int i = 0; i < write_registers; i++) {
-            auto reg = instruction->get_write_register(i);
+            auto reg = instruction->get_write_register(i, nullptr);
             if (!block_use[reg])
                 block_define[reg] = true;
         }

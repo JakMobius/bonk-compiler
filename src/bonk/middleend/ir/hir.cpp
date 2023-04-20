@@ -140,3 +140,6 @@ bonk::HIRFileInstruction::HIRFileInstruction() : HIRInstruction(HIRInstructionTy
 bonk::HIRLocationInstruction::HIRLocationInstruction()
     : HIRInstruction(HIRInstructionType::location) {
 }
+
+bonk::HIRPhiFunctionInstruction::HIRPhiFunctionInstruction(): HIRInstruction(HIRInstructionType::phi_function){
+}

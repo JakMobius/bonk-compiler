@@ -56,22 +56,22 @@ TEST(Playground, Playground) {
 
     // Print CFG
 
-    bonk::HIRGraphvizDumper dumper{output_stream};
-    dumper.dump(*ir_program);
+//    bonk::HIRGraphvizDumper dumper{output_stream};
+//    dumper.dump(*ir_program);
 
     // Print dominators
 
-    bonk::HIRDominatorFinder dominator_finder;
-    auto dominators = dominator_finder.find_dominators(*ir_program->procedures[0]);
+    bonk::HIRDominatorFinder dominator_finder(*ir_program->procedures[0]);
+    auto dominators = dominator_finder.get_dominators();
 
-    for (int i = 0; i < dominators.size(); i++) {
-        std::cout << "dominators[" << i << "] = {";
-        for (int j = 0; j < dominators[i].size(); j++) {
-            if (j != 0) {
-                std::cout << ", ";
-            }
-            std::cout << (dominators[i][j] ? "1" : "0");
-        }
-        std::cout << "}" << std::endl;
-    }
+//    for (int i = 0; i < dominators.size(); i++) {
+//        std::cout << "dominators[" << i << "] = {";
+//        for (int j = 0; j < dominators[i].size(); j++) {
+//            if (j != 0) {
+//                std::cout << ", ";
+//            }
+//            std::cout << (dominators[i][j] ? "1" : "0");
+//        }
+//        std::cout << "}" << std::endl;
+//    }
 }

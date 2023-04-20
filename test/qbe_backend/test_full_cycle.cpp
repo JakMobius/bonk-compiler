@@ -74,6 +74,22 @@ TEST(TestQBEFullCycle, TestHiveAssign) {
     EXPECT_EQ(get_executable_output("test"), "1.000000 2.000000");
 }
 
+TEST(TestQBEFullCycle, TestLoop) {
+    const char* bonk_source = R"(
+        blok main {
+            bowl counter = 0;
+            loop {
+                counter = counter + 1;
+                counter < 10 or { brek; };
+            }
+            bonk counter;
+        }
+    )";
+
+    ASSERT_TRUE(run_bonk(bonk_source, "test"));
+    EXPECT_EQ(get_executable_return_code("test"), 10);
+}
+
 TEST(TestQBEFullCycle, TestHiveComplex) {
     const char* bonk_source = R"(
         hive TestHive2 {

@@ -1,5 +1,7 @@
 
 #include "utils.hpp"
+#include "bonk/middleend/ir/algorithms/hir_ssa_converter.hpp"
+#include "bonk/middleend/ir/hir_printer.hpp"
 #include "bonk/middleend/middleend.hpp"
 
 bool run_bonk(const char* bonk_source, const char* executable_name) {
@@ -81,6 +83,11 @@ bool compile_bonk_source(const char* source, std::filesystem::path output_file) 
     if(!bonk::MiddleEnd(compiler).do_passes(*ir_program)) {
         return false;
     }
+
+    bonk::StdOutputStream output(std::cout);
+    bonk::HIRPrinter(output).print(*ir_program);
+
+    bonk::HIRSSAConverter().convert(*ir_program);
 
     bonk::qbe_backend::QBEBackend(compiler).compile_program(*ir_program, output_stream);
 

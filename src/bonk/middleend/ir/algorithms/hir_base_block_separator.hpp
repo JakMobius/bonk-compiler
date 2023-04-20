@@ -24,6 +24,7 @@ class HIRBaseBlockSeparator {
     void fill_procedure_body();
     void fill_return_block();
     void insert_jump_edges();
+    void rename_and_erase_labels();
 
   public:
     bool separate_blocks(HIRProgram& program);

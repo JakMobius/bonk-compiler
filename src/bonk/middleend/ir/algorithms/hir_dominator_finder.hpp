@@ -8,12 +8,17 @@
 namespace bonk {
 
 class HIRDominatorFinder {
-
   public:
-    HIRDominatorFinder() {
-    }
+    HIRProcedure& procedure;
 
-    std::vector<DynamicBitSet> find_dominators(HIRProcedure& procedure);
+    explicit HIRDominatorFinder(HIRProcedure& procedure);
+
+    std::vector<DynamicBitSet>& get_dominators();
+
+  private:
+    void calculate_dominators();
+
+    std::vector<DynamicBitSet> dominators;
 };
 
 }

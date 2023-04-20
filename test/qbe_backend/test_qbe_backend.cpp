@@ -5,6 +5,7 @@
 #include "bonk/frontend/frontend.hpp"
 #include "bonk/frontend/parsing/parser.hpp"
 #include "bonk/middleend/middleend.hpp"
+#include "bonk/middleend/ir/algorithms/hir_ssa_converter.hpp"
 
 TEST(QBEBackend, CodegenTest) {
 
@@ -42,9 +43,7 @@ TEST(QBEBackend, CodegenTest) {
 
     ASSERT_NE(ir_program, nullptr);
 
-    bonk::MiddleEnd(compiler).do_passes(*ir_program);
-
-    ASSERT_NE(ir_program, nullptr);
+    ASSERT_TRUE(bonk::MiddleEnd(compiler).do_passes(*ir_program));
 
     bonk::qbe_backend::QBEBackend backend{compiler};
     backend.compile_program(*ir_program, output_stream);

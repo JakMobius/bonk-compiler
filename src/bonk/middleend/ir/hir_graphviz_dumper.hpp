@@ -13,7 +13,7 @@ class HIRGraphvizDumper {
 
     void dump(HIRProgram& program);
     void dump(HIRProcedure& procedure);
-    void dump_instruction_text(bonk::HIRProgram& program, bonk::HIRInstruction* instruction);
+    void dump_instruction_text(bonk::HIRBaseBlock& block, bonk::HIRInstruction* instruction);
 
   private:
     bonk::OutputStream& stream;

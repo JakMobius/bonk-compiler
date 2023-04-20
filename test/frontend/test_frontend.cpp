@@ -1,12 +1,14 @@
 
 #include <sstream>
 #include <gtest/gtest.h>
+#include "bonk/frontend/ast/ast_printer.hpp"
 #include "bonk/frontend/converters/hir_early_generator_visitor.hpp"
 #include "bonk/frontend/converters/stdlib_header_generator.hpp"
 #include "bonk/frontend/frontend.hpp"
 #include "bonk/frontend/parsing/parser.hpp"
-#include "bonk/frontend/ast/ast_printer.hpp"
+#include "bonk/middleend/ir/algorithms/hir_base_block_separator.hpp"
 #include "bonk/middleend/ir/algorithms/hir_ref_count_replacer.hpp"
+#include "bonk/middleend/ir/algorithms/hir_variable_index_compressor.hpp"
 #include "bonk/middleend/ir/hir.hpp"
 
 TEST(FrontEnd, TypecheckerTest1) {
@@ -551,7 +553,9 @@ TEST(FrontEnd, RefCountReplacementTest1) {
     //    bonk::HIRPrinter printer(output_stream);
     //    printer.print(*program, *main_procedure);
 
-    bonk::HIRRefCountReplacer().replace_ref_counters(*main_procedure);
+    bonk::HIRVariableIndexCompressor().compress(*program);
+    bonk::HIRBaseBlockSeparator().separate_blocks(*program);
+    bonk::HIRRefCountReplacer().replace_ref_counters(*program);
 
     //    std::cout << "After refcount replacement:" << std::endl;
     //    printer.print(*program, *main_procedure);
@@ -603,6 +607,8 @@ TEST(FrontEnd, RefCountReplacementTest2) {
     //    bonk::HIRPrinter printer(output_stream);
     //    printer.print(*program);
 
+    bonk::HIRVariableIndexCompressor().compress(*program);
+    bonk::HIRBaseBlockSeparator().separate_blocks(*program);
     bonk::HIRRefCountReplacer().replace_ref_counters(*program);
 
     //    std::cout << "After refcount replacement:" << std::endl;

@@ -38,7 +38,7 @@ void bonk::HIRGraphvizDumper::dump(bonk::HIRProcedure& procedure) {
 
         for (auto& instruction : block->instructions) {
             stream.get_stream() << "        <tr><td align=\"left\">";
-            dump_instruction_text(procedure.program, instruction);
+            dump_instruction_text(*block, instruction);
             stream.get_stream() << "</td></tr>\n";
         }
 
@@ -59,11 +59,11 @@ void bonk::HIRGraphvizDumper::dump(bonk::HIRProcedure& procedure) {
     procedure_base_index += procedure.base_blocks.size();
 }
 
-void bonk::HIRGraphvizDumper::dump_instruction_text(bonk::HIRProgram& program,
+void bonk::HIRGraphvizDumper::dump_instruction_text(bonk::HIRBaseBlock& block,
                                                     bonk::HIRInstruction* instruction) {
     buffer.str("");
     buffer.clear();
-    printer.print(program, *((HIRInstruction*)instruction));
+    printer.print(block, *((HIRInstruction*)instruction));
     for (char c : buffer.str()) {
         switch (c) {
         case '<':

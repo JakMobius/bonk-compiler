@@ -22,7 +22,7 @@ void bonk::qbe_backend::QBEBackend::compile_procedure(bonk::HIRProcedure& proced
     // file instructions in procedures. Find the file instruction
     // and compile it before the procedure.
     HIRFileInstruction* file_instruction = find_procedure_file_instruction(procedure);
-    if(file_instruction) {
+    if (file_instruction) {
         compile_instruction(*file_instruction);
     }
 
@@ -40,19 +40,27 @@ void bonk::qbe_backend::QBEBackend::compile_procedure(bonk::HIRProcedure& proced
             << get_hir_type(parameter.type) << " %r" << parameter.register_id;
     }
 
-    output_stream->get_stream() << ") {\n@start\n";
+    output_stream->get_stream() << ") {\n";
+
+    compile_block(procedure.base_blocks[procedure.start_block_index]);
 
     for (auto& block : procedure.base_blocks) {
-        for (auto& instruction : block->instructions) {
-            compile_instruction(*instruction);
+        if (procedure.start_block_index == block->index ||
+            procedure.end_block_index == block->index) {
+            continue;
         }
+        compile_block(block);
     }
 
     output_stream->get_stream() << "}\n";
 }
-
-void bonk::qbe_backend::QBEBackend::compile_instruction(HIRLabelInstruction& instruction) {
-    output_stream->get_stream() << "@L" << instruction.label_id << "\n";
+void bonk::qbe_backend::QBEBackend::compile_block(std::unique_ptr<HIRBaseBlock>& block) {
+    current_block = block.get();
+    output_stream->get_stream() << "@L" << block->index << "\n";
+    for (auto& instruction : block->instructions) {
+        compile_instruction(*instruction);
+    }
+    current_block = nullptr;
 }
 
 void bonk::qbe_backend::QBEBackend::compile_instruction(HIRConstantLoadInstruction& instruction) {
@@ -265,8 +273,6 @@ void bonk::qbe_backend::QBEBackend::compile_instruction(bonk::HIRInstruction& in
     auto hir_instruction = static_cast<HIRInstruction&>(instruction);
 
     switch (hir_instruction.type) {
-    case HIRInstructionType::label:
-        return compile_instruction(static_cast<HIRLabelInstruction&>(instruction));
     case HIRInstructionType::constant_load:
         return compile_instruction(static_cast<HIRConstantLoadInstruction&>(instruction));
     case HIRInstructionType::symbol_load:
@@ -289,9 +295,14 @@ void bonk::qbe_backend::QBEBackend::compile_instruction(bonk::HIRInstruction& in
         return compile_instruction(static_cast<HIRMemoryStoreInstruction&>(instruction));
     case HIRInstructionType::location:
         return compile_instruction(static_cast<HIRLocationInstruction&>(instruction));
+    case HIRInstructionType::phi_function:
+        return compile_instruction(static_cast<HIRPhiFunctionInstruction&>(instruction));
     case HIRInstructionType::file:
         // Ignore, because QBE doesn't support file instructions within functions
         return;
+    case HIRInstructionType::label:
+        assert(!"Label instruction met in a backend. This should never happen. Make sure to use "
+                "HIRBlockSeparator before the backend");
     default:
         assert(!"Unknown instruction type");
     }
@@ -330,6 +341,23 @@ void bonk::qbe_backend::QBEBackend::compile_instruction(bonk::HIRLocationInstruc
 
     padding();
     output_stream->get_stream() << "loc " << instruction.line << "\n";
+}
+
+void bonk::qbe_backend::QBEBackend::compile_instruction(
+    bonk::HIRPhiFunctionInstruction& instruction) {
+    padding();
+    output_stream->get_stream() << "%r" << instruction.target << " ="
+                                << get_hir_type(instruction.type) << " phi"
+                                << " ";
+
+    for (int i = 0; i < instruction.sources.size(); i++) {
+        if (i != 0)
+            output_stream->get_stream() << ", ";
+        output_stream->get_stream()
+            << "@L" << current_block->predecessors[i]->index << " %r" << instruction.sources[i];
+    }
+
+    output_stream->get_stream() << "\n";
 }
 
 char bonk::qbe_backend::QBEBackend::get_hir_type(bonk::HIRDataType type, bool base_type) {

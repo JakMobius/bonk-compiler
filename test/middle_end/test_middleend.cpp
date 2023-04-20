@@ -47,8 +47,8 @@ TEST(MiddleEnd, DominatorListTest1) {
 
     bonk::HIRBaseBlockSeparator().separate_blocks(*ir_program);
 
-    bonk::HIRDominatorFinder dominator_finder;
-    auto dominators = dominator_finder.find_dominators(*ir_program->procedures[0]);
+    bonk::HIRDominatorFinder dominator_finder(*ir_program->procedures[0]);
+    auto dominators = dominator_finder.get_dominators();
 
     ASSERT_EQ(dominators[0], bonk::DynamicBitSet({1, 0, 0, 0, 0, 0, 0}));
     ASSERT_EQ(dominators[1], bonk::DynamicBitSet({1, 1, 0, 0, 0, 0, 0}));
@@ -100,19 +100,19 @@ TEST(MiddleEnd, DominatorListTest2) {
 
     bonk::HIRBaseBlockSeparator().separate_blocks(*ir_program);
 
-    bonk::HIRDominatorFinder dominator_finder;
-    auto dominators = dominator_finder.find_dominators(*ir_program->procedures[0]);
+    bonk::HIRDominatorFinder dominator_finder(*ir_program->procedures[0]);
+    auto dominators = dominator_finder.get_dominators();
 
     // print dominators
-    for (int i = 0; i < dominators.size(); i++) {
-        std::cout << "Block " << i << ": ";
-        for (int j = 0; j < dominators.size(); j++) {
-            if (dominators[i][j]) {
-                std::cout << j << " ";
-            }
-        }
-        std::cout << std::endl;
-    }
+//    for (int i = 0; i < dominators.size(); i++) {
+//        std::cout << "Block " << i << ": ";
+//        for (int j = 0; j < dominators.size(); j++) {
+//            if (dominators[i][j]) {
+//                std::cout << j << " ";
+//            }
+//        }
+//        std::cout << std::endl;
+//    }
 
     ASSERT_EQ(dominators[0], bonk::DynamicBitSet({1, 0, 0, 0, 0, 0}));
     ASSERT_EQ(dominators[1], bonk::DynamicBitSet({1, 1, 0, 0, 0, 0}));
@@ -167,7 +167,11 @@ TEST(MiddleEnd, DominanceFrontierTest) {
 
     bonk::HIRBaseBlockSeparator().separate_blocks(*ir_program);
 
-    auto dominance_frontiers = bonk::HIRDominanceFrontierFinder().find_dominators(*ir_procedure);
+    bonk::HIRDominatorFinder d_finder(*ir_procedure);
+    bonk::HIRDominanceTreeBuilder dt_finder(d_finder);
+    bonk::HIRDominanceFrontierFinder df_finder(dt_finder);
+
+    auto dominance_frontiers = df_finder.get_frontiers();
 
     ASSERT_EQ(dominance_frontiers, std::vector<int>({-1, 1, 1, -1, 1, -1, -1}));
 }
@@ -305,11 +309,13 @@ TEST(MiddleEnd, VariableIndexCompressorTest) {
     auto b1_instructions = ir_procedure->base_blocks[1]->instructions.begin();
     auto b2_instructions = ir_procedure->base_blocks[2]->instructions.begin();
 
-    ++b1_instructions;
-    ++b2_instructions;
+    // Don't increment the instruction iterators, because labels get omitted by the
+    // block separator
+    // ++b1_instructions;
+    // ++b2_instructions;
 
-    ASSERT_EQ((*b1_instructions)->get_write_register(0), 0);
-    ASSERT_EQ((*b2_instructions)->get_write_register(0), 2);
+    ASSERT_EQ((*b1_instructions)->get_write_register(0, nullptr), 0);
+    ASSERT_EQ((*b2_instructions)->get_write_register(0, nullptr), 2);
 }
 
 TEST(MiddleEnd, SSAConverterTest1) {
@@ -351,6 +357,29 @@ TEST(MiddleEnd, SSAConverterTest1) {
     bonk::HIRVariableIndexCompressor().compress(*ir_procedure);
     bonk::HIRBaseBlockSeparator().separate_blocks(*ir_program);
     bonk::HIRSSAConverter().convert(*ir_procedure);
+
+//    bonk::HIRPrinter(output_stream).print(*ir_program);
+
+    std::unordered_set<bonk::IRRegister> used_variables;
+    // Make sure all variables are only assigned once
+
+    int phi_functions = 0;
+
+    for (auto& block : ir_procedure->base_blocks) {
+        for (auto& instruction : block->instructions) {
+            if(instruction->type == bonk::HIRInstructionType::phi_function) {
+                phi_functions++;
+            }
+            for (int i = 0; i < instruction->get_write_register_count(); i++) {
+                auto variable = instruction->get_write_register(i, nullptr);
+                ASSERT_TRUE(used_variables.find(variable) == used_variables.end());
+                used_variables.insert(variable);
+            }
+        }
+    }
+
+    EXPECT_EQ(phi_functions, 1);
+    EXPECT_EQ(ir_procedure->used_registers, used_variables.size());
 }
 
 TEST(MiddleEnd, SSAConverterTest2) {
@@ -394,5 +423,27 @@ TEST(MiddleEnd, SSAConverterTest2) {
 
     bonk::HIRVariableIndexCompressor().compress(*ir_procedure);
     bonk::HIRBaseBlockSeparator().separate_blocks(*ir_program);
+
     bonk::HIRSSAConverter().convert(*ir_procedure);
+
+    std::unordered_set<bonk::IRRegister> used_variables;
+    // Make sure all variables are only assigned once
+
+    int phi_functions = 0;
+
+    for (auto& block : ir_procedure->base_blocks) {
+        for (auto& instruction : block->instructions) {
+            if(instruction->type == bonk::HIRInstructionType::phi_function) {
+                phi_functions++;
+            }
+            for (int i = 0; i < instruction->get_write_register_count(); i++) {
+                auto variable = instruction->get_write_register(i, nullptr);
+                ASSERT_TRUE(used_variables.find(variable) == used_variables.end());
+                used_variables.insert(variable);
+            }
+        }
+    }
+
+    EXPECT_EQ(phi_functions, 2);
+    EXPECT_EQ(ir_procedure->used_registers, used_variables.size());
 }
