@@ -3,6 +3,10 @@
 #include "utils/dynamic_bitset.hpp"
 
 bool bonk::HIRUnreachableCodeDeleter::delete_unreachable_code(HIRProcedure& procedure) {
+    if(procedure.is_external) {
+        return true;
+    }
+
     bonk::DynamicBitSet reachable(procedure.base_blocks.size(), false);
     bonk::DynamicBitSet work_list(procedure.base_blocks.size(), false);
 
@@ -30,7 +34,7 @@ bool bonk::HIRUnreachableCodeDeleter::delete_unreachable_code(HIRProcedure& proc
     }
 
     for (int i = 0; i < reachable.size(); i++) {
-        if (!reachable[i]) {
+        if (!reachable[i] && i != procedure.start_block_index && i != procedure.end_block_index) {
             procedure.base_blocks[i]->kill();
         }
     }
@@ -42,7 +46,7 @@ bool bonk::HIRUnreachableCodeDeleter::delete_unreachable_code(HIRProcedure& proc
 
 bool bonk::HIRUnreachableCodeDeleter::delete_unreachable_code(bonk::HIRProgram& program) {
     for (auto& procedure : program.procedures) {
-        if(!delete_unreachable_code(*procedure)) {
+        if (!delete_unreachable_code(*procedure)) {
             return false;
         }
     }

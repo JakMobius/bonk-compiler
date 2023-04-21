@@ -11,6 +11,10 @@ bool bonk::HIRVariableIndexCompressor::compress(bonk::HIRProgram& program) {
 
 std::unordered_map<bonk::IRRegister, bonk::IRRegister>
 bonk::HIRVariableIndexCompressor::compress(bonk::HIRProcedure& procedure) {
+    if(procedure.is_external) {
+        return {};
+    }
+
     std::unordered_map<bonk::IRRegister, bonk::IRRegister> register_map;
     bonk::IRRegister index = 0;
 

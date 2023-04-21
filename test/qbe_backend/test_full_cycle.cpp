@@ -316,7 +316,8 @@ TEST(TestQBEFullCycle, TestReferenceCounter6) {
         void print_reference_count(unsigned long long* ptr) { printf("%llu ", ptr[-1]); }
     )";
 
-    ASSERT_TRUE(run_bonk_with_counterpart(bonk_source, c_source, "test"));
+    ASSERT_TRUE(run_bonk_with_counterpart(bonk_source, c_source, "test",
+                                          RunParameters{.optimize_reference_counter = false}));
     EXPECT_EQ(get_executable_output("test"), "3 2 ");
 }
 
@@ -354,7 +355,8 @@ TEST(TestQBEFullCycle, TestReferenceCounter7) {
             void print_ref_count(unsigned long long* ptr) { printf("%llu ", ptr[-1]); }
     )";
 
-    ASSERT_TRUE(run_bonk_with_counterpart(bonk_source, c_source, "test"));
+    ASSERT_TRUE(run_bonk_with_counterpart(bonk_source, c_source, "test",
+                                          RunParameters{.optimize_reference_counter = false}));
     EXPECT_EQ(get_executable_output("test"), "2 2 2 2 ");
 }
 

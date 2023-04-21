@@ -11,6 +11,10 @@ bool bonk::HIRLocCollapser::collapse(bonk::HIRProgram& program) {
 }
 
 bool bonk::HIRLocCollapser::collapse(bonk::HIRProcedure& procedure) {
+    if(procedure.is_external) {
+        return true;
+    }
+
     for (auto& block : procedure.base_blocks) {
         if (!collapse(*block))
             return false;

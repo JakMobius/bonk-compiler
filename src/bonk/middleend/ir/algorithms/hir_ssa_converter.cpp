@@ -113,6 +113,9 @@ void bonk::HIRSSAConverter::convert(bonk::HIRProgram& program) {
 }
 
 void bonk::HIRSSAConverter::convert(bonk::HIRProcedure& procedure) {
+    if(procedure.is_external) {
+        return;
+    }
 
     HIRDominatorFinder d_finder(procedure);
     HIRDominanceTreeBuilder dt_builder(d_finder);

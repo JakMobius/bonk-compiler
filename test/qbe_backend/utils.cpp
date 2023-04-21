@@ -1,11 +1,22 @@
 
 #include "utils.hpp"
+#include "bonk/middleend/ir/algorithms/hir_base_block_separator.hpp"
+#include "bonk/middleend/ir/algorithms/hir_block_sorter.hpp"
+#include "bonk/middleend/ir/algorithms/hir_copy_propagation.hpp"
+#include "bonk/middleend/ir/algorithms/hir_jmp_reducer.hpp"
+#include "bonk/middleend/ir/algorithms/hir_jnz_optimizer.hpp"
+#include "bonk/middleend/ir/algorithms/hir_loc_collapser.hpp"
+#include "bonk/middleend/ir/algorithms/hir_ref_count_replacer.hpp"
+#include "bonk/middleend/ir/algorithms/hir_ref_counter_reducer.hpp"
 #include "bonk/middleend/ir/algorithms/hir_ssa_converter.hpp"
+#include "bonk/middleend/ir/algorithms/hir_unreachable_code_deleter.hpp"
+#include "bonk/middleend/ir/algorithms/hir_unused_def_deleter.hpp"
+#include "bonk/middleend/ir/algorithms/hir_variable_index_compressor.hpp"
 #include "bonk/middleend/ir/hir_printer.hpp"
 #include "bonk/middleend/middleend.hpp"
 
-bool run_bonk(const char* bonk_source, const char* executable_name) {
-    if (!compile_bonk_source(bonk_source, "bonk.qbe"))
+bool run_bonk(const char* bonk_source, const char* executable_name, const RunParameters& parameters) {
+    if (!compile_bonk_source(bonk_source, "bonk.qbe", parameters))
             return false;
     if (!compile_qbe("bonk.qbe", "bonk.s"))
             return false;
@@ -17,10 +28,10 @@ bool run_bonk(const char* bonk_source, const char* executable_name) {
 }
 
 bool run_bonk_with_counterpart(const char* bonk_source, const char* c_source,
-                               const char* executable_name) {
+                               const char* executable_name, const RunParameters& parameters) {
     if (!compile_c_source(c_source, "c_counterpart.o"))
         return false;
-    if (!compile_bonk_source(bonk_source, "bonk.qbe"))
+    if (!compile_bonk_source(bonk_source, "bonk.qbe", parameters))
         return false;
     if (!compile_qbe("bonk.qbe", "bonk.s"))
         return false;
@@ -44,7 +55,7 @@ void ensure_path(std::filesystem::path& path) {
     std::filesystem::create_directories(path.parent_path());
 }
 
-bool compile_bonk_source(const char* source, std::filesystem::path output_file) {
+bool compile_bonk_source(const char* source, std::filesystem::path output_file, const RunParameters& parameters) {
     ensure_path(output_file);
 
     auto error_stream = bonk::StdOutputStream(std::cout);
@@ -80,14 +91,36 @@ bool compile_bonk_source(const char* source, std::filesystem::path output_file) 
         return false;
     }
 
-    if(!bonk::MiddleEnd(compiler).do_passes(*ir_program)) {
-        return false;
-    }
+    bonk::HIRVariableIndexCompressor().compress(*ir_program);
+    bonk::HIRBaseBlockSeparator().separate_blocks(*ir_program);
+    bonk::HIRLocCollapser().collapse(*ir_program);
 
-    bonk::StdOutputStream output(std::cout);
-    bonk::HIRPrinter(output).print(*ir_program);
+//    bonk::StdOutputStream output(std::cout);
+//    bonk::HIRPrinter(output).print(*ir_program);
 
+    // <optimizations>
     bonk::HIRSSAConverter().convert(*ir_program);
+    bonk::HIRCopyPropagation().propagate_copies(*ir_program);
+    bonk::HIRUnusedDefDeleter().delete_unused_defs(*ir_program);
+
+    if(parameters.optimize_reference_counter) {
+        bonk::HIRRefCountReducer().reduce(*ir_program);
+    }
+    // </optimizations>
+
+    bonk::HIRRefCountReplacer().replace_ref_counters(*ir_program);
+
+    // <optimizations>
+    bonk::HIRJnzOptimizer().optimize(*ir_program);
+
+    bonk::HIRUnreachableCodeDeleter().delete_unreachable_code(*ir_program);
+    bonk::HIRJmpReducer().reduce(*ir_program);
+
+    bonk::HIRUnusedDefDeleter().delete_unused_defs(*ir_program);
+    bonk::HIRVariableIndexCompressor().compress(*ir_program);
+    bonk::HIRLocCollapser().collapse(*ir_program);
+    bonk::HIRBlockSorter().sort(*ir_program);
+    // </optimizations>
 
     bonk::qbe_backend::QBEBackend(compiler).compile_program(*ir_program, output_stream);
 

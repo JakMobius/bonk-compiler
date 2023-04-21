@@ -22,8 +22,66 @@ void bonk::HIRProcedure::create_base_block() {
 int bonk::HIRProcedure::get_unused_register() {
     return used_registers++;
 }
+
+void bonk::HIRProcedure::rename_blocks(int* old_to_new) {
+
+    // Relink the jmp and jnz instructions and start/end block indices
+
+    assert(old_to_new[start_block_index] != -1);
+    assert(old_to_new[end_block_index] != -1);
+
+    start_block_index = old_to_new[start_block_index];
+    end_block_index = old_to_new[end_block_index];
+
+    for (auto& block : base_blocks) {
+        if (block->instructions.empty()) {
+            continue;
+        }
+        auto& last_instruction = block->instructions.back();
+        if (last_instruction->type == HIRInstructionType::jump) {
+            auto* jmp = (HIRJumpInstruction*)last_instruction;
+            jmp->label_id = old_to_new[jmp->label_id];
+
+            assert(jmp->label_id != -1);
+        } else if (last_instruction->type == HIRInstructionType::jump_nz) {
+            auto* jnz = (HIRJumpNZInstruction*)last_instruction;
+            jnz->z_label = old_to_new[jnz->z_label];
+            jnz->nz_label = old_to_new[jnz->nz_label];
+
+            assert(jnz->z_label != -1);
+            assert(jnz->nz_label != -1);
+        }
+    }
+
+    int new_block_count = 0;
+
+    for (int i = 0; i < base_blocks.size(); i++) {
+        if (old_to_new[i] != -1) {
+            new_block_count++;
+        }
+    }
+
+    int unused_index = new_block_count;
+
+    for (int i = 0; i < base_blocks.size(); i++) {
+        if (old_to_new[i] == -1) {
+            old_to_new[i] = unused_index++;
+        }
+    }
+
+    for (int i = 0; i < base_blocks.size(); i++) {
+        while (old_to_new[i] != i) {
+            std::swap(base_blocks[i], base_blocks[old_to_new[i]]);
+            std::swap(old_to_new[i], old_to_new[old_to_new[i]]);
+        }
+        base_blocks[i]->index = i;
+    }
+
+    base_blocks.resize(new_block_count);
+}
+
 void bonk::HIRProcedure::remove_killed_blocks() {
-    std::vector<int> new_indices(base_blocks.size(), -1);
+    std::vector<int> old_to_new(base_blocks.size(), -1);
 
     int new_block_count = 0;
 
@@ -33,29 +91,41 @@ void bonk::HIRProcedure::remove_killed_blocks() {
         }
         if (i < base_blocks.size()) {
             base_blocks[i]->remove_killed_edges();
-            new_indices[new_block_count] = i++;
+            old_to_new[i++] = new_block_count;
         } else {
             break;
         }
     }
 
-    for (int i = 0; i < base_blocks.size(); i++) {
-        if (new_indices[i] == -1)
-            continue;
+    rename_blocks(old_to_new.data());
+}
+void bonk::HIRProcedure::remove_control_flow_edge(bonk::HIRBaseBlock* from,
+                                                  bonk::HIRBaseBlock* to) {
+    auto from_succ = std::find(from->successors.begin(), from->successors.end(), to);
+    auto to_pred = std::find(to->predecessors.begin(), to->predecessors.end(), from);
 
-        base_blocks[i] = std::move(base_blocks[new_indices[i]]);
-        base_blocks[i]->index = i;
+    assert(from_succ != from->successors.end());
+    assert(to_pred != to->predecessors.end());
+
+    int to_pred_index = to_pred - to->predecessors.begin();
+
+    from->successors.erase(from_succ);
+    to->predecessors.erase(to_pred);
+
+    // If the 'to' block has phi instructions, we need to remove the 'from' block from them
+
+    for (auto& instruction : to->instructions) {
+        if (instruction->type != HIRInstructionType::phi_function) {
+            break;
+        }
+        auto* phi = (HIRPhiFunctionInstruction*)instruction;
+        phi->sources.erase(phi->sources.begin() + to_pred_index);
     }
-
-    start_block_index = new_indices[start_block_index];
-    end_block_index = new_indices[end_block_index];
-
-    base_blocks.resize(new_block_count);
 }
 
 void bonk::HIRBaseBlock::remove_killed_edges() {
     int new_index = 0;
-    for (auto & successor : successors) {
+    for (auto& successor : successors) {
         if (successor->index != -1) {
             successors[new_index++] = successor;
         }
@@ -63,7 +133,7 @@ void bonk::HIRBaseBlock::remove_killed_edges() {
     successors.resize(new_index);
 
     new_index = 0;
-    for (auto & predecessor : predecessors) {
+    for (auto& predecessor : predecessors) {
         if (predecessor->index != -1) {
             predecessors[new_index++] = predecessor;
         }

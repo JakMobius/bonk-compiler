@@ -4,10 +4,11 @@
 #include "bonk/backend/qbe/qbe_backend.hpp"
 //#include "bonk/backend/x86/x86_backend.hpp"
 #include "bonk/compiler/compiler.hpp"
+#include "bonk/frontend/ast/ast_printer.hpp"
+#include "bonk/frontend/ast/json_ast_serializer.hpp"
 #include "bonk/frontend/frontend.hpp"
-#include "bonk/help-resolver/help_resolver.hpp"
-#include "bonk/tree/ast_printer.hpp"
-#include "bonk/tree/json_ast_serializer.hpp"
+#include "bonk/frontend/help_resolver/help_resolver.hpp"
+#include "utils/json_serializer.hpp"
 
 struct InitErrorReporter {
 

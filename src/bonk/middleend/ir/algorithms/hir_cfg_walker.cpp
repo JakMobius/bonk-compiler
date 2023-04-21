@@ -3,6 +3,10 @@
 #include "hir_cfg_walker.hpp"
 
 bool bonk::HIRCFGWalker::walk(bonk::HIRProcedure& procedure) {
+    if(procedure.is_external) {
+        return true;
+    }
+
     if(walk_backwards) {
         auto& end_block = *procedure.base_blocks[procedure.end_block_index];
         return walk_block(end_block);

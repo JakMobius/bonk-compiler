@@ -560,10 +560,9 @@ TEST(MiddleEnd, CopyDistributionTest) {
     bonk::HIRBaseBlockSeparator().separate_blocks(*ir_program);
     bonk::HIRCopyPropagation().propagate_copies(*ir_procedure);
 
-    //    bonk::HIRPrinter printer(output_stream);
-    //    printer.print(*ir_program);
+    bonk::HIRPrinter printer(output_stream);
+    printer.print(*ir_program);
 
-    int loads = 0;
     int assigns = 0;
 
     for (auto& block : ir_procedure->base_blocks) {
@@ -575,9 +574,15 @@ TEST(MiddleEnd, CopyDistributionTest) {
                     bonk::IRRegister source = operation->left;
 
                     switch (target) {
-                    case 5:
-                        EXPECT_EQ(source, 2);
+                    case 3:
+                    case 8:
+                        EXPECT_EQ(source, 0);
                         break;
+                    case 4:
+                    case 7:
+                        EXPECT_EQ(source, 1);
+                        break;
+                    case 5:
                     case 6:
                         EXPECT_EQ(source, 2);
                         break;
@@ -589,43 +594,10 @@ TEST(MiddleEnd, CopyDistributionTest) {
                     assigns++;
                 }
             }
-
-            if (instruction->type == bonk::HIRInstructionType::constant_load) {
-                auto constant = (bonk::HIRConstantLoadInstruction*)instruction;
-                bonk::IRRegister target = constant->target;
-                int64_t value = constant->constant;
-
-                switch (target) {
-                case 0:
-                    EXPECT_EQ(value, 0);
-                    break;
-                case 1:
-                    EXPECT_EQ(value, 1);
-                    break;
-                case 3:
-                    EXPECT_EQ(value, 0);
-                    break;
-                case 4:
-                    EXPECT_EQ(value, 1);
-                    break;
-                case 7:
-                    EXPECT_EQ(value, 1);
-                    break;
-                case 8:
-                    EXPECT_EQ(value, 0);
-                    break;
-                default:
-                    ADD_FAILURE() << "Unexpected register " << target;
-                    break;
-                }
-
-                loads++;
-            }
         }
     }
 
-    EXPECT_EQ(loads, 6);
-    EXPECT_EQ(assigns, 2);
+    EXPECT_EQ(assigns, 6);
 }
 
 TEST(MiddleEnd, UnusedDefinitionDeletionTest) {

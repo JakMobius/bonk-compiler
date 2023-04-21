@@ -133,6 +133,10 @@ void bonk::HIRBaseBlockSeparator::rename_and_erase_labels() {
 }
 
 bool bonk::HIRBaseBlockSeparator::separate_blocks(bonk::HIRProcedure& procedure) {
+    if(procedure.is_external) {
+        return true;
+    }
+
     current_procedure = &procedure;
     assert(current_procedure->base_blocks.size() == 1);
     current_instructions = std::move(current_procedure->base_blocks[0].get()->instructions);

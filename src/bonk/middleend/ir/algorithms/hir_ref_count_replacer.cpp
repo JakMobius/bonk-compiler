@@ -12,6 +12,10 @@ bool bonk::HIRRefCountReplacer::replace_ref_counters(bonk::HIRProgram& program) 
 }
 
 bool bonk::HIRRefCountReplacer::replace_ref_counters(bonk::HIRProcedure& procedure) {
+    if(procedure.is_external) {
+        return true;
+    }
+
     current_procedure = &procedure;
     current_program = &procedure.program;
     for (int i = 0; i < procedure.base_blocks.size(); i++) {

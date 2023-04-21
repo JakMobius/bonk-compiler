@@ -12,6 +12,9 @@ bool bonk::HIRUnusedDefDeleter::delete_unused_defs(bonk::HIRProgram& program) {
 }
 
 bool bonk::HIRUnusedDefDeleter::delete_unused_defs(bonk::HIRProcedure& procedure) {
+    if(procedure.is_external) {
+        return true;
+    }
 
     bonk::DynamicBitSet used(procedure.used_registers, false);
 

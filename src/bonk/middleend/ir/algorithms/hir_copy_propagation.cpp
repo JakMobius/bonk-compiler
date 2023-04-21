@@ -1,5 +1,6 @@
 
 #include "hir_copy_propagation.hpp"
+#include "hir_definition_finder.hpp"
 
 bool bonk::HIRCopyPropagation::propagate_copies(HIRProgram& program) {
     for (auto& procedure : program.procedures) {
@@ -11,15 +12,12 @@ bool bonk::HIRCopyPropagation::propagate_copies(HIRProgram& program) {
 }
 
 bool bonk::HIRCopyPropagation::propagate_copies(HIRProcedure& procedure) {
-    std::unordered_map<IRRegister, HIRInstruction*> definitions;
-
-    for (auto& block : procedure.base_blocks) {
-        for (auto& instruction : block->instructions) {
-            if (instruction->get_write_register_count() == 1) {
-                definitions[instruction->get_write_register(0)] = instruction;
-            }
-        }
+    if(procedure.is_external) {
+        return true;
     }
+
+    auto definitions =
+        HIRDefinitionFinder().find_typed_definitions(procedure, HIRInstructionType::operation);
 
     while (true) {
         bool changed = false;
@@ -36,14 +34,11 @@ bool bonk::HIRCopyPropagation::propagate_copies(HIRProcedure& procedure) {
                         continue;
                     }
 
-                    HIRInstruction* definition = constant_it->second;
-                    if (definition->type == HIRInstructionType::operation) {
-                        auto operation_definition = (HIROperationInstruction*)definition;
+                    auto definition = (HIROperationInstruction*)constant_it->second;
 
-                        if (operation_definition->operation_type == HIROperationType::assign) {
-                            read_register = operation_definition->left;
-                            changed = true;
-                        }
+                    if (definition->operation_type == HIROperationType::assign) {
+                        read_register = definition->left;
+                        changed = true;
                     }
                 }
             }

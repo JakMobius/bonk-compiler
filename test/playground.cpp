@@ -6,10 +6,14 @@
 #include "bonk/frontend/parsing/lexic/lexer.hpp"
 #include "bonk/frontend/parsing/parser.hpp"
 #include "bonk/middleend/ir/algorithms/hir_base_block_separator.hpp"
+#include "bonk/middleend/ir/algorithms/hir_block_sorter.hpp"
 #include "bonk/middleend/ir/algorithms/hir_copy_propagation.hpp"
 #include "bonk/middleend/ir/algorithms/hir_dominator_finder.hpp"
+#include "bonk/middleend/ir/algorithms/hir_jmp_reducer.hpp"
+#include "bonk/middleend/ir/algorithms/hir_jnz_optimizer.hpp"
 #include "bonk/middleend/ir/algorithms/hir_loc_collapser.hpp"
 #include "bonk/middleend/ir/algorithms/hir_ref_count_replacer.hpp"
+#include "bonk/middleend/ir/algorithms/hir_ref_counter_reducer.hpp"
 #include "bonk/middleend/ir/algorithms/hir_ssa_converter.hpp"
 #include "bonk/middleend/ir/algorithms/hir_unreachable_code_deleter.hpp"
 #include "bonk/middleend/ir/algorithms/hir_unused_def_deleter.hpp"
@@ -75,11 +79,22 @@ TEST(Playground, Playground) {
     bonk::HIRSSAConverter().convert(*ir_program);
     bonk::HIRCopyPropagation().propagate_copies(*ir_program);
     bonk::HIRUnusedDefDeleter().delete_unused_defs(*ir_program);
-    bonk::HIRUnreachableCodeDeleter().delete_unreachable_code(*ir_program);
-    bonk::HIRVariableIndexCompressor().compress(*ir_program);
+    bonk::HIRRefCountReducer().reduce(*ir_program);
     // </optimizations>
 
-//    bonk::HIRRefCountReplacer().replace_ref_counters(*ir_program);
+    bonk::HIRRefCountReplacer().replace_ref_counters(*ir_program);
+
+    // <optimizations>
+    bonk::HIRJnzOptimizer().optimize(*ir_program);
+
+    bonk::HIRUnreachableCodeDeleter().delete_unreachable_code(*ir_program);
+    bonk::HIRJmpReducer().reduce(*ir_program);
+
+    bonk::HIRUnusedDefDeleter().delete_unused_defs(*ir_program);
+    bonk::HIRVariableIndexCompressor().compress(*ir_program);
+    bonk::HIRLocCollapser().collapse(*ir_program);
+    bonk::HIRBlockSorter().sort(*ir_program);
+    // </optimizations>
 
     bonk::HIRPrinter printer{output_stream};
     printer.print(*ir_program);

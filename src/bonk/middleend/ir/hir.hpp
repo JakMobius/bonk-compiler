@@ -101,7 +101,9 @@ struct HIRProcedure {
     HIRProcedure(HIRProgram& program) : program(program) {
     }
 
+    void rename_blocks(int* old_to_new);
     void add_control_flow_edge(HIRBaseBlock* from, HIRBaseBlock* to);
+    void remove_control_flow_edge(HIRBaseBlock* from, HIRBaseBlock* to);
 
     // Proxy for HIRProgram::instruction
     template <typename T, typename... Args> T* instruction(Args&&... args) {
